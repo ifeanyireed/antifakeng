@@ -69,9 +69,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             System Live: 100% OK
           </span>
 
-          <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all relative bg-white shadow-xs">
-            <IconBell className="w-5 h-5" />
-          </button>
+          <Link href="/admin/notifications">
+            <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all relative bg-white shadow-xs">
+              <IconBell className="w-5 h-5" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+            </button>
+          </Link>
           
           <div className="h-8 w-px bg-slate-200" />
           
