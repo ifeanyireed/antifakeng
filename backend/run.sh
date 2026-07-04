@@ -11,6 +11,12 @@ LOG_DIR="./logs"
 mkdir -p "$BIN_DIR"
 mkdir -p "$LOG_DIR"
 
+# Load environment variables from .env if present
+if [ -f .env ]; then
+  echo "Loading environment variables from .env..."
+  export $(grep -v '^#' .env | xargs)
+fi
+
 echo "=== 1. Building Microservices ==="
 echo "Building Gateway..."
 go build -o "$BIN_DIR/gateway" cmd/gateway/main.go
