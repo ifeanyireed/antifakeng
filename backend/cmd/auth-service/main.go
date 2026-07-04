@@ -13,6 +13,7 @@ import (
 
 	"github.com/ahnara/antifake/backend/pkg/crypto"
 	"github.com/ahnara/antifake/backend/pkg/db"
+	"github.com/ahnara/antifake/backend/pkg/email"
 	"github.com/ahnara/antifake/backend/pkg/middleware"
 	"github.com/ahnara/antifake/backend/pkg/models"
 	"github.com/ahnara/antifake/backend/pkg/termii"
@@ -149,6 +150,14 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error": "Transaction commit failed"}`, http.StatusInternalServerError)
 		return
 	}
+
+	// Send registration notification email to platform administrator in background
+	go func() {
+		err := email.SendProducerSignupNotification(req.ProducerName, req.Email, planTier)
+		if err != nil {
+			log.Printf("[Notification Error] Failed to send admin email alert: %v", err)
+		}
+	}()
 
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
