@@ -15,6 +15,7 @@ import (
 	"github.com/ahnara/antifake/backend/pkg/db"
 	"github.com/ahnara/antifake/backend/pkg/middleware"
 	"github.com/ahnara/antifake/backend/pkg/models"
+	"github.com/ahnara/antifake/backend/pkg/printer"
 )
 
 func main() {
@@ -314,6 +315,66 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(codes)
+		return
+	}
+
+	if action == "print" && r.Method == http.MethodGet {
+		// Retrieve all tokens for printing
+		rows, err := db.DB.Query(`SELECT token FROM qr_codes WHERE batch_id = ?`, batchID)
+		if err != nil {
+			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		var tokens []string
+		for rows.Next() {
+			var token string
+			if err := rows.Scan(&token); err != nil {
+				http.Error(w, `{"error": "Failed to scan tokens"}`, http.StatusInternalServerError)
+				return
+			}
+			tokens = append(tokens, token)
+		}
+
+		if len(tokens) == 0 {
+			http.Error(w, `{"error": "No QR codes found for this batch. Generate them first."}`, http.StatusBadRequest)
+			return
+		}
+
+		// Read parameters
+		msg := r.URL.Query().Get("message")
+		if msg == "" {
+			msg = "Scan QR code or visit antifake.ng/verify, input serial to check authenticity."
+		}
+
+		widthOpt := r.URL.Query().Get("width")
+		if widthOpt == "" {
+			widthOpt = "4ft"
+		}
+
+		colsStr := r.URL.Query().Get("columns")
+		cols, _ := strconv.Atoi(colsStr)
+		if cols <= 0 {
+			cols = 12
+		}
+
+		printConfig := printer.PrintConfig{
+			BatchCode:   batchIDStr,
+			Message:     msg,
+			WidthOption: widthOpt,
+			Format:      "pdf",
+			Columns:     cols,
+		}
+
+		// Set header to trigger pdf download
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"antifake-print-%s.pdf\"", batchIDStr))
+
+		err = printer.GenerateVectorPDF(w, printConfig, tokens)
+		if err != nil {
+			log.Printf("Failed to generate PDF print sheet: %v", err)
+		}
 		return
 	}
 

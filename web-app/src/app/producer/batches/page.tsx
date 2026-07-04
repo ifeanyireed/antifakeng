@@ -83,25 +83,41 @@ export default function ProducerBatches() {
           setTimeout(() => {
             setIsGenerating(false);
             setIsPrintModalOpen(false);
-            // Trigger sample PDF download containing custom config details
-            const blob = new Blob([
-              `AntiFakeNG Print Layout Package\n`,
-              `=================================\n`,
-              `Batch ID: ${activePrintBatch.id}\n`,
-              `Product: ${activePrintBatch.product}\n`,
-              `Code Count: ${activePrintBatch.count}\n`,
-              `File Format: ${fileFormat.toUpperCase()}\n`,
-              `Selected Layout Width: ${layoutWidth === "custom" ? `${customWidth} ${customWidthUnit}` : layoutWidth}\n`,
-              `Columns: ${gridColumns} across\n`,
-              `Print Message: "${printMessage}"\n\n`,
-              `This package contains print-ready high-resolution assets configured according to your specifications.\n`
-            ], { type: "text/plain" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `antifake-print-${activePrintBatch.id}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
+
+            // Attempt real backend PDF layout download
+            const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
+            
+            // Map known mock AURA batch code (B-AURA2606) or seeded batch ID (1) to the real database batch ID
+            let dbBatchID: string | null = null;
+            if (activePrintBatch.id === 1 || activePrintBatch.id === "1" || activePrintBatch.id === "B-AURA2606") {
+              dbBatchID = "1";
+            }
+
+            if (dbBatchID && token) {
+              const downloadUrl = `http://localhost:8080/api/producer/batches/${dbBatchID}/print?token=${encodeURIComponent(token)}&message=${encodeURIComponent(printMessage)}&width=${encodeURIComponent(layoutWidth === "custom" ? `${customWidth}${customWidthUnit}` : layoutWidth)}&columns=${gridColumns}`;
+              window.open(downloadUrl, "_blank");
+            } else {
+              // Trigger text descriptor fallback for frontend-only mock rows
+              const blob = new Blob([
+                `AntiFakeNG Print Layout Package (Mock Layout)\n`,
+                `===============================================\n`,
+                `Batch ID: ${activePrintBatch.id}\n`,
+                `Product: ${activePrintBatch.product}\n`,
+                `Code Count: ${activePrintBatch.count}\n`,
+                `File Format: ${fileFormat.toUpperCase()}\n`,
+                `Selected Layout Width: ${layoutWidth === "custom" ? `${customWidth} ${customWidthUnit}` : layoutWidth}\n`,
+                `Columns: ${gridColumns} across\n`,
+                `Print Message: "${printMessage}"\n\n`,
+                `This is a mock print run asset package because batch ${activePrintBatch.id} is a local mock row.\n`,
+                `To generate a real vector PDF, please create a new production batch or select a database-seeded batch.\n`
+              ], { type: "text/plain" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `antifake-print-${activePrintBatch.id}.txt`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }
           }, 500);
           return 100;
         }

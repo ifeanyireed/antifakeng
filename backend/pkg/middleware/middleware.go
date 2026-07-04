@@ -36,19 +36,23 @@ func CORS(next http.Handler) http.Handler {
 // RequireAuth extracts and validates the JWT from Authorization header
 func RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tokenStr := ""
 		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, `{"error": "Authorization header required"}`, http.StatusUnauthorized)
-			return
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenStr = parts[1]
+			}
 		}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			http.Error(w, `{"error": "Authorization header must be in format 'Bearer <token>'"}`, http.StatusUnauthorized)
-			return
+		if tokenStr == "" {
+			tokenStr = r.URL.Query().Get("token")
 		}
 
-		tokenStr := parts[1]
+		if tokenStr == "" {
+			http.Error(w, `{"error": "Authorization token required"}`, http.StatusUnauthorized)
+			return
+		}
 		claims, err := crypto.ValidateJWT(tokenStr)
 		if err != nil {
 			http.Error(w, `{"error": "Invalid or expired token"}`, http.StatusUnauthorized)
