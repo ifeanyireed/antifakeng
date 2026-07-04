@@ -31,6 +31,41 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
   const [verdict, setVerdict] = useState<string>(initialVerdict);
   const [otpError, setOtpError] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+
+  interface ProductDetails {
+    name: string;
+    sku: string;
+    category: string;
+    description: string;
+    image_url: string;
+    brand_name: string;
+  }
+
+  const [product, setProduct] = useState<ProductDetails | null>(null);
+
+  useEffect(() => {
+    const fetchProductDetails = async () => {
+      try {
+        const res = await fetch(`http://localhost:8080/api/verify/token/${token}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.product) {
+            setProduct({
+              name: data.product.name,
+              sku: data.product.sku,
+              category: data.product.category,
+              description: data.product.description,
+              image_url: data.product.image_url || "/logo.png",
+              brand_name: data.brand_name || "AntiFake Brand"
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load product details from backend:", err);
+      }
+    };
+    fetchProductDetails();
+  }, [token]);
   
   // Form states for reporting
   const [retailerLocation, setRetailerLocation] = useState("");
@@ -148,13 +183,26 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
 
                 {/* Product Metadata Card */}
                 <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 flex gap-4 items-center">
-                  <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    <img src="/logo.png" alt="Brand Logo" className="w-10 h-10 object-contain" />
+                  <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                    <img 
+                      src={product?.image_url || "/logo.png"} 
+                      alt={product?.name || "Product image"} 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/logo.png";
+                      }}
+                    />
                   </div>
                   <div className="text-left flex-1 min-w-0">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Product Details</span>
-                    <h3 className="text-sm font-bold text-slate-800 leading-tight truncate mt-0.5">AURA Skincare Serum</h3>
-                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">SKU: AURA-SERUM-50ML</p>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                      {product?.brand_name || "Product Details"}
+                    </span>
+                    <h3 className="text-sm font-bold text-slate-800 leading-tight truncate mt-0.5">
+                      {product?.name || "AURA Skincare Serum"}
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                      SKU: {product?.sku || "AURA-SERUM-50ML"}
+                    </p>
                     <span className="inline-block px-2 py-0.5 bg-slate-200 rounded font-mono text-[9px] font-bold text-slate-600 mt-1">
                       ID: {token}
                     </span>
@@ -333,7 +381,7 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
                       <div className="grid grid-cols-2 gap-y-3 gap-x-2 font-medium text-slate-700 mt-1">
                         <div>
                           <span className="text-slate-400 text-[10px]">Product SKU</span>
-                          <p className="font-bold text-slate-800 truncate">AURA-SERUM-50ML</p>
+                          <p className="font-bold text-slate-800 truncate">{product?.sku || "AURA-SERUM-50ML"}</p>
                         </div>
                         <div>
                           <span className="text-slate-400 text-[10px]">Production Batch</span>

@@ -15,16 +15,28 @@ import {
 
 export default function ProducerProducts() {
   const [products, setProducts] = useState([
-    { id: 1, name: "AURA Skincare Serum 50ml", sku: "AURA-SERUM-50ML", category: "Cosmetics", status: "Active", date: "June 20, 2026", scans: 14210 },
-    { id: 2, name: "AURA Cleanser 100ml", sku: "AURA-CLEANSE-100", category: "Cosmetics", status: "Active", date: "June 22, 2026", scans: 5120 },
-    { id: 3, name: "Hydra Essence", sku: "AURA-HYDRA-ESSENCE", category: "Cosmetics", status: "Active", date: "June 25, 2026", scans: 5482 },
-    { id: 4, name: "Retinol Therapy Gel", sku: "AURA-RETINOL-30", category: "Cosmetics", status: "Active", date: "July 01, 2026", scans: 0 }
+    { id: 1, name: "AURA Skincare Serum 50ml", sku: "AURA-SERUM-50ML", category: "Cosmetics", status: "Active", date: "June 20, 2026", scans: 14210, image_url: "/logo.png" },
+    { id: 2, name: "AURA Cleanser 100ml", sku: "AURA-CLEANSE-100", category: "Cosmetics", status: "Active", date: "June 22, 2026", scans: 5120, image_url: "/logo.png" },
+    { id: 3, name: "Hydra Essence", sku: "AURA-HYDRA-ESSENCE", category: "Cosmetics", status: "Active", date: "June 25, 2026", scans: 5482, image_url: "/logo.png" },
+    { id: 4, name: "Retinol Therapy Gel", sku: "AURA-RETINOL-30", category: "Cosmetics", status: "Active", date: "July 01, 2026", scans: 0, image_url: "/logo.png" }
   ]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newProductName, setNewProductName] = useState("");
   const [newProductSku, setNewProductSku] = useState("");
   const [newProductCat, setNewProductCat] = useState("Cosmetics");
+  const [productImage, setProductImage] = useState("");
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProductImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,11 +50,13 @@ export default function ProducerProducts() {
           category: newProductCat,
           status: "Active",
           date: new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }),
-          scans: 0
+          scans: 0,
+          image_url: productImage || "/logo.png"
         }
       ]);
       setNewProductName("");
       setNewProductSku("");
+      setProductImage("");
       setIsAddModalOpen(false);
     }
   };
@@ -100,8 +114,12 @@ export default function ProducerProducts() {
               {products.map((p) => (
                 <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                   <td className="p-4 font-bold text-slate-800 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-                      <IconBox className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200/50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {p.image_url ? (
+                        <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <IconBox className="w-4 h-4 text-slate-500" />
+                      )}
                     </div>
                     {p.name}
                   </td>
@@ -195,6 +213,51 @@ export default function ProducerProducts() {
                     <option value="Consumer Goods">Consumer Goods</option>
                     <option value="Chemicals">Chemicals</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Product Image</label>
+                  <div className="flex flex-col gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <div className="flex items-center gap-3">
+                      {productImage ? (
+                        <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex-shrink-0 relative group">
+                          <img src={productImage} alt="Preview" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setProductImage("")}
+                            className="absolute inset-0 bg-black/40 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <IconX className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-slate-200 flex-shrink-0 flex items-center justify-center text-slate-400 border border-slate-300">
+                          <IconBox className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div className="flex-1 flex flex-col gap-1.5">
+                        <input
+                          type="text"
+                          value={productImage}
+                          onChange={(e) => setProductImage(e.target.value)}
+                          placeholder="Image URL (e.g. /product.png)"
+                          className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1]"
+                        />
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black text-slate-400 uppercase">Or</span>
+                          <label className="text-[10px] text-[#0089C1] hover:underline font-bold cursor-pointer">
+                            Upload File...
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 mt-4">
