@@ -20,12 +20,11 @@ func UploadImage(file multipart.File, header *multipart.FileHeader) (string, err
 	host := os.Getenv("SFTP_HOST")
 	port := os.Getenv("SFTP_PORT")
 	user := os.Getenv("SFTP_USER")
-	pass := os.Getenv("SFTP_PASS")
 	remoteDir := os.Getenv("SFTP_REMOTE_DIR")
 	baseURL := os.Getenv("SFTP_BASE_URL")
 
-	// If SFTP credentials are empty, fallback to local uploads directory
-	if host == "" || user == "" || pass == "" {
+	// If SFTP configurations are missing, fallback to local uploads directory
+	if host == "" || user == "" {
 		localDir := "./uploads"
 		if err := os.MkdirAll(localDir, 0755); err != nil {
 			return "", fmt.Errorf("failed to create local uploads directory: %w", err)
@@ -50,35 +49,33 @@ func UploadImage(file multipart.File, header *multipart.FileHeader) (string, err
 		port = "65002" // default Hostinger SSH port
 	}
 
-	// Setup SSH authentication methods
-	var authMethods []ssh.AuthMethod
+	// Setup SSH authentication methods (require SSH private key for security)
 	keyPath := os.Getenv("SFTP_KEY_PATH")
-
-	if keyPath != "" {
-		keyBytes, err := os.ReadFile(keyPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read SSH private key file %s: %w", keyPath, err)
-		}
-
-		var signer ssh.Signer
-		passphrase := os.Getenv("SFTP_KEY_PASSPHRASE")
-		if passphrase != "" {
-			signer, err = ssh.ParsePrivateKeyWithPassphrase(keyBytes, []byte(passphrase))
-		} else {
-			signer, err = ssh.ParsePrivateKey(keyBytes)
-		}
-		if err != nil {
-			return "", fmt.Errorf("failed to parse SSH private key: %w", err)
-		}
-		authMethods = append(authMethods, ssh.PublicKeys(signer))
-	} else {
-		authMethods = append(authMethods, ssh.Password(pass))
+	if keyPath == "" {
+		return "", fmt.Errorf("SFTP key authentication required: SFTP_KEY_PATH environment variable is not set")
 	}
 
-	// SSH Config
+	keyBytes, err := os.ReadFile(keyPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read SSH private key file %s: %w", keyPath, err)
+	}
+
+	var signer ssh.Signer
+	passphrase := os.Getenv("SFTP_KEY_PASSPHRASE")
+	var parseErr error
+	if passphrase != "" {
+		signer, parseErr = ssh.ParsePrivateKeyWithPassphrase(keyBytes, []byte(passphrase))
+	} else {
+		signer, parseErr = ssh.ParsePrivateKey(keyBytes)
+	}
+	if parseErr != nil {
+		return "", fmt.Errorf("failed to parse SSH private key: %w", parseErr)
+	}
+
+	// SSH Config using Key Authentication only
 	sshConfig := &ssh.ClientConfig{
 		User:            user,
-		Auth:            authMethods,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         10 * time.Second,
 	}
