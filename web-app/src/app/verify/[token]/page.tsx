@@ -42,6 +42,7 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
   }
 
   const [product, setProduct] = useState<ProductDetails | null>(null);
+  const [verificationData, setVerificationData] = useState<any>(null);
 
   useEffect(() => {
     const fetchProductDetails = async () => {
@@ -49,15 +50,25 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
         const res = await fetch(`http://localhost:8080/api/verify/token/${token}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.product) {
-            setProduct({
-              name: data.product.name,
-              sku: data.product.sku,
-              category: data.product.category,
-              description: data.product.description,
-              image_url: data.product.image_url || "/logo.png",
-              brand_name: data.brand_name || "AntiFake Brand"
-            });
+          if (data.verdict === "invalid") {
+            setVerdict("invalid");
+            setStep("verdict");
+            setVerificationData(data);
+          } else if (data.verdict === "recalled") {
+            setVerdict("recalled");
+            setStep("verdict");
+            setVerificationData(data);
+          } else {
+            if (data.product) {
+              setProduct({
+                name: data.product.name,
+                sku: data.product.sku,
+                category: data.product.category,
+                description: data.product.description,
+                image_url: data.product.image_url || "/logo.png",
+                brand_name: data.brand_name || "AntiFake Brand"
+              });
+            }
           }
         }
       } catch (err) {
@@ -108,6 +119,7 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
                 if (res.ok) {
                   const data = await res.json();
                   setVerdict(data.verdict);
+                  setVerificationData(data);
                 }
               } catch (err) {
                 console.error("Risk scan request error:", err);
@@ -181,9 +193,31 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
     }
   };
 
-  const handleReportSubmit = (e: React.FormEvent) => {
+  const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep("report_success");
+    try {
+      const res = await fetch("http://localhost:8080/api/analytics/reports/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: token,
+          phone: phoneNumber,
+          description: reportComment,
+          retailer_name: retailerName,
+          retailer_location: retailerLocation,
+          photo_url: "" // File uploader mock
+        })
+      });
+      if (res.ok) {
+        setStep("report_success");
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to submit report.");
+      }
+    } catch (err) {
+      console.error("Report submit error:", err);
+      alert("Analytics reporting service is offline.");
+    }
   };
 
   // Reset verification simulator
@@ -478,19 +512,27 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
                       <div className="grid grid-cols-2 gap-y-3 gap-x-2 font-medium text-slate-700 mt-1">
                         <div>
                           <span className="text-slate-400 text-[10px]">Product SKU</span>
-                          <p className="font-bold text-slate-800 truncate">{product?.sku || "AURA-SERUM-50ML"}</p>
+                          <p className="font-bold text-slate-800 truncate">{verificationData?.product?.sku || product?.sku || "---"}</p>
                         </div>
                         <div>
                           <span className="text-slate-400 text-[10px]">Production Batch</span>
-                          <p className="font-bold text-slate-800">B-AURA2606</p>
+                          <p className="font-bold text-slate-800">{verificationData?.batch?.batch_code || "---"}</p>
                         </div>
                         <div>
                           <span className="text-slate-400 text-[10px]">Manufacture Date</span>
-                          <p className="font-bold text-slate-800">June 20, 2026</p>
+                          <p className="font-bold text-slate-800">
+                            {verificationData?.batch?.manufacture_date 
+                              ? new Date(verificationData.batch.manufacture_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) 
+                              : "---"}
+                          </p>
                         </div>
                         <div>
                           <span className="text-slate-400 text-[10px]">Expiry Date</span>
-                          <p className="font-bold text-slate-800 font-mono">June 20, 2029</p>
+                          <p className="font-bold text-slate-800 font-mono">
+                            {verificationData?.batch?.expiry_date 
+                              ? new Date(verificationData.batch.expiry_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) 
+                              : "---"}
+                          </p>
                         </div>
                       </div>
                     </div>

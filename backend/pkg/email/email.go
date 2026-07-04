@@ -30,7 +30,12 @@ func SendProducerSignupNotification(producerName, producerEmail, plan string) er
 	if recipient == "" {
 		recipient = "ifeanyireed@gmail.com"
 	}
+	fromEmail := os.Getenv("FROM_EMAIL")
+	if fromEmail == "" {
+		fromEmail = "noreply@antifake.ng"
+	}
 
+	fromHeader := fmt.Sprintf("From: AntiFakeNG <%s>\n", fromEmail)
 	subject := fmt.Sprintf("Subject: 🚀 New Producer Registered: %s\n", producerName)
 	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 	body := fmt.Sprintf(`
@@ -61,7 +66,7 @@ func SendProducerSignupNotification(producerName, producerEmail, plan string) er
 		</html>
 	`, producerName, producerEmail, plan)
 
-	msg := []byte(subject + mime + body)
+	msg := []byte(fromHeader + subject + mime + body)
 	addr := fmt.Sprintf("%s:%s", smtpHost, smtpPortStr)
 	auth := smtp.PlainAuth("", smtpUser, smtpPass, smtpHost)
 

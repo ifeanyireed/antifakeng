@@ -41,14 +41,54 @@ export default function ConsumerPortal() {
     "Finalizing threat risk score..."
   ];
 
+  const [channel, setChannel] = useState<"whatsapp" | "sms">("whatsapp");
+  const [sessionToken, setSessionToken] = useState("");
+  const [apiError, setApiError] = useState("");
+  const [verificationData, setVerificationData] = useState<any>(null);
+
+  interface ProductDetails {
+    name: string;
+    sku: string;
+    category: string;
+    description: string;
+    image_url: string;
+    brand_name: string;
+  }
+  const [product, setProduct] = useState<ProductDetails | null>(null);
+
   useEffect(() => {
     if (step === "verifying") {
       const interval = setInterval(() => {
         setVerifyingLogStep((prev) => {
           if (prev >= verifyingLogs.length - 1) {
             clearInterval(interval);
+            
+            // Execute real backend risk check
+            const runCheck = async () => {
+              try {
+                const res = await fetch(`http://localhost:8080/api/verify/token/${token}/check`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    session_token: sessionToken,
+                    device_id: "browser-manual-check",
+                    ip_country: "Nigeria"
+                  })
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  setVerdict(data.verdict);
+                  setVerificationData(data);
+                }
+              } catch (err) {
+                console.error("Risk scan request error:", err);
+              } finally {
+                setStep("verdict");
+              }
+            };
+            
             setTimeout(() => {
-              setStep("verdict");
+              runCheck();
             }, 800);
             return prev;
           }
@@ -57,36 +97,124 @@ export default function ConsumerPortal() {
       }, 700);
       return () => clearInterval(interval);
     }
-  }, [step]);
+  }, [step, sessionToken, token]);
 
-  const handleTokenSubmit = (e: React.FormEvent) => {
+  const handleTokenSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (token.length >= 4) {
-      setStep("landing");
+      setApiError("");
+      try {
+        const res = await fetch(`http://localhost:8080/api/verify/token/${token}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.verdict === "invalid") {
+            setVerdict("invalid");
+            setStep("verdict");
+          } else if (data.verdict === "recalled") {
+            setVerdict("recalled");
+            setStep("verdict");
+            setVerificationData(data);
+          } else {
+            if (data.product) {
+              setProduct({
+                name: data.product.name,
+                sku: data.product.sku,
+                category: data.product.category,
+                description: data.product.description,
+                image_url: data.product.image_url || "/logo.png",
+                brand_name: data.brand_name || "AntiFake Brand"
+              });
+            }
+            setStep("landing");
+          }
+        } else {
+          setVerdict("invalid");
+          setStep("verdict");
+        }
+      } catch (err) {
+        setApiError("Verification service is offline.");
+      }
     }
   };
 
-  const handlePhoneSubmit = (e: React.FormEvent) => {
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApiError("");
     if (phoneNumber.length >= 10) {
-      setOtpSent(true);
-      setStep("otp");
+      try {
+        const res = await fetch("http://localhost:8080/api/auth/otp/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token,
+            phone: "+234" + phoneNumber,
+            channel
+          })
+        });
+        if (res.ok) {
+          setOtpSent(true);
+          setStep("otp");
+        } else {
+          const data = await res.json();
+          setApiError(data.error || "Failed to request code.");
+        }
+      } catch (err) {
+        setApiError("Auth server is currently offline.");
+      }
     }
   };
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otpCode === "123456" || otpCode.length === 6) {
-      setStep("verifying");
-      setVerifyingLogStep(0);
-    } else {
-      setOtpError(true);
+    setApiError("");
+    try {
+      const res = await fetch("http://localhost:8080/api/auth/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          phone: "+234" + phoneNumber,
+          code: otpCode
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSessionToken(data.session_token);
+        setStep("verifying");
+        setVerifyingLogStep(0);
+      } else {
+        setOtpError(true);
+      }
+    } catch (err) {
+      setApiError("Authentication connection timeout.");
     }
   };
 
-  const handleReportSubmit = (e: React.FormEvent) => {
+  const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep("report_success");
+    try {
+      const res = await fetch("http://localhost:8080/api/analytics/reports/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: token,
+          phone: phoneNumber,
+          description: reportComment,
+          retailer_name: retailerName,
+          retailer_location: retailerLocation,
+          photo_url: ""
+        })
+      });
+      if (res.ok) {
+        setStep("report_success");
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to submit report.");
+      }
+    } catch (err) {
+      console.error("Report submit error:", err);
+      alert("Analytics reporting service is offline.");
+    }
   };
 
   const handleReset = (newVerdict: string) => {
@@ -96,6 +224,8 @@ export default function ConsumerPortal() {
     setOtpCode("");
     setOtpSent(false);
     setOtpError(false);
+    setApiError("");
+    setVerificationData(null);
   };
 
   return (
@@ -191,12 +321,12 @@ export default function ConsumerPortal() {
                 {/* Product Metadata Card */}
                 <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 flex gap-4 items-center">
                   <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    <img src="/logo.png" alt="Brand Logo" className="w-10 h-10 object-contain" />
+                    <img src={product?.image_url || "/logo.png"} alt="Brand Logo" className="w-10 h-10 object-contain" />
                   </div>
                   <div className="text-left flex-1 min-w-0">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Product Details</span>
-                    <h3 className="text-sm font-bold text-slate-800 leading-tight truncate mt-0.5">AURA Skincare Serum</h3>
-                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">SKU: AURA-SERUM-50ML</p>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{product?.brand_name || "Product Details"}</span>
+                    <h3 className="text-sm font-bold text-slate-800 leading-tight truncate mt-0.5">{product?.name || "Authenticating..."}</h3>
+                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">SKU: {product?.sku || "---"}</p>
                     <span className="inline-block px-2 py-0.5 bg-slate-200 rounded font-mono text-[9px] font-bold text-slate-600 mt-1">
                       ID: {token || "9F3C-71AE"}
                     </span>
@@ -383,19 +513,27 @@ export default function ConsumerPortal() {
                       <div className="grid grid-cols-2 gap-y-3 gap-x-2 font-medium text-slate-700 mt-1">
                         <div>
                           <span className="text-slate-400 text-[10px]">Product SKU</span>
-                          <p className="font-bold text-slate-800 truncate">AURA-SERUM-50ML</p>
+                          <p className="font-bold text-slate-800 truncate">{verificationData?.product?.sku || product?.sku || "---"}</p>
                         </div>
                         <div>
                           <span className="text-slate-400 text-[10px]">Production Batch</span>
-                          <p className="font-bold text-slate-800">B-AURA2606</p>
+                          <p className="font-bold text-slate-800">{verificationData?.batch?.batch_code || "---"}</p>
                         </div>
                         <div>
                           <span className="text-slate-400 text-[10px]">Manufacture Date</span>
-                          <p className="font-bold text-slate-800">June 20, 2026</p>
+                          <p className="font-bold text-slate-800">
+                            {verificationData?.batch?.manufacture_date 
+                              ? new Date(verificationData.batch.manufacture_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) 
+                              : "---"}
+                          </p>
                         </div>
                         <div>
                           <span className="text-slate-400 text-[10px]">Expiry Date</span>
-                          <p className="font-bold text-slate-800 font-mono">June 20, 2029</p>
+                          <p className="font-bold text-slate-800 font-mono">
+                            {verificationData?.batch?.expiry_date 
+                              ? new Date(verificationData.batch.expiry_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) 
+                              : "---"}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -491,7 +629,7 @@ export default function ConsumerPortal() {
                       </div>
                       <h2 className="text-2xl font-black text-slate-600 tracking-tight text-display">Batch Recalled</h2>
                       <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                        Notice: This product is genuine but belongs to Batch <span className="font-bold text-slate-800">B-AURA2606</span> which has been recalled by the manufacturer.
+                        Notice: This product is genuine but belongs to Batch <span className="font-bold text-slate-800">{verificationData?.batch?.batch_code || "---"}</span> which has been recalled by the manufacturer.
                       </p>
                     </div>
 

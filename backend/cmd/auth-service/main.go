@@ -71,6 +71,7 @@ func main() {
 	mux.HandleFunc("/api/auth/login", handleLogin)
 	mux.HandleFunc("/api/auth/otp/request", handleOTPRequest)
 	mux.HandleFunc("/api/auth/otp/verify", handleOTPVerify)
+	mux.Handle("/api/auth/me", middleware.RequireAuth(http.HandlerFunc(handleMe)))
 
 	// Admin route to seed default data if DB is empty
 	mux.HandleFunc("/api/auth/seed", handleSeedData)
@@ -432,3 +433,51 @@ func handleSeedData(w http.ResponseWriter, r *http.Request) {
 		"message": "Database successfully seeded with tenant 'AURA Skincare', test user 'admin@auraskin.com' (password: aura123456), product, batch, and test QR token '9F3C-71AE'.",
 	})
 }
+
+func handleMe(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	var email, role, status string
+	var producerID sql.NullInt64
+	err := db.DB.QueryRow(`SELECT email, role, producer_id, status FROM users WHERE id = ?`, userID).Scan(&email, &role, &producerID, &status)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, `{"error": "User not found"}`, http.StatusNotFound)
+		} else {
+			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	roleUpper := strings.ToUpper(role)
+	
+	// Map to User struct required by front-end
+	res := map[string]interface{}{
+		"id":    fmt.Sprintf("%d", userID),
+		"email": email,
+		"name":  roleUpper + " Admin",
+		"role":  roleUpper,
+	}
+	if producerID.Valid {
+		res["producer_id"] = producerID.Int64
+		// Retrieve producer name
+		var prodName string
+		db.DB.QueryRow(`SELECT name FROM producers WHERE id = ?`, producerID.Int64).Scan(&prodName)
+		if prodName != "" {
+			res["name"] = prodName + " Admin"
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
+}
+

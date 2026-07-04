@@ -36,37 +36,104 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      // Mock registration fallback
-      setTimeout(() => {
-        setIsLoading(false);
-        login("mock-token-reg", {
-          id: "mock-reg-id",
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+      const res = await fetch("http://localhost:8080/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          producer_name: name,
+          producer_slug: slug,
+          contact_email: email,
+          plan_tier: "growth",
           email: email,
-          name: name,
-          role: "PRODUCER",
+          password: password
+        })
+      });
+
+      if (res.ok) {
+        const loginRes = await fetch("http://localhost:8080/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
         });
-        router.push("/onboarding");
-      }, 1000);
-    } catch (err: any) {
+        
+        setIsLoading(false);
+        if (loginRes.ok) {
+          const loginData = await loginRes.json();
+          login(loginData.token, {
+            id: String(loginData.producer_id),
+            email: loginData.email,
+            name: name,
+            role: "PRODUCER",
+          });
+          localStorage.setItem("ahnara_token", loginData.token);
+          router.push("/onboarding");
+        } else {
+          router.push("/login?registered=true");
+        }
+      } else {
+        setIsLoading(false);
+        const data = await res.json();
+        setError(data.error || "Failed to register.");
+      }
+    } catch (err) {
       setIsLoading(false);
-      setError(err.message || "Failed to register.");
+      setError("Registration service is currently offline.");
     }
   };
 
-  const handleQuickRegister = () => {
+  const handleQuickRegister = async () => {
     setIsLoading(true);
     setError(null);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
       const randomId = Math.floor(Math.random() * 1000);
-      login("mock-token-quick-reg", {
-        id: `mock-${randomId}`,
-        email: `brand${randomId}@auralabs.com`,
-        name: "New Brand Admin",
-        role: "PRODUCER",
+      const randEmail = `brand${randomId}@auralabs.com`;
+      const randName = `Aura Labs ${randomId}`;
+      const slug = `aura-labs-${randomId}`;
+      const randPassword = "password123";
+
+      const res = await fetch("http://localhost:8080/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          producer_name: randName,
+          producer_slug: slug,
+          contact_email: randEmail,
+          plan_tier: "growth",
+          email: randEmail,
+          password: randPassword
+        })
       });
-      router.push("/onboarding");
-    }, 600);
+
+      if (res.ok) {
+        const loginRes = await fetch("http://localhost:8080/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: randEmail, password: randPassword })
+        });
+        setIsLoading(false);
+        if (loginRes.ok) {
+          const loginData = await loginRes.json();
+          login(loginData.token, {
+            id: String(loginData.producer_id),
+            email: loginData.email,
+            name: randName,
+            role: "PRODUCER",
+          });
+          localStorage.setItem("ahnara_token", loginData.token);
+          router.push("/onboarding");
+        } else {
+          router.push("/login");
+        }
+      } else {
+        setIsLoading(false);
+        const data = await res.json();
+        setError(data.error || "Failed to quick register.");
+      }
+    } catch (err) {
+      setIsLoading(false);
+      setError("Registration service is offline.");
+    }
   };
 
   return (
