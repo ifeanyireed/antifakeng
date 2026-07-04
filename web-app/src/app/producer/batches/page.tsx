@@ -53,8 +53,27 @@ export default function ProducerBatches() {
   const [customWidth, setCustomWidth] = useState("48");
   const [customWidthUnit, setCustomWidthUnit] = useState("inch");
   const [fileFormat, setFileFormat] = useState("pdf");
-  const [gridColumns, setGridColumns] = useState("12");
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const getRollWidthMM = () => {
+    if (layoutWidth === "4ft") return 1219.2;
+    if (layoutWidth === "6ft") return 1828.8;
+    if (layoutWidth === "10ft") return 3048.0;
+    if (layoutWidth === "custom") {
+      const val = parseFloat(customWidth) || 0;
+      if (customWidthUnit === "inch") return val * 25.4;
+      if (customWidthUnit === "ft") return val * 304.8;
+      if (customWidthUnit === "cm") return val * 10;
+    }
+    return 1219.2;
+  };
+
+  const getDynamicColumns = () => {
+    const rollWidthMM = getRollWidthMM();
+    const labelWidthMM = 80;
+    const spacingMM = 0.26; // 1px = ~0.26mm
+    return Math.floor((rollWidthMM + spacingMM) / (labelWidthMM + spacingMM)) || 1;
+  };
   const [generationProgress, setGenerationProgress] = useState(0);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -435,6 +454,11 @@ export default function ProducerBatches() {
                     </div>
 
                     {/* Width / Roll Layout configuration */}
+                    <div className="py-2">
+                      <p className="text-[10px] text-slate-400 font-bold leading-normal">
+                        * Spacing between individual cards is automatically set to exactly 1px (TBLR) and columns are dynamically auto-fitted to cover your roll width.
+                      </p>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Layout Roll Width</label>
@@ -494,30 +518,6 @@ export default function ProducerBatches() {
                         </div>
                       </div>
                     )}
-
-                    {/* Grid Columns density */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grid Columns Across</label>
-                        <select
-                          value={gridColumns}
-                          onChange={(e) => setGridColumns(e.target.value)}
-                          disabled={isGenerating}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white disabled:opacity-60"
-                        >
-                          <option value="8">8 labels wide</option>
-                          <option value="12">12 labels wide</option>
-                          <option value="16">16 labels wide</option>
-                          <option value="20">20 labels wide</option>
-                        </select>
-                      </div>
-                      
-                      <div className="flex flex-col justify-end">
-                        <div className="text-[10px] text-slate-400 font-bold leading-normal">
-                          * Recommended spacing between individual items is automatically set to 0.125 inches (bleed margin).
-                        </div>
-                      </div>
-                    </div>
 
                     {/* Actions */}
                     <div className="flex gap-3 mt-4 border-t border-slate-100 pt-4">
@@ -584,14 +584,14 @@ export default function ProducerBatches() {
                     <div className="flex-1 flex flex-col gap-2 justify-center border border-dashed border-slate-200 rounded-xl p-4 bg-white/50">
                       <div className="flex justify-between text-[10px] font-bold text-slate-400">
                         <span>Roll Layout: {layoutWidth === "custom" ? `${customWidth} ${customWidthUnit}` : layoutWidth} Width</span>
-                        <span>{gridColumns} Columns</span>
+                        <span>{getDynamicColumns()} Columns (Auto-fit)</span>
                       </div>
                       
                       {/* Visual grid rendering */}
                       <div className="w-full h-24 bg-white border border-slate-200 rounded-md relative p-2 flex flex-col gap-1 overflow-hidden">
                         {[...Array(3)].map((_, r) => (
                           <div key={r} className="flex gap-1 justify-between">
-                            {[...Array(parseInt(gridColumns))].map((_, c) => (
+                            {[...Array(Math.min(getDynamicColumns(), 20))].map((_, c) => (
                               <div key={c} className="w-2.5 h-2.5 bg-slate-100 border border-slate-200/80 rounded-xs flex items-center justify-center p-0.5">
                                 <div className="w-full h-full bg-slate-400/50 rounded-xs" />
                               </div>
@@ -652,10 +652,10 @@ export default function ProducerBatches() {
                 {previewUrl === "html" ? (
                   <div className="flex flex-col gap-4 w-full">
                     <div
-                      className="grid gap-3 justify-center"
+                      className="grid gap-[1px] justify-start overflow-auto"
                       style={{
-                        gridTemplateColumns: `repeat(auto-fill, minmax(80mm, 1fr))`,
-                        width: "100%",
+                        gridTemplateColumns: `repeat(${getDynamicColumns()}, 80mm)`,
+                        width: "fit-content",
                         maxWidth: "100%",
                       }}
                     >
@@ -665,9 +665,9 @@ export default function ProducerBatches() {
                           className="w-[80mm] h-[40mm] border border-slate-200 rounded-lg flex overflow-hidden p-2 bg-white text-slate-800 shrink-0 select-none shadow-xs mx-auto"
                         >
                           {/* Left: QR Code */}
-                          <div className="w-[34mm] h-[34mm] flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md p-1">
+                          <div className="w-[34mm] h-[34mm] flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md p-[2px]">
                             <img
-                              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://antifake.ng/verify?token=${tokenObj.token}`)}`}
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=0&data=${encodeURIComponent(`https://antifake.ng/verify?token=${tokenObj.token}`)}`}
                               alt="QR Code"
                               className="w-full h-full object-contain"
                             />
@@ -777,10 +777,10 @@ export default function ProducerBatches() {
             }
           `}} />
           <div
-            className="grid gap-[5mm] p-[5mm]"
+            className="grid gap-[1px] p-[1px]"
             style={{
-              gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
-              width: layoutWidth === "4ft" ? "1219.2mm" : layoutWidth === "6ft" ? "1828.8mm" : layoutWidth === "10ft" ? "3048.0mm" : "100%",
+              gridTemplateColumns: `repeat(${getDynamicColumns()}, 80mm)`,
+              width: `${getRollWidthMM()}mm`,
             }}
           >
             {tokensList.map((tokenObj, idx) => (
@@ -789,9 +789,9 @@ export default function ProducerBatches() {
                 className="print-card w-[80mm] h-[40mm] border border-slate-300 rounded-lg flex overflow-hidden p-2 bg-white text-slate-800 shrink-0 select-none"
               >
                 {/* Left: QR Code */}
-                <div className="w-[34mm] h-[34mm] flex items-center justify-center bg-white border border-slate-100 rounded-md p-1">
+                <div className="w-[34mm] h-[34mm] flex items-center justify-center bg-white border border-slate-100 rounded-md p-[2px]">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://antifake.ng/verify?token=${tokenObj.token}`)}`}
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=0&data=${encodeURIComponent(`https://antifake.ng/verify?token=${tokenObj.token}`)}`}
                     alt="QR Code"
                     className="w-full h-full object-contain"
                   />
