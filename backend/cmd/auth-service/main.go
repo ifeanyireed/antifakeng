@@ -14,6 +14,7 @@ import (
 	"github.com/ahnara/antifake/backend/pkg/db"
 	"github.com/ahnara/antifake/backend/pkg/middleware"
 	"github.com/ahnara/antifake/backend/pkg/models"
+	"github.com/ahnara/antifake/backend/pkg/whatsapp"
 )
 
 type RegisterReq struct {
@@ -54,6 +55,9 @@ func main() {
 
 	// Seed random number generator
 	rand.Seed(time.Now().UnixNano())
+
+	// Initialize WhatsApp client
+	go whatsapp.InitWhatsApp()
 
 	// Create a router
 	mux := http.NewServeMux()
@@ -230,12 +234,26 @@ func handleOTPRequest(w http.ResponseWriter, r *http.Request) {
 	otpStore[req.Phone] = code
 	otpMutex.Unlock()
 
-	log.Printf("[MOCK OTP] Sent code %s to consumer phone %s for token %s", code, req.Phone, req.Token)
+	log.Printf("[OTP] Generated code %s for consumer phone %s for token %s", code, req.Phone, req.Token)
+
+	// Send real OTP via WhatsApp
+	var waStatus = "mock_sent"
+	var waError = ""
+	err := whatsapp.SendOTP(req.Phone, code, req.Token)
+	if err != nil {
+		log.Printf("[WhatsApp] Failed to send OTP to %s: %v", req.Phone, err)
+		waStatus = "failed"
+		waError = err.Error()
+	} else {
+		waStatus = "whatsapp_sent"
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":  "sent",
-		"message": fmt.Sprintf("OTP request received. For testing, use code: %s", code),
+		"status":          "sent",
+		"message":         fmt.Sprintf("OTP request received. For testing, use code: %s", code),
+		"whatsapp_status": waStatus,
+		"whatsapp_error":  waError,
 	})
 }
 
