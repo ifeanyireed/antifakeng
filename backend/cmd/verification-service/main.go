@@ -73,7 +73,8 @@ func fetchTokenMetadata(w http.ResponseWriter, token string) {
 	var q models.QRCode
 	var p models.Product
 	var b models.Batch
-	var brandName, brandLogo string
+	var brandName string
+	var brandLogo sql.NullString
 	var desc, img sql.NullString
 
 	query := `SELECT q.id, q.batch_id, q.token, q.signature, q.status, 
@@ -105,6 +106,7 @@ func fetchTokenMetadata(w http.ResponseWriter, token string) {
 		})
 		return
 	} else if err != nil {
+		log.Printf("Database error in fetchTokenMetadata: %v", err)
 		http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
 		return
 	}
@@ -119,7 +121,7 @@ func fetchTokenMetadata(w http.ResponseWriter, token string) {
 			Product:   p,
 			Batch:     b,
 			BrandName: brandName,
-			BrandLogo: brandLogo,
+			BrandLogo: brandLogo.String,
 		})
 		return
 	}
@@ -134,7 +136,7 @@ func fetchTokenMetadata(w http.ResponseWriter, token string) {
 			Product:   p,
 			Batch:     b,
 			BrandName: brandName,
-			BrandLogo: brandLogo,
+			BrandLogo: brandLogo.String,
 		})
 		return
 	}
@@ -147,7 +149,7 @@ func fetchTokenMetadata(w http.ResponseWriter, token string) {
 		Product:   p,
 		Batch:     b,
 		BrandName: brandName,
-		BrandLogo: brandLogo,
+		BrandLogo: brandLogo.String,
 	})
 }
 

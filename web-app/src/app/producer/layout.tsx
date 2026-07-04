@@ -25,9 +25,9 @@ export default function ProducerLayout({ children }: { children: React.ReactNode
     { name: "Dashboard", href: "/producer/dashboard", icon: IconLayoutDashboard, activeIcon: IconLayoutDashboardFilled },
     { name: "Products", href: "/producer/products", icon: IconBox, activeIcon: IconBox },
     { name: "Batches", href: "/producer/batches", icon: IconQrcode, activeIcon: IconQrcode },
-    { name: "Fraud Alerts", href: "/producer/alerts", icon: IconAlertOctagon, activeIcon: IconAlertTriangle },
-    { name: "Scan History", href: "/producer/history", icon: IconClock, activeIcon: IconClock },
-    { name: "Consumer Reports", href: "/producer/reports", icon: IconFileText, activeIcon: IconFileText },
+    { name: "Alerts", href: "/producer/alerts", icon: IconAlertOctagon, activeIcon: IconAlertTriangle },
+    { name: "History", href: "/producer/history", icon: IconClock, activeIcon: IconClock },
+    { name: "Reports", href: "/producer/reports", icon: IconFileText, activeIcon: IconFileText },
   ];
 
   return (
@@ -75,14 +75,16 @@ export default function ProducerLayout({ children }: { children: React.ReactNode
             Plan: Standard
           </span>
 
-          <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all relative bg-white shadow-xs">
-            <IconBell className="w-5 h-5" />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-          </button>
+          <Link href="/producer/notifications">
+            <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all relative bg-white shadow-xs">
+              <IconBell className="w-5 h-5" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+            </button>
+          </Link>
           
           <div className="h-8 w-px bg-slate-200" />
           
-          <div className="flex items-center gap-3">
+          <Link href="/producer/profile" className="flex items-center gap-3 hover:opacity-85 transition-all cursor-pointer">
             <img
               src="/character3.jpg"
               alt="Profile Avatar"
@@ -94,7 +96,7 @@ export default function ProducerLayout({ children }: { children: React.ReactNode
                 Producer Account
               </span>
             </div>
-          </div>
+          </Link>
         </div>
       </header>
 
