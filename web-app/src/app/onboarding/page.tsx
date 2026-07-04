@@ -18,7 +18,12 @@ import {
 import { AhnaraCard } from "@/components/ahnara/AhnaraCard";
 import { AhnaraButton } from "@/components/ahnara/AhnaraButton";
 import { AhnaraInput } from "@/components/ahnara/AhnaraInput";
-import PaystackButton from "@/components/ahnara/PaystackButton";
+import dynamic from "next/dynamic";
+
+const PaystackButton = dynamic(
+  () => import("@/components/ahnara/PaystackButton"),
+  { ssr: false }
+);
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -31,7 +36,7 @@ export default function OnboardingPage() {
   const [hqAddress, setHqAddress] = useState("");
   
   // Step 2: Plan Selection state
-  const [selectedPlan, setSelectedPlan] = useState("Standard");
+  const [selectedPlan, setSelectedPlan] = useState("Growth");
 
   // Step 3: API Key state
   const [apiKey, setApiKey] = useState("");
@@ -236,6 +241,27 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+                  {/* Starter Plan */}
+                  <div 
+                    onClick={() => setSelectedPlan("Starter")}
+                    className={`border-2 rounded-2xl p-5 cursor-pointer flex flex-col gap-3 transition-all ${
+                      selectedPlan === "Starter"
+                        ? "border-[#1E293B] bg-slate-50/50 shadow-sm"
+                        : "border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Starter</span>
+                    <div>
+                      <h4 className="text-lg font-black text-slate-800">25,000</h4>
+                      <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Codes issued / month</p>
+                    </div>
+                    <ul className="text-[10px] text-slate-500 flex flex-col gap-1 mt-2 font-medium border-t border-slate-100 pt-3">
+                      <li>✓ Single Brand</li>
+                      <li>✓ Core Analytics</li>
+                      <li className="font-bold text-[#608216] mt-1">₦150,000/mo</li>
+                    </ul>
+                  </div>
+
                   {/* Growth Plan */}
                   <div 
                     onClick={() => setSelectedPlan("Growth")}
@@ -247,32 +273,13 @@ export default function OnboardingPage() {
                   >
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Growth</span>
                     <div>
-                      <h4 className="text-lg font-black text-slate-800">50,000</h4>
-                      <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Codes issued / month</p>
-                    </div>
-                    <ul className="text-[10px] text-slate-500 flex flex-col gap-1 mt-2 font-medium border-t border-slate-100 pt-3">
-                      <li>✓ Single Brand</li>
-                      <li>✓ Core Analytics</li>
-                    </ul>
-                  </div>
-
-                  {/* Standard Plan */}
-                  <div 
-                    onClick={() => setSelectedPlan("Standard")}
-                    className={`border-2 rounded-2xl p-5 cursor-pointer flex flex-col gap-3 transition-all ${
-                      selectedPlan === "Standard"
-                        ? "border-[#1E293B] bg-slate-50/50 shadow-sm"
-                        : "border-slate-200 hover:border-slate-300"
-                    }`}
-                  >
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Standard</span>
-                    <div>
-                      <h4 className="text-lg font-black text-slate-800">100,000</h4>
+                      <h4 className="text-lg font-black text-slate-800">250,000</h4>
                       <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Codes issued / month</p>
                     </div>
                     <ul className="text-[10px] text-slate-500 flex flex-col gap-1 mt-2 font-medium border-t border-slate-100 pt-3">
                       <li>✓ Multi-brand catalog</li>
                       <li>✓ Regional map intel</li>
+                      <li className="font-bold text-[#608216] mt-1">₦450,000/mo</li>
                     </ul>
                   </div>
 
@@ -287,12 +294,13 @@ export default function OnboardingPage() {
                   >
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Enterprise</span>
                     <div>
-                      <h4 className="text-lg font-black text-slate-800">1,000,000</h4>
+                      <h4 className="text-lg font-black text-slate-800">Unlimited</h4>
                       <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Codes issued / month</p>
                     </div>
                     <ul className="text-[10px] text-slate-500 flex flex-col gap-1 mt-2 font-medium border-t border-slate-100 pt-3">
                       <li>✓ Custom limits</li>
                       <li>✓ Platform-wide API</li>
+                      <li className="font-bold text-[#608216] mt-1">Custom Pricing</li>
                     </ul>
                   </div>
                 </div>
@@ -387,23 +395,35 @@ export default function OnboardingPage() {
           )}
 
           {currentStep === 2 ? (
-            <PaystackButton
-              config={{
-                reference: "pay_" + Math.random().toString(36).substring(2, 12),
-                email: "billing@brand.com",
-                amount: selectedPlan === "Growth" ? 3000000 : selectedPlan === "Standard" ? 10000000 : 50000000,
-                publicKey: "pk_test_1573581f39d4a4aa7486dc09a13d91856f085063",
-              }}
-              onSuccess={(ref) => {
-                alert(`Payment Confirmed. Tx Ref: ${ref.reference}. Activating plan...`);
-                setCurrentStep(3);
-              }}
-              onClose={() => {
-                alert("Checkout flow terminated by user.");
-              }}
-              text={`Pay & Activate ${selectedPlan}`}
-              className="bg-[#1E293B] text-white hover:bg-slate-800 font-bold px-6 py-2.5 rounded-full text-xs shadow-md"
-            />
+            selectedPlan === "Enterprise" ? (
+              <button
+                onClick={() => {
+                  alert("Enterprise Custom contract activation requested. A representative will contact your billing department. Activating platform trial access...");
+                  setCurrentStep(3);
+                }}
+                className="bg-[#1E293B] text-white hover:bg-slate-800 font-bold px-6 py-2.5 rounded-full text-xs shadow-md transition-all"
+              >
+                Contact Sales & Activate Trial
+              </button>
+            ) : (
+              <PaystackButton
+                config={{
+                  reference: "pay_" + Math.random().toString(36).substring(2, 12),
+                  email: "billing@brand.com",
+                  amount: selectedPlan === "Starter" ? 15000000 : 45000000,
+                  publicKey: "pk_test_1573581f39d4a4aa7486dc09a13d91856f085063",
+                }}
+                onSuccess={(ref) => {
+                  alert(`Payment Confirmed. Tx Ref: ${ref.reference}. Activating plan...`);
+                  setCurrentStep(3);
+                }}
+                onClose={() => {
+                  alert("Checkout flow terminated by user.");
+                }}
+                text={`Pay & Activate ${selectedPlan}`}
+                className="bg-[#1E293B] text-white hover:bg-slate-800 font-bold px-6 py-2.5 rounded-full text-xs shadow-md"
+              />
+            )
           ) : currentStep < 3 ? (
             <button
               onClick={handleNext}

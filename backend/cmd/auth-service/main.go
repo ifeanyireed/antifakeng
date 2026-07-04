@@ -113,7 +113,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	producerQuery := `INSERT INTO producers (name, slug, plan_tier, contact_email, status, created_at) 
 		VALUES (?, ?, ?, ?, ?, ?)`
 
-	// SQLite returns last insert row ID differently than Postgres, so we check driver style
+	// MySQL returns last insert row ID differently than Postgres, so we check driver style
 	res, err := tx.Exec(producerQuery, req.ProducerName, req.ProducerSlug, planTier, req.ContactEmail, models.StatusActive, time.Now())
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error": "Failed to create producer (slug might be taken): %v"}`, err), http.StatusBadRequest)
@@ -122,7 +122,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	producerID, err = res.LastInsertId()
 	if err != nil {
 		// Postgres driver Exec doesn't support LastInsertId on Exec, let's use QueryRow if Postgres
-		// But Exec works on SQLite. Let's do a backup query if producerID is 0
+		// But Exec works on MySQL. Let's do a backup query if producerID is 0
 		var id int
 		err = db.DB.QueryRow(`SELECT id FROM producers WHERE slug = ?`, req.ProducerSlug).Scan(&id)
 		if err != nil {

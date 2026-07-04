@@ -31,6 +31,8 @@ func main() {
 	mux.Handle("/api/producer/batches/", middleware.RequireAuth(http.HandlerFunc(handleSingleBatchOperations)))
 	mux.Handle("/api/producer/upload", middleware.RequireAuth(http.HandlerFunc(handleUpload)))
 	mux.Handle("/api/producer/profile", middleware.RequireAuth(http.HandlerFunc(handleProfile)))
+	mux.Handle("/api/producer/admin/producers", middleware.RequireAuth(http.HandlerFunc(handleAdminProducers)))
+	mux.Handle("/api/producer/admin/producers/", middleware.RequireAuth(http.HandlerFunc(handleAdminSingleProducer)))
 
 	// Serve static uploads
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
@@ -545,4 +547,104 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
 	}
+}
+
+func handleAdminProducers(w http.ResponseWriter, r *http.Request) {
+	// Role check
+	roleVal := r.Context().Value(middleware.ClaimsRole)
+	if roleVal == nil || roleVal.(string) != "admin" {
+		http.Error(w, `{"error": "Forbidden: admin access required"}`, http.StatusForbidden)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	rows, err := db.DB.Query(`SELECT id, name, slug, plan_tier, contact_email, brand_logo_url, status, created_at FROM producers ORDER BY name ASC`)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var list []models.Producer
+	for rows.Next() {
+		var p models.Producer
+		var logo sql.NullString
+		err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, &p.Status, &p.CreatedAt)
+		if err == nil {
+			p.BrandLogoURL = logo.String
+			list = append(list, p)
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(list)
+}
+
+func handleAdminSingleProducer(w http.ResponseWriter, r *http.Request) {
+	// Role check
+	roleVal := r.Context().Value(middleware.ClaimsRole)
+	if roleVal == nil || roleVal.(string) != "admin" {
+		http.Error(w, `{"error": "Forbidden: admin access required"}`, http.StatusForbidden)
+		return
+	}
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 6 {
+		http.Error(w, `{"error": "Invalid path"}`, http.StatusBadRequest)
+		return
+	}
+
+	prodIDStr := parts[5]
+	prodID, err := strconv.Atoi(prodIDStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid producer ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	if r.Method == http.MethodPut {
+		var req struct {
+			Status   string `json:"status"`
+			PlanTier string `json:"plan_tier"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+			return
+		}
+
+		if req.Status == "" && req.PlanTier == "" {
+			http.Error(w, `{"error": "Missing status or plan_tier"}`, http.StatusBadRequest)
+			return
+		}
+
+		query := "UPDATE producers SET "
+		var args []interface{}
+		var updates []string
+		if req.Status != "" {
+			updates = append(updates, "status = ?")
+			args = append(args, req.Status)
+		}
+		if req.PlanTier != "" {
+			updates = append(updates, "plan_tier = ?")
+			args = append(args, req.PlanTier)
+		}
+		query += strings.Join(updates, ", ")
+		query += " WHERE id = ?"
+		args = append(args, prodID)
+
+		_, err = db.DB.Exec(query, args...)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to update producer: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"message": "Producer updated successfully."})
+		return
+	}
+
+	http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
 }

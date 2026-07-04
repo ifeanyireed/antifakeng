@@ -41,6 +41,8 @@ func main() {
 	mux.Handle("/api/analytics/reports/", middleware.RequireAuth(http.HandlerFunc(handleSingleReportOperations)))
 	mux.Handle("/api/analytics/alerts", middleware.RequireAuth(http.HandlerFunc(handleProducerAlerts)))
 	mux.Handle("/api/analytics/alerts/", middleware.RequireAuth(http.HandlerFunc(handleResolveAlert)))
+	mux.Handle("/api/analytics/history", middleware.RequireAuth(http.HandlerFunc(handleProducerHistory)))
+	mux.Handle("/api/analytics/audit-logs", middleware.RequireAuth(http.HandlerFunc(handleAuditLogs)))
 
 	log.Println("Analytics & Reports Service starting on port 8084...")
 	log.Fatal(http.ListenAndServe(":8084", middleware.CORS(mux)))
@@ -186,7 +188,7 @@ func handleScansTimeline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch scan timeseries (last 7 days grouped by date)
-	// Supports SQLite date grouping. Fallback logic is standard.
+	// Supports MySQL date grouping. Fallback logic is standard.
 	query := `
 		SELECT DATE(vs.created_at) as scan_date, vs.result, COUNT(*) as count
 		FROM verification_sessions vs
@@ -317,26 +319,40 @@ func handleProducerReports(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleProducerAlerts(w http.ResponseWriter, r *http.Request) {
-	prodID, ok := middleware.GetProducerID(r.Context())
-	if !ok {
-		http.Error(w, `{"error": "Unauthorized"}`, http.StatusForbidden)
-		return
-	}
-
 	if r.Method != http.MethodGet {
 		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
 		return
 	}
 
-	rows, err := db.DB.Query(`SELECT fe.id, fe.verification_session_id, fe.signal_type, fe.severity, fe.resolved_by, fe.resolved_at, fe.created_at,
-		vs.risk_score, vs.device_id, vs.ip_country, q.token, p.name
-		FROM fraud_events fe
-		JOIN verification_sessions vs ON fe.verification_session_id = vs.id
-		JOIN qr_codes q ON vs.qr_code_id = q.id
-		JOIN batches b ON q.batch_id = b.id
-		JOIN products p ON b.product_id = p.id
-		WHERE p.producer_id = ?
-		ORDER BY fe.created_at DESC`, prodID)
+	prodID, ok := middleware.GetProducerID(r.Context())
+	var rows *sql.Rows
+	var err error
+
+	if !ok {
+		// Admin: get all alerts
+		rows, err = db.DB.Query(`SELECT fe.id, fe.verification_session_id, fe.signal_type, fe.severity, fe.resolved_by, fe.resolved_at, fe.created_at,
+			vs.risk_score, vs.device_id, vs.ip_country, q.token, p.name, pr.name
+			FROM fraud_events fe
+			JOIN verification_sessions vs ON fe.verification_session_id = vs.id
+			JOIN qr_codes q ON vs.qr_code_id = q.id
+			JOIN batches b ON q.batch_id = b.id
+			JOIN products p ON b.product_id = p.id
+			JOIN producers pr ON p.producer_id = pr.id
+			ORDER BY fe.created_at DESC`)
+	} else {
+		// Producer: get only their alerts
+		rows, err = db.DB.Query(`SELECT fe.id, fe.verification_session_id, fe.signal_type, fe.severity, fe.resolved_by, fe.resolved_at, fe.created_at,
+			vs.risk_score, vs.device_id, vs.ip_country, q.token, p.name, pr.name
+			FROM fraud_events fe
+			JOIN verification_sessions vs ON fe.verification_session_id = vs.id
+			JOIN qr_codes q ON vs.qr_code_id = q.id
+			JOIN batches b ON q.batch_id = b.id
+			JOIN products p ON b.product_id = p.id
+			JOIN producers pr ON p.producer_id = pr.id
+			WHERE p.producer_id = ?
+			ORDER BY fe.created_at DESC`, prodID)
+	}
+
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
 		return
@@ -350,6 +366,7 @@ func handleProducerAlerts(w http.ResponseWriter, r *http.Request) {
 		Country   string    `json:"ip_country"`
 		Token     string    `json:"token"`
 		Product   string    `json:"product_name"`
+		BrandName string    `json:"brand_name"`
 	}
 
 	var alerts []AlertDetail
@@ -357,8 +374,9 @@ func handleProducerAlerts(w http.ResponseWriter, r *http.Request) {
 		var ad AlertDetail
 		var resBy sql.NullInt64
 		var resAt sql.NullTime
+		var device, country sql.NullString
 		err := rows.Scan(&ad.ID, &ad.VerificationSessionID, &ad.SignalType, &ad.Severity, &resBy, &resAt, &ad.CreatedAt,
-			&ad.RiskScore, &ad.DeviceID, &ad.Country, &ad.Token, &ad.Product)
+			&ad.RiskScore, &device, &country, &ad.Token, &ad.Product, &ad.BrandName)
 		if err == nil {
 			if resBy.Valid {
 				uid := int(resBy.Int64)
@@ -366,6 +384,12 @@ func handleProducerAlerts(w http.ResponseWriter, r *http.Request) {
 			}
 			if resAt.Valid {
 				ad.ResolvedAt = &resAt.Time
+			}
+			if country.Valid {
+				ad.Country = country.String
+			}
+			if device.Valid {
+				ad.DeviceID = device.String
 			}
 			alerts = append(alerts, ad)
 		}
@@ -490,4 +514,115 @@ func handleSingleReportOperations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, `{"error": "Invalid request or action"}`, http.StatusNotFound)
+}
+
+func handleProducerHistory(w http.ResponseWriter, r *http.Request) {
+	prodID, ok := middleware.GetProducerID(r.Context())
+	if !ok {
+		http.Error(w, `{"error": "Unauthorized: no producer ID associated with user"}`, http.StatusForbidden)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	rows, err := db.DB.Query(`SELECT vs.id, vs.created_at, vs.result, vs.risk_score, vs.ip_country, vs.device_id, q.token, p.name
+		FROM verification_sessions vs
+		JOIN qr_codes q ON vs.qr_code_id = q.id
+		JOIN batches b ON q.batch_id = b.id
+		JOIN products p ON b.product_id = p.id
+		WHERE p.producer_id = ?
+		ORDER BY vs.created_at DESC`, prodID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type HistoryDetail struct {
+		ID          int       `json:"id"`
+		CreatedAt   time.Time `json:"created_at"`
+		Result      string    `json:"result"`
+		RiskScore   float64   `json:"risk_score"`
+		IPCountry   string    `json:"ip_country"`
+		DeviceID    string    `json:"device_id"`
+		Token       string    `json:"token"`
+		ProductName string    `json:"product_name"`
+	}
+
+	var history []HistoryDetail
+	for rows.Next() {
+		var hd HistoryDetail
+		var deviceID, ipCountry sql.NullString
+		err := rows.Scan(&hd.ID, &hd.CreatedAt, &hd.Result, &hd.RiskScore, &ipCountry, &deviceID, &hd.Token, &hd.ProductName)
+		if err == nil {
+			if deviceID.Valid {
+				hd.DeviceID = deviceID.String
+			}
+			if ipCountry.Valid {
+				hd.IPCountry = ipCountry.String
+			}
+			history = append(history, hd)
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(history)
+}
+
+func handleAuditLogs(w http.ResponseWriter, r *http.Request) {
+	// Require role to be admin
+	roleVal := r.Context().Value(middleware.ClaimsRole)
+	if roleVal == nil || roleVal.(string) != "admin" {
+		http.Error(w, `{"error": "Forbidden: admin access required"}`, http.StatusForbidden)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	rows, err := db.DB.Query(`SELECT al.id, al.actor_user_id, al.action, al.target_entity, al.target_id, al.created_at, u.email
+		FROM audit_logs al
+		LEFT JOIN users u ON al.actor_user_id = u.id
+		ORDER BY al.created_at DESC`)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type AuditLogDetail struct {
+		ID           int       `json:"id"`
+		ActorUserID  *int      `json:"actor_user_id"`
+		ActorEmail   string    `json:"actor_email"`
+		Action       string    `json:"action"`
+		TargetEntity string    `json:"target_entity"`
+		TargetID     int       `json:"target_id"`
+		CreatedAt    time.Time `json:"created_at"`
+	}
+
+	var logs []AuditLogDetail
+	for rows.Next() {
+		var ald AuditLogDetail
+		var actorUserID sql.NullInt64
+		var actorEmail sql.NullString
+		err := rows.Scan(&ald.ID, &actorUserID, &ald.Action, &ald.TargetEntity, &ald.TargetID, &ald.CreatedAt, &actorEmail)
+		if err == nil {
+			if actorUserID.Valid {
+				uid := int(actorUserID.Int64)
+				ald.ActorUserID = &uid
+			}
+			if actorEmail.Valid {
+				ald.ActorEmail = actorEmail.String
+			}
+			logs = append(logs, ald)
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(logs)
 }

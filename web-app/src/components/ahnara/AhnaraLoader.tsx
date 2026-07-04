@@ -5,9 +5,10 @@ import React from "react";
 interface AhnaraLoaderProps {
   fullScreen?: boolean;
   size?: "sm" | "md" | "lg";
+  label?: string;
 }
 
-export function AhnaraLoader({ fullScreen = false, size = "md" }: AhnaraLoaderProps) {
+export function AhnaraLoader({ fullScreen = false, size = "md", label }: AhnaraLoaderProps) {
   // Dimensions mapping
   const dimensions = {
     sm: {
@@ -30,15 +31,20 @@ export function AhnaraLoader({ fullScreen = false, size = "md" }: AhnaraLoaderPr
   const current = dimensions[size];
 
   const content = (
-    <div className="relative flex items-center justify-center select-none pointer-events-none">
-      {/* Rotating outline */}
-      <div 
-        className={`${current.outline} rounded-full border-t-[#0089C1] border-r-[#0089C1] border-b-[#0089C1]/10 border-l-[#0089C1]/10 animate-spin`} 
-      />
-      {/* Central Logo wrapped in circle */}
-      <div className={`absolute ${current.logoBg} rounded-full bg-[#D4F475] flex items-center justify-center shadow-md`}>
-        <img src="/logo.png" alt="Ahnara Logo" className={`${current.logoImg} object-contain`} />
+    <div className="flex flex-col items-center gap-4 select-none pointer-events-none text-center">
+      <div className="relative flex items-center justify-center">
+        {/* Rotating outline */}
+        <div 
+          className={`${current.outline} rounded-full border-t-[#0089C1] border-r-[#0089C1] border-b-[#0089C1]/10 border-l-[#0089C1]/10 animate-spin`} 
+        />
+        {/* Central Logo wrapped in circle */}
+        <div className={`absolute ${current.logoBg} rounded-full bg-[#D4F475] flex items-center justify-center shadow-md`}>
+          <img src="/logo.png" alt="Ahnara Logo" className={`${current.logoImg} object-contain`} />
+        </div>
       </div>
+      {label && (
+        <span className="text-slate-500 font-bold text-xs tracking-wider uppercase animate-pulse mt-2">{label}</span>
+      )}
     </div>
   );
 

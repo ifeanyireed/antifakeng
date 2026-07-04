@@ -14,7 +14,7 @@ The project is structured into two main layers:
    - **Producer Service**: Handles manufacturer onboarding, product management, and batch generation (Port `8082`).
    - **Verification Service**: Processes public QR scan codes and checks item status (Port `8083`).
    - **Analytics Service**: Collects statistics on scans, verification rates, and geo-data (Port `8084`).
-   - **Database**: Employs SQLite (`antifake.db`) for lightweight, robust local development.
+   - **Database**: Employs MySQL or PostgreSQL for robust database storage.
 
 2. **Next.js Frontend (Web App)**:
    - Built with Next.js (App Router), TypeScript, and TailwindCSS / Vanilla CSS.

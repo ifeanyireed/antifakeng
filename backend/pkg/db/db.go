@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	_ "github.com/glebarez/go-sqlite"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 )
@@ -18,8 +17,8 @@ var DB *sql.DB
 // InitDB initializes the database connection and creates tables if they do not exist
 func InitDB() *sql.DB {
 	var err error
-	driver := "sqlite"
-	dsn := "antifake.db"
+	var driver string
+	var dsn string
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL != "" {
@@ -53,6 +52,8 @@ func InitDB() *sql.DB {
 			os.Getenv("DB_PASSWORD"),
 			os.Getenv("DB_NAME"),
 		)
+	} else {
+		log.Fatalf("Database configuration is missing. Please set DATABASE_URL or DB_HOST environment variable.")
 	}
 
 	log.Printf("Connecting to database using driver: %s", driver)
@@ -72,112 +73,7 @@ func InitDB() *sql.DB {
 func createTables(driver string) {
 	var queries []string
 
-	if driver == "sqlite" {
-		queries = []string{
-			`CREATE TABLE IF NOT EXISTS producers (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				name TEXT NOT NULL,
-				slug TEXT NOT NULL UNIQUE,
-				plan_tier TEXT NOT NULL,
-				contact_email TEXT NOT NULL,
-				brand_logo_url TEXT,
-				status TEXT NOT NULL DEFAULT 'active',
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-			);`,
-			`CREATE TABLE IF NOT EXISTS users (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				email TEXT NOT NULL UNIQUE,
-				password_hash TEXT NOT NULL,
-				role TEXT NOT NULL,
-				producer_id INTEGER,
-				status TEXT NOT NULL DEFAULT 'active',
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY(producer_id) REFERENCES producers(id)
-			);`,
-			`CREATE TABLE IF NOT EXISTS products (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				producer_id INTEGER NOT NULL,
-				name TEXT NOT NULL,
-				sku TEXT NOT NULL UNIQUE,
-				category TEXT NOT NULL,
-				description TEXT,
-				image_url TEXT,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY(producer_id) REFERENCES producers(id)
-			);`,
-			`CREATE TABLE IF NOT EXISTS batches (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				product_id INTEGER NOT NULL,
-				batch_code TEXT NOT NULL UNIQUE,
-				quantity INTEGER NOT NULL,
-				manufacture_date DATETIME NOT NULL,
-				expiry_date DATETIME NOT NULL,
-				status TEXT NOT NULL DEFAULT 'draft',
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY(product_id) REFERENCES products(id)
-			);`,
-			`CREATE TABLE IF NOT EXISTS qr_codes (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				batch_id INTEGER NOT NULL,
-				token TEXT NOT NULL UNIQUE,
-				signature TEXT NOT NULL,
-				status TEXT NOT NULL DEFAULT 'active',
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY(batch_id) REFERENCES batches(id)
-			);`,
-			`CREATE TABLE IF NOT EXISTS consumers (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				phone_number_hash TEXT NOT NULL UNIQUE,
-				verification_count INTEGER DEFAULT 0,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-			);`,
-			`CREATE TABLE IF NOT EXISTS verification_sessions (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				qr_code_id INTEGER NOT NULL,
-				consumer_id INTEGER,
-				device_id TEXT,
-				ip_country TEXT,
-				result TEXT NOT NULL,
-				risk_score REAL NOT NULL,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY(qr_code_id) REFERENCES qr_codes(id),
-				FOREIGN KEY(consumer_id) REFERENCES consumers(id)
-			);`,
-			`CREATE TABLE IF NOT EXISTS reports (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				qr_code_id INTEGER NOT NULL,
-				consumer_id INTEGER NOT NULL,
-				description TEXT,
-				retailer_name TEXT,
-				retailer_location TEXT,
-				photo_url TEXT,
-				status TEXT NOT NULL DEFAULT 'pending',
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY(qr_code_id) REFERENCES qr_codes(id),
-				FOREIGN KEY(consumer_id) REFERENCES consumers(id)
-			);`,
-			`CREATE TABLE IF NOT EXISTS fraud_events (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				verification_session_id INTEGER NOT NULL,
-				signal_type TEXT NOT NULL,
-				severity TEXT NOT NULL,
-				resolved_by INTEGER,
-				resolved_at DATETIME,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY(verification_session_id) REFERENCES verification_sessions(id),
-				FOREIGN KEY(resolved_by) REFERENCES users(id)
-			);`,
-			`CREATE TABLE IF NOT EXISTS audit_logs (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				actor_user_id INTEGER,
-				action TEXT NOT NULL,
-				target_entity TEXT NOT NULL,
-				target_id INTEGER NOT NULL,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY(actor_user_id) REFERENCES users(id)
-			);`,
-		}
-	} else if driver == "mysql" {
+	if driver == "mysql" {
 		// MySQL schema
 		queries = []string{
 			`CREATE TABLE IF NOT EXISTS producers (

@@ -1,12 +1,33 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/ahnara/AuthContext";
+import { AhnaraLoader } from "@/components/ahnara/AhnaraLoader";
 
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDossierTab, setActiveDossierTab] = useState("vision");
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      if (user.role === "ADMIN") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/producer/dashboard");
+      }
+    }
+  }, [user, loading, router]);
+
+  if (loading || user) {
+    return (
+      <AhnaraLoader fullScreen label="Syncing Session..." />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#E8EFF4] text-slate-800 font-sans flex flex-col overflow-x-hidden">
@@ -477,14 +498,14 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
-            {/* Growth Plan */}
+            {/* Starter Plan */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-8 flex flex-col justify-between shadow-sm">
               <div>
-                <h3 className="text-xl font-bold text-slate-800 mb-2 font-serif">Growth</h3>
+                <h3 className="text-xl font-bold text-slate-800 mb-2 font-serif">Starter</h3>
                 <p className="text-xs text-slate-500 mb-6">For a single brand getting its first codes into the market.</p>
-                <div className="text-3xl font-bold text-slate-800 mb-6">₦30,000<span className="text-xs font-semibold text-slate-500">/month</span></div>
+                <div className="text-3xl font-bold text-slate-800 mb-6">₦150,000<span className="text-xs font-semibold text-slate-500">/month</span></div>
                 <ul className="flex flex-col gap-3 text-xs text-slate-500 border-t border-slate-100 pt-6">
-                  <li className="flex gap-2">✓ <span className="font-semibold">Up to 50,000 codes per month</span></li>
+                  <li className="flex gap-2">✓ <span className="font-semibold">Up to 25,000 codes per month</span></li>
                   <li className="flex gap-2">✓ <span>Browser verification portal</span></li>
                   <li className="flex gap-2">✓ <span>Standard analytics</span></li>
                   <li className="flex gap-2">✓ <span>Email support</span></li>
@@ -495,17 +516,17 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* Standard Plan - Featured */}
+            {/* Growth Plan - Featured */}
             <div className="bg-slate-800 text-white border-2 border-[#8BB436] rounded-3xl p-8 flex flex-col justify-between shadow-xl relative scale-105 z-10">
               <div className="absolute top-[-13px] left-8 bg-[#8BB436] text-white text-[8px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-slate-700">
                 Most Chosen
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white mb-2 font-serif">Standard</h3>
+                <h3 className="text-xl font-bold text-white mb-2 font-serif">Growth</h3>
                 <p className="text-xs text-slate-300 mb-6">For producers scaling across states and retail partners.</p>
-                <div className="text-3xl font-bold text-white mb-6">₦100,000<span className="text-xs font-semibold text-slate-300">/month</span></div>
+                <div className="text-3xl font-bold text-white mb-6">₦450,000<span className="text-xs font-semibold text-slate-300">/month</span></div>
                 <ul className="flex flex-col gap-3 text-xs text-slate-300 border-t border-white/10 pt-6">
-                  <li className="flex gap-2">✓ <span className="font-semibold text-white">Up to 100,000 codes per month</span></li>
+                  <li className="flex gap-2">✓ <span className="font-semibold text-white">Up to 250,000 codes per month</span></li>
                   <li className="flex gap-2">✓ <span>Fraud detection engine</span></li>
                   <li className="flex gap-2">✓ <span>Counterfeit investigation center</span></li>
                   <li className="flex gap-2">✓ <span>Priority support</span></li>
@@ -521,9 +542,9 @@ export default function HomePage() {
               <div>
                 <h3 className="text-xl font-bold text-slate-800 mb-2 font-serif">Enterprise</h3>
                 <p className="text-xs text-slate-500 mb-6">For platforms running several brands or tenants at once.</p>
-                <div className="text-3xl font-bold text-slate-800 mb-6">₦500,000<span className="text-xs font-semibold text-slate-500">/month</span></div>
+                <div className="text-3xl font-bold text-slate-800 mb-6">Custom</div>
                 <ul className="flex flex-col gap-3 text-xs text-slate-500 border-t border-slate-100 pt-6">
-                  <li className="flex gap-2">✓ <span className="font-semibold">Up to 1,000,000 codes</span></li>
+                  <li className="flex gap-2">✓ <span className="font-semibold">Unlimited codes</span></li>
                   <li className="flex gap-2">✓ <span>Multi-tenant administration</span></li>
                   <li className="flex gap-2">✓ <span>Dedicated onboarding</span></li>
                   <li className="flex gap-2">✓ <span>SLA-backed support</span></li>
