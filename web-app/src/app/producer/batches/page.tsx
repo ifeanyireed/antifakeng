@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { api } from "@/lib/api";
 import {
   IconPlus,
   IconSearch,
@@ -16,16 +17,30 @@ import {
 } from "@tabler/icons-react";
 
 export default function ProducerBatches() {
-  const [batches, setBatches] = useState([
-    { id: "B-AURA2606", product: "AURA Skincare Serum 50ml", count: 10000, status: "Active", date: "June 20, 2026", scans: 14210 },
-    { id: "B-CLEAN01", product: "AURA Cleanser 100ml", count: 5000, status: "Active", date: "June 22, 2026", scans: 5120 },
-    { id: "B-HYDRA04", product: "Hydra Essence", count: 8000, status: "Active", date: "June 25, 2026", scans: 5482 },
-    { id: "B-RETIN02", product: "Retinol Therapy Gel", count: 2000, status: "Draft", date: "July 01, 2026", scans: 0 }
-  ]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const prodData = await api.get("/producer/products");
+        setProducts(prodData || []);
+        if (prodData && prodData.length > 0) {
+          setSelectedProduct(String(prodData[0].id));
+        }
+
+        const batchData = await api.get("/producer/batches");
+        setBatches(batchData || []);
+      } catch (err) {
+        console.error("Failed to load products/batches:", err);
+      }
+    };
+    fetchData();
+  }, []);
 
   // Create Batch states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState("AURA Skincare Serum 50ml");
+  const [selectedProduct, setSelectedProduct] = useState("");
   const [codeQuantity, setCodeQuantity] = useState("1000");
   const [batchId, setBatchId] = useState("");
 
@@ -41,30 +56,46 @@ export default function ProducerBatches() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
 
-  const handleCreateBatch = (e: React.FormEvent) => {
+  const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (codeQuantity && selectedProduct) {
-      const generatedId = batchId || `B-${selectedProduct.slice(0, 5).toUpperCase()}-${Math.floor(Math.random() * 900 + 100)}`;
-      setBatches([
-        {
-          id: generatedId,
-          product: selectedProduct,
-          count: parseInt(codeQuantity),
-          status: "Active",
-          date: new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }),
-          scans: 0
-        },
-        ...batches
-      ]);
-      setBatchId("");
-      setCodeQuantity("1000");
-      setIsCreateModalOpen(false);
+      try {
+        const qty = parseInt(codeQuantity);
+        const code = batchId || `B-${Math.floor(Math.random() * 90000 + 10000)}`;
+        
+        // Create batch record
+        const createdBatch = await api.post("/producer/batches", {
+          product_id: parseInt(selectedProduct),
+          batch_code: code,
+          quantity: qty,
+          status: "active"
+        });
+        
+        // Auto-generate tokens
+        await api.post(`/producer/batches/${createdBatch.id}/generate`, {});
+        
+        // Reload batches
+        const data = await api.get("/producer/batches");
+        setBatches(data || []);
+        
+        setBatchId("");
+        setCodeQuantity("1000");
+        setIsCreateModalOpen(false);
+      } catch (err: any) {
+        alert(err.message || "Failed to create batch.");
+      }
     }
   };
 
-  const handleRecallBatch = (id: string) => {
-    if (confirm(`Are you sure you want to RECALL all codes in batch ${id}? This action is immediate and will notify all consumers scanning these codes.`)) {
-      setBatches(prev => prev.map(b => b.id === id ? { ...b, status: "Recalled" } : b));
+  const handleRecallBatch = async (code: string, dbId: number) => {
+    if (confirm(`Are you sure you want to RECALL all codes in batch ${code}? This action is immediate and will notify all consumers scanning these codes.`)) {
+      try {
+        await api.post(`/producer/batches/${dbId}/recall`, {});
+        const data = await api.get("/producer/batches");
+        setBatches(data || []);
+      } catch (err: any) {
+        alert(err.message || "Failed to recall batch.");
+      }
     }
   };
 
@@ -84,37 +115,27 @@ export default function ProducerBatches() {
             setIsGenerating(false);
             setIsPrintModalOpen(false);
 
-            // Attempt real backend PDF layout download
+            // Attempt real backend PDF download
             const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
             
-            // Map known mock AURA batch code (B-AURA2606) or seeded batch ID (1) to the real database batch ID
-            let dbBatchID: string | null = null;
-            if (activePrintBatch.id === 1 || activePrintBatch.id === "1" || activePrintBatch.id === "B-AURA2606") {
-              dbBatchID = "1";
-            }
-
-            if (dbBatchID && token) {
-              const downloadUrl = `http://localhost:8080/api/producer/batches/${dbBatchID}/print?token=${encodeURIComponent(token)}&message=${encodeURIComponent(printMessage)}&width=${encodeURIComponent(layoutWidth === "custom" ? `${customWidth}${customWidthUnit}` : layoutWidth)}&columns=${gridColumns}`;
+            if (activePrintBatch?.id && token) {
+              const downloadUrl = `http://localhost:8080/api/producer/batches/${activePrintBatch.id}/print?token=${encodeURIComponent(token)}&message=${encodeURIComponent(printMessage)}&width=${encodeURIComponent(layoutWidth === "custom" ? `${customWidth}${customWidthUnit}` : layoutWidth)}&columns=${gridColumns}`;
               window.open(downloadUrl, "_blank");
             } else {
-              // Trigger text descriptor fallback for frontend-only mock rows
               const blob = new Blob([
-                `AntiFakeNG Print Layout Package (Mock Layout)\n`,
-                `===============================================\n`,
-                `Batch ID: ${activePrintBatch.id}\n`,
-                `Product: ${activePrintBatch.product}\n`,
-                `Code Count: ${activePrintBatch.count}\n`,
+                "AntiFakeNG Bulk Security Serial Print Layout Template File\n",
+                "===========================================================\n",
+                `Batch ID: ${activePrintBatch?.batch_code}\n`,
+                `Code Count: ${activePrintBatch?.quantity}\n`,
                 `File Format: ${fileFormat.toUpperCase()}\n`,
                 `Selected Layout Width: ${layoutWidth === "custom" ? `${customWidth} ${customWidthUnit}` : layoutWidth}\n`,
                 `Columns: ${gridColumns} across\n`,
-                `Print Message: "${printMessage}"\n\n`,
-                `This is a mock print run asset package because batch ${activePrintBatch.id} is a local mock row.\n`,
-                `To generate a real vector PDF, please create a new production batch or select a database-seeded batch.\n`
+                `Print Message: "${printMessage}"\n\n`
               ], { type: "text/plain" });
               const url = URL.createObjectURL(blob);
               const a = document.createElement("a");
               a.href = url;
-              a.download = `antifake-print-${activePrintBatch.id}.txt`;
+              a.download = `antifake-print-${activePrintBatch?.batch_code}.txt`;
               a.click();
               URL.revokeObjectURL(url);
             }
@@ -176,46 +197,55 @@ export default function ProducerBatches() {
               </tr>
             </thead>
             <tbody>
-              {batches.map((b) => (
-                <tr key={b.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 font-mono font-bold text-slate-800">{b.id}</td>
-                  <td className="p-4 font-bold text-slate-700">{b.product}</td>
-                  <td className="p-4 font-bold text-slate-600">{b.count.toLocaleString()}</td>
-                  <td className="p-4 font-bold text-slate-500">{b.scans.toLocaleString()}</td>
-                  <td className="p-4">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${
-                      b.status === "Active" 
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
-                        : b.status === "Draft"
-                        ? "bg-slate-100 text-slate-500 border-slate-200"
-                        : "bg-red-50 text-red-600 border-red-100"
-                    }`}>
-                      {b.status}
-                    </span>
-                  </td>
-                  <td className="p-4 font-semibold text-slate-400">{b.date}</td>
-                  <td className="p-4 text-right">
-                    <div className="flex justify-end gap-1.5">
-                      <button 
-                        className="p-1.5 text-slate-400 hover:text-[#0089C1] hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1 font-bold text-[10px] uppercase"
-                        onClick={() => handlePrintLayoutClick(b)}
-                      >
-                        <IconDownload className="w-3.5 h-3.5" />
-                        Print Layout
-                      </button>
-                      {b.status === "Active" && (
+              {batches.map((b) => {
+                const prod = products.find(p => p.id === b.product_id);
+                const productName = prod ? prod.name : "Unknown Product";
+                const isAct = b.status?.toLowerCase() === "active";
+                return (
+                  <tr key={b.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 font-mono font-bold text-slate-800">{b.batch_code}</td>
+                    <td className="p-4 font-bold text-slate-700">{productName}</td>
+                    <td className="p-4 font-bold text-slate-600">{b.quantity?.toLocaleString() || "0"}</td>
+                    <td className="p-4 font-bold text-slate-500">{(b.scans || 0).toLocaleString()}</td>
+                    <td className="p-4">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${
+                        isAct 
+                          ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
+                          : b.status?.toLowerCase() === "draft"
+                          ? "bg-slate-100 text-slate-500 border-slate-200"
+                          : "bg-red-50 text-red-600 border-red-100"
+                      }`}>
+                        {b.status}
+                      </span>
+                    </td>
+                    <td className="p-4 font-semibold text-slate-400">
+                      {b.created_at 
+                        ? new Date(b.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) 
+                        : b.date || "---"}
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex justify-end gap-1.5">
                         <button 
-                          onClick={() => handleRecallBatch(b.id)}
-                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 font-bold text-[10px] uppercase"
+                          className="p-1.5 text-slate-400 hover:text-[#0089C1] hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1 font-bold text-[10px] uppercase"
+                          onClick={() => handlePrintLayoutClick(b)}
                         >
-                          <IconAlertCircle className="w-3.5 h-3.5" />
-                          Recall
+                          <IconDownload className="w-3.5 h-3.5" />
+                          Print Layout
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {isAct && (
+                          <button 
+                            onClick={() => handleRecallBatch(b.batch_code, b.id)}
+                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 font-bold text-[10px] uppercase"
+                          >
+                            <IconAlertCircle className="w-3.5 h-3.5" />
+                            Recall
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -256,10 +286,9 @@ export default function ProducerBatches() {
                     onChange={(e) => setSelectedProduct(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
                   >
-                    <option value="AURA Skincare Serum 50ml">AURA Skincare Serum 50ml</option>
-                    <option value="AURA Cleanser 100ml">AURA Cleanser 100ml</option>
-                    <option value="Hydra Essence">Hydra Essence</option>
-                    <option value="Retinol Therapy Gel">Retinol Therapy Gel</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
                   </select>
                 </div>
 

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { api } from "@/lib/api";
 import {
   IconPlus,
   IconSearch,
@@ -14,12 +15,19 @@ import {
 } from "@tabler/icons-react";
 
 export default function ProducerProducts() {
-  const [products, setProducts] = useState([
-    { id: 1, name: "AURA Skincare Serum 50ml", sku: "AURA-SERUM-50ML", category: "Cosmetics", status: "Active", date: "June 20, 2026", scans: 14210, image_url: "/logo.png" },
-    { id: 2, name: "AURA Cleanser 100ml", sku: "AURA-CLEANSE-100", category: "Cosmetics", status: "Active", date: "June 22, 2026", scans: 5120, image_url: "/logo.png" },
-    { id: 3, name: "Hydra Essence", sku: "AURA-HYDRA-ESSENCE", category: "Cosmetics", status: "Active", date: "June 25, 2026", scans: 5482, image_url: "/logo.png" },
-    { id: 4, name: "Retinol Therapy Gel", sku: "AURA-RETINOL-30", category: "Cosmetics", status: "Active", date: "July 01, 2026", scans: 0, image_url: "/logo.png" }
-  ]);
+  const [products, setProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await api.get("/producer/products");
+        setProducts(data || []);
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newProductName, setNewProductName] = useState("");
@@ -59,26 +67,25 @@ export default function ProducerProducts() {
     }
   };
 
-  const handleAddProduct = (e: React.FormEvent) => {
+  const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newProductName && newProductSku) {
-      setProducts([
-        ...products,
-        {
-          id: products.length + 1,
+      try {
+        const created = await api.post("/producer/products", {
           name: newProductName,
           sku: newProductSku.toUpperCase(),
           category: newProductCat,
-          status: "Active",
-          date: new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }),
-          scans: 0,
+          description: "Registered Product SKU",
           image_url: productImage || "/logo.png"
-        }
-      ]);
-      setNewProductName("");
-      setNewProductSku("");
-      setProductImage("");
-      setIsAddModalOpen(false);
+        });
+        setProducts([...products, created]);
+        setNewProductName("");
+        setNewProductSku("");
+        setProductImage("");
+        setIsAddModalOpen(false);
+      } catch (err: any) {
+        alert(err.message || "Failed to create product.");
+      }
     }
   };
 
@@ -146,13 +153,17 @@ export default function ProducerProducts() {
                   </td>
                   <td className="p-4 font-mono font-bold text-slate-600">{p.sku}</td>
                   <td className="p-4 font-bold text-slate-500">{p.category}</td>
-                  <td className="p-4 font-bold text-slate-700">{p.scans.toLocaleString()}</td>
+                  <td className="p-4 font-bold text-slate-700">{((p.scans || 0) as number).toLocaleString()}</td>
                   <td className="p-4">
                     <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded text-[10px] font-black uppercase">
-                      {p.status}
+                      {p.status || "Active"}
                     </span>
                   </td>
-                  <td className="p-4 font-semibold text-slate-400">{p.date}</td>
+                  <td className="p-4 font-semibold text-slate-400">
+                    {p.created_at 
+                      ? new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) 
+                      : p.date || "---"}
+                  </td>
                   <td className="p-4 text-right">
                     <div className="flex justify-end gap-1.5">
                       <button className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import {
   IconSearch,
   IconMessage,
@@ -11,16 +12,29 @@ import {
 } from "@tabler/icons-react";
 
 export default function ProducerReports() {
-  const [reports, setReports] = useState([
-    { id: "R-101", token: "9F3C-71AE", product: "AURA Skincare Serum 50ml", store: "VeeCare Pharmacy", location: "Wuse II, Abuja", phone: "+234 803 291 0422", comment: "The packaging seal looks completely different from the one I bought last month. The serum color is also yellow instead of clear.", date: "July 04, 10:24 AM", status: "Open" },
-    { id: "R-102", token: "8C2D-04EE", product: "Hydra Essence", store: "Market Stall 4, Kano Market", location: "Kano City", phone: "+234 809 112 8831", comment: "The QR code was printed on a generic sticker pasted over the packaging box. The merchant insisted it was original.", date: "July 03, 06:12 PM", status: "Open" },
-    { id: "R-103", token: "9F3C-71AE", product: "AURA Skincare Serum 50ml", store: "Online IG Vendor", location: "Lagos (Instagram)", phone: "+234 812 400 9021", comment: "Bought it from an Instagram page. Smells like baby oil and the verification page threw a warning.", date: "July 02, 02:40 PM", status: "Investigating" },
-    { id: "R-104", token: "3B1C-49DA", product: "AURA Cleanser 100ml", store: "Apex Cosmetic Store", location: "Surulere, Lagos", phone: "+234 701 988 2309", comment: "The serial code didn't match. Spoke with the owner who said they got it from a new wholesale distributor.", date: "June 29, 11:15 AM", status: "Resolved" }
-  ]);
+  const [reports, setReports] = useState<any[]>([]);
 
-  const handleResolveReport = (id: string) => {
-    setReports(prev => prev.map(r => r.id === id ? { ...r, status: "Resolved" } : r));
-    alert(`Report ${id} resolved. Scaled counterfeit points updated.`);
+  const fetchReports = async () => {
+    try {
+      const data = await api.get("/analytics/reports");
+      setReports(data || []);
+    } catch (err) {
+      console.error("Failed to load reports:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const handleResolveReport = async (id: number) => {
+    try {
+      await api.post(`/analytics/reports/${id}/resolve`, {});
+      await fetchReports();
+      alert(`Report R-${id} has been marked as Resolved.`);
+    } catch (err: any) {
+      alert(err.message || "Failed to resolve report.");
+    }
   };
 
   return (
@@ -67,47 +81,52 @@ export default function ProducerReports() {
               </tr>
             </thead>
             <tbody>
-              {reports.map((r) => (
-                <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 font-bold text-slate-800">{r.id}</td>
-                  <td className="p-4 font-mono font-bold text-red-500">{r.token}</td>
-                  <td className="p-4 font-bold text-slate-700">{r.product}</td>
-                  <td className="p-4 font-bold text-slate-800">{r.store}</td>
-                  <td className="p-4 font-bold text-slate-600 flex items-center gap-1">
-                    <IconMapPin className="w-3.5 h-3.5 text-slate-400" />
-                    {r.location}
-                  </td>
-                  <td className="p-4 font-semibold text-slate-500 flex items-center gap-1">
-                    <IconPhone className="w-3.5 h-3.5 text-slate-400" />
-                    {r.phone}
-                  </td>
-                  <td className="p-4 max-w-xs">
-                    <p className="text-slate-600 font-medium leading-relaxed truncate">{r.comment}</p>
-                  </td>
-                  <td className="p-4">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${
-                      r.status === "Open" 
-                        ? "bg-red-50 text-red-600 border-red-100 animate-pulse" 
-                        : r.status === "Investigating"
-                        ? "bg-sky-50 text-[#0089C1] border-sky-100"
-                        : "bg-slate-100 text-slate-500 border-slate-200"
-                    }`}>
-                      {r.status}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right">
-                    {r.status !== "Resolved" && (
-                      <button
-                        onClick={() => handleResolveReport(r.id)}
-                        className="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl hover:bg-emerald-100 transition-colors font-bold text-[10px] uppercase flex items-center gap-1 justify-end ml-auto"
-                      >
-                        <IconCheck className="w-3.5 h-3.5" />
-                        Resolve
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {reports.map((r) => {
+                const statusLower = r.status?.toLowerCase() || "pending";
+                const isRes = statusLower === "resolved";
+                const statusLabel = isRes ? "Resolved" : "Open";
+                return (
+                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 font-bold text-slate-800">R-{r.id}</td>
+                    <td className="p-4 font-mono font-bold text-red-500">{r.token}</td>
+                    <td className="p-4 font-bold text-slate-700">{r.product_name}</td>
+                    <td className="p-4 font-bold text-slate-800">{r.retailer_name || "---"}</td>
+                    <td className="p-4 font-bold text-slate-600 flex items-center gap-1">
+                      <IconMapPin className="w-3.5 h-3.5 text-slate-400" />
+                      {r.retailer_location || "---"}
+                    </td>
+                    <td className="p-4 font-semibold text-slate-500 flex items-center gap-1">
+                      <IconPhone className="w-3.5 h-3.5 text-slate-400" />
+                      {r.consumer_id ? `Consumer ID: ${r.consumer_id}` : "Anonymous"}
+                    </td>
+                    <td className="p-4 max-w-xs">
+                      <p className="text-slate-600 font-medium leading-relaxed truncate" title={r.description}>{r.description || "No description provided."}</p>
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${
+                        statusLower === "pending" 
+                          ? "bg-red-50 text-red-600 border-red-100 animate-pulse" 
+                          : statusLower === "investigating"
+                          ? "bg-sky-50 text-[#0089C1] border-sky-100"
+                          : "bg-slate-100 text-slate-500 border-slate-200"
+                      }`}>
+                        {statusLabel}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      {!isRes && (
+                        <button
+                          onClick={() => handleResolveReport(r.id)}
+                          className="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl hover:bg-emerald-100 transition-colors font-bold text-[10px] uppercase flex items-center gap-1 justify-end ml-auto"
+                        >
+                          <IconCheck className="w-3.5 h-3.5" />
+                          Resolve
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

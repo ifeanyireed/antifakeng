@@ -30,6 +30,7 @@ func main() {
 	mux.Handle("/api/producer/batches", middleware.RequireAuth(http.HandlerFunc(handleBatches)))
 	mux.Handle("/api/producer/batches/", middleware.RequireAuth(http.HandlerFunc(handleSingleBatchOperations)))
 	mux.Handle("/api/producer/upload", middleware.RequireAuth(http.HandlerFunc(handleUpload)))
+	mux.Handle("/api/producer/profile", middleware.RequireAuth(http.HandlerFunc(handleProfile)))
 
 	// Serve static uploads
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
@@ -383,6 +384,44 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if action == "recall" && r.Method == http.MethodPost {
+		tx, err := db.DB.Begin()
+		if err != nil {
+			http.Error(w, `{"error": "Failed to start transaction"}`, http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+
+		_, err = tx.Exec(`UPDATE batches SET status = ? WHERE id = ?`, models.StatusRecalled, batchID)
+		if err != nil {
+			http.Error(w, `{"error": "Failed to update batch status"}`, http.StatusInternalServerError)
+			return
+		}
+
+		_, err = tx.Exec(`UPDATE qr_codes SET status = ? WHERE batch_id = ?`, models.StatusRecalled, batchID)
+		if err != nil {
+			http.Error(w, `{"error": "Failed to update QR codes status"}`, http.StatusInternalServerError)
+			return
+		}
+
+		if err := tx.Commit(); err != nil {
+			http.Error(w, `{"error": "Failed to commit recall"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// Audit Log
+		userID, _ := middleware.GetUserID(r.Context())
+		db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
+			VALUES (?, 'RECALL_BATCH', 'batch', ?, ?)`, userID, batchID, time.Now())
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message": "Batch recalled successfully.",
+			"status":  models.StatusRecalled,
+		})
+		return
+	}
+
 	http.Error(w, `{"error": "Invalid request or action"}`, http.StatusNotFound)
 }
 
@@ -430,4 +469,80 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"url": urlStr,
 	})
+}
+
+func handleProfile(w http.ResponseWriter, r *http.Request) {
+	prodID, ok := middleware.GetProducerID(r.Context())
+	if !ok {
+		http.Error(w, `{"error": "Unauthorized: no producer ID associated with user"}`, http.StatusForbidden)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		var p models.Producer
+		var logo sql.NullString
+		err := db.DB.QueryRow(`SELECT id, name, slug, plan_tier, contact_email, brand_logo_url, status, created_at 
+			FROM producers WHERE id = ?`, prodID).Scan(&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, &p.Status, &p.CreatedAt)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, `{"error": "Producer profile not found"}`, http.StatusNotFound)
+			} else {
+				http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
+			}
+			return
+		}
+		p.BrandLogoURL = logo.String
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(p)
+
+	case http.MethodPut:
+		var req struct {
+			Name         string `json:"name"`
+			ContactEmail string `json:"contact_email"`
+			BrandLogoURL string `json:"brand_logo_url"`
+			PlanTier     string `json:"plan_tier"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+			return
+		}
+
+		if req.Name == "" || req.ContactEmail == "" {
+			http.Error(w, `{"error": "Name and contact email are required"}`, http.StatusBadRequest)
+			return
+		}
+
+		// Update database
+		query := `UPDATE producers SET name = ?, contact_email = ?`
+		args := []interface{}{req.Name, req.ContactEmail}
+		if req.BrandLogoURL != "" {
+			query += `, brand_logo_url = ?`
+			args = append(args, req.BrandLogoURL)
+		}
+		if req.PlanTier != "" {
+			query += `, plan_tier = ?`
+			args = append(args, req.PlanTier)
+		}
+		query += ` WHERE id = ?`
+		args = append(args, prodID)
+
+		_, err := db.DB.Exec(query, args...)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to update profile: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		// Log audit trail
+		userID, _ := middleware.GetUserID(r.Context())
+		db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
+			VALUES (?, 'UPDATE_PRODUCER_PROFILE', 'producer', ?, ?)`, userID, prodID, time.Now())
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"message": "Profile updated successfully"})
+
+	default:
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+	}
 }

@@ -67,24 +67,45 @@ export default function OnboardingPage() {
     setCurrentStep(prev => prev - 1);
   };
 
-  const handleComplete = () => {
-    // Save settings to LocalStorage for persistence
-    const onboardingData = {
-      brandName,
-      industry,
-      website,
-      hqAddress,
-      selectedPlan,
-      apiKey,
-      apiSecret,
-      setupCompleted: true,
-      timestamp: new Date().toISOString()
-    };
-    
-    localStorage.setItem("producer_brand_data", JSON.stringify(onboardingData));
-    
-    // Direct redirect to producer dashboard
-    router.push("/producer/dashboard");
+  const handleComplete = async () => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
+      const res = await fetch("http://localhost:8080/api/producer/profile", {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: brandName,
+          contact_email: typeof window !== "undefined" ? (JSON.parse(localStorage.getItem("producer_brand_data") || "{}").email || "admin@brand.com") : "admin@brand.com",
+          brand_logo_url: "/logo.png",
+          plan_tier: selectedPlan.toLowerCase()
+        })
+      });
+
+      if (res.ok) {
+        const onboardingData = {
+          brandName,
+          industry,
+          website,
+          hqAddress,
+          selectedPlan,
+          apiKey,
+          apiSecret,
+          setupCompleted: true,
+          timestamp: new Date().toISOString()
+        };
+        localStorage.setItem("producer_brand_data", JSON.stringify(onboardingData));
+        router.push("/producer/dashboard");
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to save onboarding details.");
+      }
+    } catch (err) {
+      console.error("Onboarding submit error:", err);
+      alert("Onboarding service is offline.");
+    }
   };
 
   return (

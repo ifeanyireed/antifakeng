@@ -4,20 +4,22 @@ import React, { useState, useEffect, use } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import {
-  IconCheck,
-  IconShieldCheck,
-  IconAlertTriangle,
-  IconX,
-  IconAlertCircle,
-  IconReload,
-  IconPhone,
-  IconLock,
-  IconMapPin,
-  IconUpload,
-  IconChevronRight
+	IconCheck,
+	IconShieldCheck,
+	IconAlertTriangle,
+	IconX,
+	IconAlertCircle,
+	IconReload,
+	IconPhone,
+	IconLock,
+	IconMapPin,
+	IconUpload,
+	IconChevronRight
 } from "@tabler/icons-react";
+import { useLocation } from "@/components/ahnara/LocationContext";
 
 export default function ConsumerVerifyPage({ params }: { params: Promise<{ token: string }> }) {
+  const { currentCity, currentArea } = useLocation();
   const searchParams = useSearchParams();
   const unwrappedParams = use(params);
   const token = unwrappedParams.token || "9F3C-71AE";
@@ -107,13 +109,18 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
             // Execute real backend risk engine check
             const runCheck = async () => {
               try {
+                // Dynamically compile the browser-detected geolocator coordinates details
+                const geoTag = currentCity?.name && currentCity.slug
+                  ? `${currentArea ? currentArea + ", " : ""}${currentCity.name}, NG`
+                  : "NG";
+
                 const res = await fetch(`http://localhost:8080/api/verify/token/${token}/check`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     session_token: sessionToken,
                     device_id: "browser-client-uid-992",
-                    ip_country: "NG"
+                    ip_country: geoTag
                   })
                 });
                 if (res.ok) {
@@ -138,7 +145,7 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
       }, 700);
       return () => clearInterval(interval);
     }
-  }, [step, sessionToken, token]);
+  }, [step, sessionToken, token, currentCity, currentArea]);
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -628,7 +635,7 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
                       </div>
                       <h2 className="text-2xl font-black text-slate-600 tracking-tight text-display">Batch Recalled</h2>
                       <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                        Notice: This product is genuine but belongs to Batch <span className="font-bold text-slate-800">B-AURA2606</span> which has been recalled by the manufacturer.
+                        Notice: This product is genuine but belongs to Batch <span className="font-bold text-slate-800">{verificationData?.batch?.batch_code || "---"}</span> which has been recalled by the manufacturer.
                       </p>
                     </div>
 

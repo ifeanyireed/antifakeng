@@ -38,6 +38,7 @@ func main() {
 	mux.Handle("/api/analytics/summary", middleware.RequireAuth(http.HandlerFunc(handleSummary)))
 	mux.Handle("/api/analytics/scans", middleware.RequireAuth(http.HandlerFunc(handleScansTimeline)))
 	mux.Handle("/api/analytics/reports", middleware.RequireAuth(http.HandlerFunc(handleProducerReports)))
+	mux.Handle("/api/analytics/reports/", middleware.RequireAuth(http.HandlerFunc(handleSingleReportOperations)))
 	mux.Handle("/api/analytics/alerts", middleware.RequireAuth(http.HandlerFunc(handleProducerAlerts)))
 	mux.Handle("/api/analytics/alerts/", middleware.RequireAuth(http.HandlerFunc(handleResolveAlert)))
 
@@ -431,4 +432,62 @@ func handleResolveAlert(w http.ResponseWriter, r *http.Request) {
 		"resolved_by": userID,
 		"resolved_at": now,
 	})
+}
+
+func handleSingleReportOperations(w http.ResponseWriter, r *http.Request) {
+	prodID, ok := middleware.GetProducerID(r.Context())
+	if !ok {
+		http.Error(w, `{"error": "Unauthorized"}`, http.StatusForbidden)
+		return
+	}
+
+	// Path: /api/analytics/reports/:id/resolve
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 5 {
+		http.Error(w, `{"error": "Invalid path"}`, http.StatusBadRequest)
+		return
+	}
+
+	reportIDStr := parts[4]
+	reportID, err := strconv.Atoi(reportIDStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid report ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Verify report ownership
+	var reportOwnerProdID int
+	err = db.DB.QueryRow(`SELECT p.producer_id FROM reports r
+		JOIN qr_codes q ON r.qr_code_id = q.id
+		JOIN batches b ON q.batch_id = b.id
+		JOIN products p ON b.product_id = p.id
+		WHERE r.id = ?`, reportID).Scan(&reportOwnerProdID)
+	if err == sql.ErrNoRows || reportOwnerProdID != prodID {
+		http.Error(w, `{"error": "Forbidden: invalid report ID"}`, http.StatusForbidden)
+		return
+	}
+
+	action := ""
+	if len(parts) >= 6 {
+		action = parts[5]
+	}
+
+	if action == "resolve" && r.Method == http.MethodPost {
+		_, err = db.DB.Exec(`UPDATE reports SET status = 'resolved' WHERE id = ?`, reportID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to resolve report: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		// Audit Log
+		userID, _ := middleware.GetUserID(r.Context())
+		db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
+			VALUES (?, 'RESOLVE_REPORT', 'report', ?, ?)`, userID, reportID, time.Now())
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"message": "Report marked as resolved successfully."})
+		return
+	}
+
+	http.Error(w, `{"error": "Invalid request or action"}`, http.StatusNotFound)
 }
