@@ -42,7 +42,7 @@ func handleProducts(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		rows, err := db.DB.Query(`SELECT id, producer_id, name, sku, category, description, image_url, created_at 
-			FROM products WHERE producer_id = $1`, prodID)
+			FROM products WHERE producer_id = ?`, prodID)
 		if err != nil {
 			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
 			return
@@ -78,7 +78,7 @@ func handleProducts(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err := db.DB.Exec(`INSERT INTO products (producer_id, name, sku, category, description, image_url, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			prodID, p.Name, p.SKU, p.Category, p.Description, p.ImageURL, time.Now())
 		if err != nil {
 			http.Error(w, fmt.Sprintf(`{"error": "Product creation failed (SKU may exist): %v"}`, err), http.StatusBadRequest)
@@ -88,7 +88,7 @@ func handleProducts(w http.ResponseWriter, r *http.Request) {
 		// Fetch created product to return
 		var created models.Product
 		err = db.DB.QueryRow(`SELECT id, producer_id, name, sku, category, description, image_url, created_at 
-			FROM products WHERE sku = $1`, p.SKU).Scan(
+			FROM products WHERE sku = ?`, p.SKU).Scan(
 			&created.ID, &created.ProducerID, &created.Name, &created.SKU, &created.Category, &created.Description, &created.ImageURL, &created.CreatedAt)
 		if err != nil {
 			http.Error(w, `{"error": "Created but failed to retrieve product"}`, http.StatusInternalServerError)
@@ -98,7 +98,7 @@ func handleProducts(w http.ResponseWriter, r *http.Request) {
 		// Log audit trail
 		userID, _ := middleware.GetUserID(r.Context())
 		db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
-			VALUES ($1, $2, 'product', $3, $4)`, userID, "CREATE_PRODUCT", created.ID, time.Now())
+			VALUES (?, ?, 'product', ?, ?)`, userID, "CREATE_PRODUCT", created.ID, time.Now())
 
 		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "application/json")
@@ -121,7 +121,7 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 		rows, err := db.DB.Query(`SELECT b.id, b.product_id, b.batch_code, b.quantity, b.manufacture_date, b.expiry_date, b.status, b.created_at 
 			FROM batches b
 			JOIN products p ON b.product_id = p.id
-			WHERE p.producer_id = $1`, prodID)
+			WHERE p.producer_id = ?`, prodID)
 		if err != nil {
 			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
 			return
@@ -155,7 +155,7 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 
 		// Ensure product belongs to this producer
 		var ownerProdID int
-		err := db.DB.QueryRow(`SELECT producer_id FROM products WHERE id = $1`, b.ProductID).Scan(&ownerProdID)
+		err := db.DB.QueryRow(`SELECT producer_id FROM products WHERE id = ?`, b.ProductID).Scan(&ownerProdID)
 		if err == sql.ErrNoRows || ownerProdID != prodID {
 			http.Error(w, `{"error": "Forbidden: invalid product ID"}`, http.StatusForbidden)
 			return
@@ -171,7 +171,7 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err = db.DB.Exec(`INSERT INTO batches (product_id, batch_code, quantity, manufacture_date, expiry_date, status, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			b.ProductID, b.BatchCode, b.Quantity, mDate, eDate, models.StatusActive, time.Now())
 		if err != nil {
 			http.Error(w, fmt.Sprintf(`{"error": "Batch creation failed (batch_code may exist): %v"}`, err), http.StatusBadRequest)
@@ -180,7 +180,7 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 
 		var created models.Batch
 		err = db.DB.QueryRow(`SELECT id, product_id, batch_code, quantity, manufacture_date, expiry_date, status, created_at 
-			FROM batches WHERE batch_code = $1`, b.BatchCode).Scan(
+			FROM batches WHERE batch_code = ?`, b.BatchCode).Scan(
 			&created.ID, &created.ProductID, &created.BatchCode, &created.Quantity, &created.ManufactureDate, &created.ExpiryDate, &created.Status, &created.CreatedAt)
 		if err != nil {
 			http.Error(w, `{"error": "Created but failed to retrieve batch"}`, http.StatusInternalServerError)
@@ -190,7 +190,7 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 		// Log audit trail
 		userID, _ := middleware.GetUserID(r.Context())
 		db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
-			VALUES ($1, $2, 'batch', $3, $4)`, userID, "CREATE_BATCH", created.ID, time.Now())
+			VALUES (?, ?, 'batch', ?, ?)`, userID, "CREATE_BATCH", created.ID, time.Now())
 
 		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "application/json")
@@ -227,7 +227,7 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 	var batchQty int
 	err = db.DB.QueryRow(`SELECT p.producer_id, b.quantity FROM batches b 
 		JOIN products p ON b.product_id = p.id 
-		WHERE b.id = $1`, batchID).Scan(&ownerProdID, &batchQty)
+		WHERE b.id = ?`, batchID).Scan(&ownerProdID, &batchQty)
 	if err == sql.ErrNoRows || ownerProdID != prodID {
 		http.Error(w, `{"error": "Forbidden: invalid batch ID"}`, http.StatusForbidden)
 		return
@@ -242,7 +242,7 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 		// Generate QR codes for the batch
 		// 1. Check if we already have codes generated for this batch
 		var count int
-		db.DB.QueryRow(`SELECT COUNT(*) FROM qr_codes WHERE batch_id = $1`, batchID).Scan(&count)
+		db.DB.QueryRow(`SELECT COUNT(*) FROM qr_codes WHERE batch_id = ?`, batchID).Scan(&count)
 		if count > 0 {
 			http.Error(w, `{"error": "QR codes have already been generated for this batch"}`, http.StatusBadRequest)
 			return
@@ -255,7 +255,7 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 		}
 		defer tx.Rollback()
 
-		insertQuery := `INSERT INTO qr_codes (batch_id, token, signature, status, created_at) VALUES ($1, $2, $3, $4, $5)`
+		insertQuery := `INSERT INTO qr_codes (batch_id, token, signature, status, created_at) VALUES (?, ?, ?, ?, ?)`
 		generatedCount := 0
 
 		for i := 0; i < batchQty; i++ {
@@ -283,7 +283,7 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 		// Audit Log
 		userID, _ := middleware.GetUserID(r.Context())
 		db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
-			VALUES ($1, 'GENERATE_QR_CODES', 'batch', $2, $3)`, userID, batchID, time.Now())
+			VALUES (?, 'GENERATE_QR_CODES', 'batch', ?, ?)`, userID, batchID, time.Now())
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -295,7 +295,7 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 
 	if action == "qr-codes" && r.Method == http.MethodGet {
 		// Retrieve generated QR codes
-		rows, err := db.DB.Query(`SELECT id, token, signature, status, created_at FROM qr_codes WHERE batch_id = $1`, batchID)
+		rows, err := db.DB.Query(`SELECT id, token, signature, status, created_at FROM qr_codes WHERE batch_id = ?`, batchID)
 		if err != nil {
 			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
 			return

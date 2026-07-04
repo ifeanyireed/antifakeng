@@ -1,0 +1,173 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator db {
+  provider = "go run github.com/steebchen/prisma-client-go"
+  output   = "./db"
+}
+
+model Producer {
+  id           Int      @id @default(autoincrement())
+  name         String
+  slug         String   @unique
+  planTier     String   @map("plan_tier")
+  contactEmail String   @map("contact_email")
+  brandLogoUrl String?  @map("brand_logo_url") @db.VarChar(512)
+  status       String   @default("active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  users        User[]
+  products     Product[]
+
+  @@map("producers")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         String
+  producerId   Int?      @map("producer_id")
+  status       String    @default("active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  producer     Producer? @relation(fields: [producerId], references: [id], onDelete: SetNull)
+  fraudEvents  FraudEvent[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  producerId  Int      @map("producer_id")
+  name        String
+  sku         String   @unique
+  category    String
+  description String?  @db.Text
+  imageUrl    String?  @map("image_url") @db.VarChar(512)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  producer    Producer @relation(fields: [producerId], references: [id], onDelete: Cascade)
+  batches     Batch[]
+
+  @@map("products")
+}
+
+model Batch {
+  id              Int      @id @default(autoincrement())
+  productId       Int      @map("product_id")
+  batchCode       String   @unique @map("batch_code")
+  quantity        Int
+  manufactureDate DateTime @default(now()) @map("manufacture_date")
+  expiryDate      DateTime @default(now()) @map("expiry_date")
+  status          String   @default("draft")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  qrCodes         QRCode[]
+
+  @@map("batches")
+}
+
+model QRCode {
+  id                   Int                   @id @default(autoincrement())
+  batchId              Int                   @map("batch_id")
+  token                String                @unique
+  signature            String
+  status               String                @default("active")
+  printedAt            DateTime?             @map("printed_at")
+  createdAt            DateTime              @default(now()) @map("created_at")
+
+  batch                Batch                 @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  verificationSessions VerificationSession[]
+  reports              Report[]
+
+  @@map("qr_codes")
+}
+
+model Consumer {
+  id                   Int                   @id @default(autoincrement())
+  phoneNumberHash      String                @unique @map("phone_number_hash")
+  firstSeenAt          DateTime              @default(now()) @map("first_seen_at")
+  verificationCount    Int                   @default(0) @map("verification_count")
+  createdAt            DateTime              @default(now()) @map("created_at")
+
+  verificationSessions VerificationSession[]
+  reports              Report[]
+
+  @@map("consumers")
+}
+
+model Device {
+  id              Int      @id @default(autoincrement())
+  fingerprintHash String   @unique @map("fingerprint_hash")
+  firstSeenAt     DateTime @default(now()) @map("first_seen_at")
+
+  @@map("devices")
+}
+
+model VerificationSession {
+  id          Int      @id @default(autoincrement())
+  qrCodeId    Int      @map("qr_code_id")
+  consumerId  Int?     @map("consumer_id")
+  deviceId    String?  @map("device_id") @db.Text
+  ipCountry   String?  @map("ip_country")
+  result      String
+  riskScore   Float    @map("risk_score")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  qrCode      QRCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+  consumer    Consumer? @relation(fields: [consumerId], references: [id], onDelete: SetNull)
+  fraudEvents FraudEvent[]
+
+  @@map("verification_sessions")
+}
+
+model Report {
+  id               Int      @id @default(autoincrement())
+  qrCodeId         Int      @map("qr_code_id")
+  consumerId       Int      @map("consumer_id")
+  description      String?  @db.Text
+  retailerName     String?  @map("retailer_name")
+  retailerLocation String?  @map("retailer_location") @db.Text
+  photoUrl         String?  @map("photo_url") @db.VarChar(512)
+  status           String   @default("pending")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  qrCode           QRCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+  consumer         Consumer @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+model FraudEvent {
+  id                    Int                 @id @default(autoincrement())
+  verificationSessionId Int                 @map("verification_session_id")
+  signalType            String              @map("signal_type")
+  severity              String
+  resolvedBy            Int?                @map("resolved_by")
+  resolvedAt            DateTime?           @map("resolved_at")
+  createdAt             DateTime            @default(now()) @map("created_at")
+
+  verificationSession   VerificationSession @relation(fields: [verificationSessionId], references: [id], onDelete: Cascade)
+  resolver              User?               @relation(fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@map("fraud_events")
+}
+
+model AuditLog {
+  id           Int      @id @default(autoincrement())
+  actorUserId  Int?     @map("actor_user_id")
+  action       String
+  targetEntity String   @map("target_entity")
+  targetId     Int      @map("target_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  actor        User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}

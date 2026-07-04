@@ -64,7 +64,7 @@ func handlePublicReportSubmit(w http.ResponseWriter, r *http.Request) {
 
 	// Find the QR code ID
 	var qrCodeID int
-	err := db.DB.QueryRow(`SELECT id FROM qr_codes WHERE token = $1`, req.Token).Scan(&qrCodeID)
+	err := db.DB.QueryRow(`SELECT id FROM qr_codes WHERE token = ?`, req.Token).Scan(&qrCodeID)
 	if err == sql.ErrNoRows {
 		http.Error(w, `{"error": "Invalid token"}`, http.StatusNotFound)
 		return
@@ -76,12 +76,12 @@ func handlePublicReportSubmit(w http.ResponseWriter, r *http.Request) {
 	// Find or create consumer ID
 	phoneHash := crypto.SignToken(req.Phone) // hash phone
 	var consumerID int
-	err = db.DB.QueryRow(`SELECT id FROM consumers WHERE phone_number_hash = $1`, phoneHash).Scan(&consumerID)
+	err = db.DB.QueryRow(`SELECT id FROM consumers WHERE phone_number_hash = ?`, phoneHash).Scan(&consumerID)
 	if err == sql.ErrNoRows {
-		res, _ := db.DB.Exec(`INSERT INTO consumers (phone_number_hash, verification_count, created_at) VALUES ($1, 1, $2)`, phoneHash, time.Now())
+		res, _ := db.DB.Exec(`INSERT INTO consumers (phone_number_hash, verification_count, created_at) VALUES (?, 1, ?)`, phoneHash, time.Now())
 		cid, _ := res.LastInsertId()
 		if cid == 0 {
-			db.DB.QueryRow(`SELECT id FROM consumers WHERE phone_number_hash = $1`, phoneHash).Scan(&consumerID)
+			db.DB.QueryRow(`SELECT id FROM consumers WHERE phone_number_hash = ?`, phoneHash).Scan(&consumerID)
 		} else {
 			consumerID = int(cid)
 		}
@@ -90,7 +90,7 @@ func handlePublicReportSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = db.DB.Exec(`INSERT INTO reports (qr_code_id, consumer_id, description, retailer_name, retailer_location, photo_url, status, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)`,
+		VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
 		qrCodeID, consumerID, req.Description, req.RetailerName, req.RetailerLocation, req.PhotoURL, time.Now())
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error": "Failed to create report: %v"}`, err), http.StatusInternalServerError)
@@ -118,15 +118,15 @@ func handleSummary(w http.ResponseWriter, r *http.Request) {
 	var productCount, batchCount, scanCount, genuineCount, suspiciousCount, recalledCount int
 
 	// Totals
-	db.DB.QueryRow(`SELECT COUNT(*) FROM products WHERE producer_id = $1`, prodID).Scan(&productCount)
-	db.DB.QueryRow(`SELECT COUNT(*) FROM batches b JOIN products p ON b.product_id = p.id WHERE p.producer_id = $1`, prodID).Scan(&batchCount)
+	db.DB.QueryRow(`SELECT COUNT(*) FROM products WHERE producer_id = ?`, prodID).Scan(&productCount)
+	db.DB.QueryRow(`SELECT COUNT(*) FROM batches b JOIN products p ON b.product_id = p.id WHERE p.producer_id = ?`, prodID).Scan(&batchCount)
 	
 	// Scans
 	scanQuery := `SELECT COUNT(vs.id) FROM verification_sessions vs
 		JOIN qr_codes q ON vs.qr_code_id = q.id
 		JOIN batches b ON q.batch_id = b.id
 		JOIN products p ON b.product_id = p.id
-		WHERE p.producer_id = $1`
+		WHERE p.producer_id = ?`
 	db.DB.QueryRow(scanQuery, prodID).Scan(&scanCount)
 
 	// Scans genuine
@@ -139,7 +139,7 @@ func handleSummary(w http.ResponseWriter, r *http.Request) {
 	recalledQuery := `SELECT COUNT(q.id) FROM qr_codes q
 		JOIN batches b ON q.batch_id = b.id
 		JOIN products p ON b.product_id = p.id
-		WHERE p.producer_id = $1 AND (q.status = 'recalled' OR b.status = 'recalled')`
+		WHERE p.producer_id = ? AND (q.status = 'recalled' OR b.status = 'recalled')`
 	db.DB.QueryRow(recalledQuery, prodID).Scan(&recalledCount)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -192,7 +192,7 @@ func handleScansTimeline(w http.ResponseWriter, r *http.Request) {
 		JOIN qr_codes q ON vs.qr_code_id = q.id
 		JOIN batches b ON q.batch_id = b.id
 		JOIN products p ON b.product_id = p.id
-		WHERE p.producer_id = $1 AND vs.created_at >= $2
+		WHERE p.producer_id = ? AND vs.created_at >= ?
 		GROUP BY DATE(vs.created_at), vs.result
 		ORDER BY scan_date ASC
 	`
@@ -206,7 +206,7 @@ func handleScansTimeline(w http.ResponseWriter, r *http.Request) {
 			JOIN qr_codes q ON vs.qr_code_id = q.id
 			JOIN batches b ON q.batch_id = b.id
 			JOIN products p ON b.product_id = p.id
-			WHERE p.producer_id = $1 AND vs.created_at >= $2
+			WHERE p.producer_id = ? AND vs.created_at >= ?
 			GROUP BY TO_CHAR(vs.created_at, 'YYYY-MM-DD'), vs.result
 			ORDER BY scan_date ASC
 		`
@@ -238,7 +238,7 @@ func handleScansTimeline(w http.ResponseWriter, r *http.Request) {
 		JOIN qr_codes q ON vs.qr_code_id = q.id
 		JOIN batches b ON q.batch_id = b.id
 		JOIN products p ON b.product_id = p.id
-		WHERE p.producer_id = $1
+		WHERE p.producer_id = ?
 		GROUP BY vs.ip_country
 	`
 	geoRows, err := db.DB.Query(geoQuery, prodID)
@@ -282,7 +282,7 @@ func handleProducerReports(w http.ResponseWriter, r *http.Request) {
 		JOIN qr_codes q ON r.qr_code_id = q.id
 		JOIN batches b ON q.batch_id = b.id
 		JOIN products p ON b.product_id = p.id
-		WHERE p.producer_id = $1
+		WHERE p.producer_id = ?
 		ORDER BY r.created_at DESC`, prodID)
 	if err != nil {
 		http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
@@ -334,7 +334,7 @@ func handleProducerAlerts(w http.ResponseWriter, r *http.Request) {
 		JOIN qr_codes q ON vs.qr_code_id = q.id
 		JOIN batches b ON q.batch_id = b.id
 		JOIN products p ON b.product_id = p.id
-		WHERE p.producer_id = $1
+		WHERE p.producer_id = ?
 		ORDER BY fe.created_at DESC`, prodID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
@@ -407,7 +407,7 @@ func handleResolveAlert(w http.ResponseWriter, r *http.Request) {
 		JOIN qr_codes q ON vs.qr_code_id = q.id
 		JOIN batches b ON q.batch_id = b.id
 		JOIN products p ON b.product_id = p.id
-		WHERE fe.id = $1`, alertID).Scan(&alertOwnerProdID)
+		WHERE fe.id = ?`, alertID).Scan(&alertOwnerProdID)
 	if err == sql.ErrNoRows || alertOwnerProdID != prodID {
 		http.Error(w, `{"error": "Forbidden: invalid alert ID"}`, http.StatusForbidden)
 		return
@@ -415,7 +415,7 @@ func handleResolveAlert(w http.ResponseWriter, r *http.Request) {
 
 	userID, _ := middleware.GetUserID(r.Context())
 	now := time.Now()
-	_, err = db.DB.Exec(`UPDATE fraud_events SET resolved_by = $1, resolved_at = $2 WHERE id = $3`, userID, now, alertID)
+	_, err = db.DB.Exec(`UPDATE fraud_events SET resolved_by = ?, resolved_at = ? WHERE id = ?`, userID, now, alertID)
 	if err != nil {
 		http.Error(w, `{"error": "Failed to resolve alert"}`, http.StatusInternalServerError)
 		return
@@ -423,7 +423,7 @@ func handleResolveAlert(w http.ResponseWriter, r *http.Request) {
 
 	// Audit Log
 	db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
-		VALUES ($1, 'RESOLVE_FRAUD_ALERT', 'fraud_event', $2, $3)`, userID, alertID, now)
+		VALUES (?, 'RESOLVE_FRAUD_ALERT', 'fraud_event', ?, ?)`, userID, alertID, now)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{

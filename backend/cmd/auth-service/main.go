@@ -102,7 +102,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	var producerID int64
 	producerQuery := `INSERT INTO producers (name, slug, plan_tier, contact_email, status, created_at) 
-		VALUES ($1, $2, $3, $4, $5, $6)`
+		VALUES (?, ?, ?, ?, ?, ?)`
 
 	// SQLite returns last insert row ID differently than Postgres, so we check driver style
 	res, err := tx.Exec(producerQuery, req.ProducerName, req.ProducerSlug, planTier, req.ContactEmail, models.StatusActive, time.Now())
@@ -115,7 +115,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		// Postgres driver Exec doesn't support LastInsertId on Exec, let's use QueryRow if Postgres
 		// But Exec works on SQLite. Let's do a backup query if producerID is 0
 		var id int
-		err = db.DB.QueryRow(`SELECT id FROM producers WHERE slug = $1`, req.ProducerSlug).Scan(&id)
+		err = db.DB.QueryRow(`SELECT id FROM producers WHERE slug = ?`, req.ProducerSlug).Scan(&id)
 		if err != nil {
 			http.Error(w, fmt.Sprintf(`{"error": "Failed to fetch producer: %v"}`, err), http.StatusInternalServerError)
 			return
@@ -131,7 +131,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userQuery := `INSERT INTO users (email, password_hash, role, producer_id, status, created_at) 
-		VALUES ($1, $2, $3, $4, $5, $6)`
+		VALUES (?, ?, ?, ?, ?, ?)`
 	_, err = tx.Exec(userQuery, req.Email, pwdHash, string(models.RoleProducer), producerID, models.StatusActive, time.Now())
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error": "User email already exists: %v"}`, err), http.StatusBadRequest)
@@ -165,7 +165,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var u models.User
-	query := `SELECT id, email, password_hash, role, producer_id, status FROM users WHERE email = $1`
+	query := `SELECT id, email, password_hash, role, producer_id, status FROM users WHERE email = ?`
 	err := db.DB.QueryRow(query, req.Email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.ProducerID, &u.Status)
 	if err == sql.ErrNoRows {
 		http.Error(w, `{"error": "Invalid credentials"}`, http.StatusUnauthorized)
@@ -303,7 +303,7 @@ func handleSeedData(w http.ResponseWriter, r *http.Request) {
 
 	// Seed Producer
 	res, err := tx.Exec(`INSERT INTO producers (name, slug, plan_tier, contact_email, status, created_at)
-		VALUES ('AURA Skincare', 'aura', 'growth', 'hello@auraskin.com', 'active', $1)`, time.Now())
+		VALUES ('AURA Skincare', 'aura', 'growth', 'hello@auraskin.com', 'active', ?)`, time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -313,14 +313,14 @@ func handleSeedData(w http.ResponseWriter, r *http.Request) {
 		// Postgres fallback
 		var pid int
 		tx.QueryRow(`INSERT INTO producers (name, slug, plan_tier, contact_email, status, created_at)
-			VALUES ('AURA Skincare', 'aura', 'growth', 'hello@auraskin.com', 'active', $1) RETURNING id`, time.Now()).Scan(&pid)
+			VALUES ('AURA Skincare', 'aura', 'growth', 'hello@auraskin.com', 'active', ?) RETURNING id`, time.Now()).Scan(&pid)
 		producerID = int64(pid)
 	}
 
 	// Seed Users
 	pwdHash, _ := crypto.HashPassword("aura123456")
 	_, err = tx.Exec(`INSERT INTO users (email, password_hash, role, producer_id, status, created_at)
-		VALUES ('admin@auraskin.com', $1, 'producer', $2, 'active', $3)`, pwdHash, producerID, time.Now())
+		VALUES ('admin@auraskin.com', ?, 'producer', ?, 'active', ?)`, pwdHash, producerID, time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -329,7 +329,7 @@ func handleSeedData(w http.ResponseWriter, r *http.Request) {
 	// Seed Platform Admin
 	pwdAdminHash, _ := crypto.HashPassword("admin123456")
 	_, err = tx.Exec(`INSERT INTO users (email, password_hash, role, producer_id, status, created_at)
-		VALUES ('admin@antifakeng.com', $1, 'admin', NULL, 'active', $2)`, pwdAdminHash, time.Now())
+		VALUES ('admin@antifakeng.com', ?, 'admin', NULL, 'active', ?)`, pwdAdminHash, time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -337,7 +337,7 @@ func handleSeedData(w http.ResponseWriter, r *http.Request) {
 
 	// Seed Product
 	prodRes, err := tx.Exec(`INSERT INTO products (producer_id, name, sku, category, description, image_url, created_at)
-		VALUES ($1, 'AURA Skincare Serum', 'AURA-SERUM-50ML', 'Cosmetics', 'Premium hydrating skincare serum with Hyaluronic Acid.', '/logo.png', $2)`,
+		VALUES (?, 'AURA Skincare Serum', 'AURA-SERUM-50ML', 'Cosmetics', 'Premium hydrating skincare serum with Hyaluronic Acid.', '/logo.png', ?)`,
 		producerID, time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -347,14 +347,14 @@ func handleSeedData(w http.ResponseWriter, r *http.Request) {
 	if productID == 0 {
 		var prid int
 		tx.QueryRow(`INSERT INTO products (producer_id, name, sku, category, description, image_url, created_at)
-			VALUES ($1, 'AURA Skincare Serum', 'AURA-SERUM-50ML', 'Cosmetics', 'Premium hydrating skincare serum with Hyaluronic Acid.', '/logo.png', $2) RETURNING id`,
+			VALUES (?, 'AURA Skincare Serum', 'AURA-SERUM-50ML', 'Cosmetics', 'Premium hydrating skincare serum with Hyaluronic Acid.', '/logo.png', ?) RETURNING id`,
 			producerID, time.Now()).Scan(&prid)
 		productID = int64(prid)
 	}
 
 	// Seed Batch
 	batchRes, err := tx.Exec(`INSERT INTO batches (product_id, batch_code, quantity, manufacture_date, expiry_date, status, created_at)
-		VALUES ($1, 'B-AUR-2026-01', 5000, $2, $3, 'active', $4)`,
+		VALUES (?, 'B-AUR-2026-01', 5000, ?, ?, 'active', ?)`,
 		productID, time.Now(), time.Now().AddDate(2, 0, 0), time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -364,7 +364,7 @@ func handleSeedData(w http.ResponseWriter, r *http.Request) {
 	if batchID == 0 {
 		var bid int
 		tx.QueryRow(`INSERT INTO batches (product_id, batch_code, quantity, manufacture_date, expiry_date, status, created_at)
-			VALUES ($1, 'B-AUR-2026-01', 5000, $2, $3, 'active', $4) RETURNING id`,
+			VALUES (?, 'B-AUR-2026-01', 5000, ?, ?, 'active', ?) RETURNING id`,
 			productID, time.Now(), time.Now().AddDate(2, 0, 0), time.Now()).Scan(&bid)
 		batchID = int64(bid)
 	}
@@ -372,7 +372,7 @@ func handleSeedData(w http.ResponseWriter, r *http.Request) {
 	// Seed a specific test QRCode token "9F3C-71AE"
 	sig := crypto.SignToken("9F3C-71AE")
 	_, err = tx.Exec(`INSERT INTO qr_codes (batch_id, token, signature, status, created_at)
-		VALUES ($1, '9F3C-71AE', $2, 'active', $3)`, batchID, sig, time.Now())
+		VALUES (?, '9F3C-71AE', ?, 'active', ?)`, batchID, sig, time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

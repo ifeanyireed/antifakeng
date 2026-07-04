@@ -84,7 +84,7 @@ func fetchTokenMetadata(w http.ResponseWriter, token string) {
 			  JOIN batches b ON q.batch_id = b.id
 			  JOIN products p ON b.product_id = p.id
 			  JOIN producers pr ON p.producer_id = pr.id
-			  WHERE q.token = $1`
+			  WHERE q.token = ?`
 
 	err := db.DB.QueryRow(query, token).Scan(
 		&q.ID, &q.BatchID, &q.Token, &q.Signature, &q.Status,
@@ -203,7 +203,7 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 			  JOIN batches b ON q.batch_id = b.id
 			  JOIN products p ON b.product_id = p.id
 			  JOIN producers pr ON p.producer_id = pr.id
-			  WHERE q.token = $1`
+			  WHERE q.token = ?`
 
 	err := db.DB.QueryRow(query, token).Scan(
 		&q.ID, &q.BatchID, &q.Token, &q.Signature, &q.Status,
@@ -248,23 +248,23 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 
 		// Create/Get consumer details
 		var consumerID int
-		err = db.DB.QueryRow(`SELECT id FROM consumers WHERE phone_number_hash = $1`, phoneHash).Scan(&consumerID)
+		err = db.DB.QueryRow(`SELECT id FROM consumers WHERE phone_number_hash = ?`, phoneHash).Scan(&consumerID)
 		if err == sql.ErrNoRows {
-			res, _ := db.DB.Exec(`INSERT INTO consumers (phone_number_hash, verification_count, created_at) VALUES ($1, 1, $2)`, phoneHash, time.Now())
+			res, _ := db.DB.Exec(`INSERT INTO consumers (phone_number_hash, verification_count, created_at) VALUES (?, 1, ?)`, phoneHash, time.Now())
 			cid, _ := res.LastInsertId()
 			if cid == 0 {
-				db.DB.QueryRow(`SELECT id FROM consumers WHERE phone_number_hash = $1`, phoneHash).Scan(&consumerID)
+				db.DB.QueryRow(`SELECT id FROM consumers WHERE phone_number_hash = ?`, phoneHash).Scan(&consumerID)
 			} else {
 				consumerID = int(cid)
 			}
 		} else {
 			consumerID = int(consumerID)
-			db.DB.Exec(`UPDATE consumers SET verification_count = verification_count + 1 WHERE id = $1`, consumerID)
+			db.DB.Exec(`UPDATE consumers SET verification_count = verification_count + 1 WHERE id = ?`, consumerID)
 		}
 
 		// Count previous scans of this specific QR token
 		var prevScansCount int
-		db.DB.QueryRow(`SELECT COUNT(*) FROM verification_sessions WHERE qr_code_id = $1`, q.ID).Scan(&prevScansCount)
+		db.DB.QueryRow(`SELECT COUNT(*) FROM verification_sessions WHERE qr_code_id = ?`, q.ID).Scan(&prevScansCount)
 
 		if prevScansCount > 0 {
 			// Scan repeated! Check signals
@@ -272,7 +272,7 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 			
 			// Signal 1: Device fingerprint mismatch
 			var lastDeviceID string
-			db.DB.QueryRow(`SELECT device_id FROM verification_sessions WHERE qr_code_id = $1 ORDER BY created_at DESC LIMIT 1`, q.ID).Scan(&lastDeviceID)
+			db.DB.QueryRow(`SELECT device_id FROM verification_sessions WHERE qr_code_id = ? ORDER BY created_at DESC LIMIT 1`, q.ID).Scan(&lastDeviceID)
 			if lastDeviceID != "" && lastDeviceID != req.DeviceID {
 				riskScore += 0.35 // Medium weight
 				signals = append(signals, "device_mismatch")
@@ -280,7 +280,7 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 
 			// Signal 2: Different phone numbers scanning same QR
 			var uniquePhones int
-			db.DB.QueryRow(`SELECT COUNT(DISTINCT consumer_id) FROM verification_sessions WHERE qr_code_id = $1`, q.ID).Scan(&uniquePhones)
+			db.DB.QueryRow(`SELECT COUNT(DISTINCT consumer_id) FROM verification_sessions WHERE qr_code_id = ?`, q.ID).Scan(&uniquePhones)
 			if uniquePhones > 1 {
 				riskScore += 0.45 // High weight
 				signals = append(signals, "different_phone_reused")
@@ -288,7 +288,7 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 
 			// Signal 3: Scan velocity (scanned too fast consecutively)
 			var lastScanTime time.Time
-			db.DB.QueryRow(`SELECT created_at FROM verification_sessions WHERE qr_code_id = $1 ORDER BY created_at DESC LIMIT 1`, q.ID).Scan(&lastScanTime)
+			db.DB.QueryRow(`SELECT created_at FROM verification_sessions WHERE qr_code_id = ? ORDER BY created_at DESC LIMIT 1`, q.ID).Scan(&lastScanTime)
 			if !lastScanTime.IsZero() && time.Since(lastScanTime) < 5*time.Minute {
 				riskScore += 0.25 // Medium weight
 				signals = append(signals, "multiple_scans_short_period")
@@ -317,7 +317,7 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 
 		var sessionID int64
 		res, err := tx.Exec(`INSERT INTO verification_sessions (qr_code_id, consumer_id, device_id, ip_country, result, risk_score, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			q.ID, consumerID, req.DeviceID, req.IPCountry, verdict, riskScore, time.Now())
 		if err == nil {
 			sessionID, _ = res.LastInsertId()
@@ -326,7 +326,7 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 		// If LastInsertId failed due to driver, fetch it
 		if sessionID == 0 {
 			tx.QueryRow(`INSERT INTO verification_sessions (qr_code_id, consumer_id, device_id, ip_country, result, risk_score, created_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+				VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
 				q.ID, consumerID, req.DeviceID, req.IPCountry, verdict, riskScore, time.Now()).Scan(&sessionID)
 		}
 
@@ -338,7 +338,7 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 					severity = "high"
 				}
 				tx.Exec(`INSERT INTO fraud_events (verification_session_id, signal_type, severity, created_at)
-					VALUES ($1, $2, $3, $4)`, sessionID, sigType, severity, time.Now())
+					VALUES (?, ?, ?, ?)`, sessionID, sigType, severity, time.Now())
 			}
 		}
 
