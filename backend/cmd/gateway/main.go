@@ -22,6 +22,7 @@ func main() {
 		{Prefix: "/api/producer", Target: "http://localhost:8082"},
 		{Prefix: "/api/verify", Target: "http://localhost:8083"},
 		{Prefix: "/api/analytics", Target: "http://localhost:8084"},
+		{Prefix: "/uploads", Target: "http://localhost:8082"},
 	}
 
 	proxies := make(map[string]*httputil.ReverseProxy)

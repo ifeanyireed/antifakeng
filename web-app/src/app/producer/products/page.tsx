@@ -27,14 +27,35 @@ export default function ProducerProducts() {
   const [newProductCat, setNewProductCat] = useState("Cosmetics");
   const [productImage, setProductImage] = useState("");
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProductImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append("image", file);
+      
+      try {
+        const token = localStorage.getItem("ahnara_token");
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+        
+        const res = await fetch("http://localhost:8080/api/producer/upload", {
+          method: "POST",
+          headers,
+          body: formData
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setProductImage(data.url);
+        } else {
+          alert("Failed to upload image to host server.");
+        }
+      } catch (err) {
+        console.error("Upload connection error:", err);
+        alert("Upload server is currently unreachable. Image preview disabled.");
+      }
     }
   };
 

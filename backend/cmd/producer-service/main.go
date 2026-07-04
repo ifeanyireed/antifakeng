@@ -16,6 +16,7 @@ import (
 	"github.com/ahnara/antifake/backend/pkg/middleware"
 	"github.com/ahnara/antifake/backend/pkg/models"
 	"github.com/ahnara/antifake/backend/pkg/printer"
+	"github.com/ahnara/antifake/backend/pkg/storage"
 )
 
 func main() {
@@ -28,6 +29,10 @@ func main() {
 	mux.Handle("/api/producer/products", middleware.RequireAuth(http.HandlerFunc(handleProducts)))
 	mux.Handle("/api/producer/batches", middleware.RequireAuth(http.HandlerFunc(handleBatches)))
 	mux.Handle("/api/producer/batches/", middleware.RequireAuth(http.HandlerFunc(handleSingleBatchOperations)))
+	mux.Handle("/api/producer/upload", middleware.RequireAuth(http.HandlerFunc(handleUpload)))
+
+	// Serve static uploads
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	log.Println("Producer Service starting on port 8082...")
 	log.Fatal(http.ListenAndServe(":8082", middleware.CORS(mux)))
@@ -395,4 +400,34 @@ func generateRandomToken() string {
 		sb.WriteByte(charset[int(val)%len(charset)])
 	}
 	return sb.String()
+}
+
+func handleUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Limit upload size to 10MB
+	r.ParseMultipartForm(10 << 20)
+
+	file, header, err := r.FormFile("image")
+	if err != nil {
+		http.Error(w, `{"error": "Failed to read uploaded file"}`, http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Upload image via SFTP to Hostinger or local fallback
+	urlStr, err := storage.UploadImage(file, header)
+	if err != nil {
+		log.Printf("File upload error: %v", err)
+		http.Error(w, fmt.Sprintf(`{"error": "%v"}`, err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"url": urlStr,
+	})
 }
