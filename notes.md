@@ -56,3 +56,8 @@
   token inside  wameow_session.db . It will reconnect
   automatically on all future restarts without requiring
   pairing again.
+
+    To compile and run all services in the background together,
+  you should run:
+
+    ./run.sh

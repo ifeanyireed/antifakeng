@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import {
@@ -55,6 +56,10 @@ export default function ProducerBatches() {
   const [gridColumns, setGridColumns] = useState("12");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [previewText, setPreviewText] = useState("");
+  const [tokensList, setTokensList] = useState<any[]>([]);
 
   const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,47 +109,68 @@ export default function ProducerBatches() {
     setIsPrintModalOpen(true);
   };
 
-  const handleStartGeneration = () => {
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownload = () => {
+    const textToDownload = previewText || tokensList.map(t => `${t.token},https://antifake.ng/verify?token=${t.token}`).join("\n");
+    const blob = new Blob([textToDownload], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `antifake-print-${activePrintBatch?.batch_code}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleStartGeneration = async () => {
     setIsGenerating(true);
     setGenerationProgress(0);
     const interval = setInterval(() => {
       setGenerationProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
-          setTimeout(() => {
-            setIsGenerating(false);
-            setIsPrintModalOpen(false);
-
-            // Attempt real backend PDF download
-            const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
-            
-            if (activePrintBatch?.id && token) {
-              const downloadUrl = `http://localhost:8080/api/producer/batches/${activePrintBatch.id}/print?token=${encodeURIComponent(token)}&message=${encodeURIComponent(printMessage)}&width=${encodeURIComponent(layoutWidth === "custom" ? `${customWidth}${customWidthUnit}` : layoutWidth)}&columns=${gridColumns}`;
-              window.open(downloadUrl, "_blank");
-            } else {
-              const blob = new Blob([
-                "AntiFakeNG Bulk Security Serial Print Layout Template File\n",
-                "===========================================================\n",
-                `Batch ID: ${activePrintBatch?.batch_code}\n`,
-                `Code Count: ${activePrintBatch?.quantity}\n`,
-                `File Format: ${fileFormat.toUpperCase()}\n`,
-                `Selected Layout Width: ${layoutWidth === "custom" ? `${customWidth} ${customWidthUnit}` : layoutWidth}\n`,
-                `Columns: ${gridColumns} across\n`,
-                `Print Message: "${printMessage}"\n\n`
-              ], { type: "text/plain" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `antifake-print-${activePrintBatch?.batch_code}.txt`;
-              a.click();
-              URL.revokeObjectURL(url);
-            }
-          }, 500);
           return 100;
         }
         return prev + 10;
       });
-    }, 150);
+    }, 100);
+
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
+      
+      if (activePrintBatch?.id && token) {
+        // Fetch real QR code tokens from the backend
+        const codes = await api.get(`/producer/batches/${activePrintBatch.id}/qr-codes`);
+        setTokensList(codes || []);
+        setPreviewUrl("html"); // Renders HTML print sheet preview inside the modal
+        setPreviewText("");
+      } else {
+        // Fallback: Generate mock tokens for preview
+        const count = activePrintBatch?.quantity || 24;
+        const mockCodes = Array.from({ length: Math.min(count, 100) }, (_, i) => ({
+          token: `MOCK-${activePrintBatch?.batch_code || "TEST"}-${1000 + i}`,
+          status: "active"
+        }));
+        setTokensList(mockCodes);
+        setPreviewUrl("html");
+        setPreviewText("");
+      }
+
+      // Complete generation progress
+      setTimeout(() => {
+        clearInterval(interval);
+        setIsGenerating(false);
+        setIsPrintModalOpen(false);
+        setIsPreviewModalOpen(true);
+      }, 1100);
+
+    } catch (err: any) {
+      clearInterval(interval);
+      setIsGenerating(false);
+      alert(err.message || "Failed to fetch QR codes for print layout.");
+    }
   };
 
   return (
@@ -501,7 +527,7 @@ export default function ProducerBatches() {
                         onClick={handleStartGeneration}
                         className="flex-1 bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md"
                       >
-                        Generate &amp; Download
+                        Generate &amp; Preview
                       </button>
                     </div>
                   </div>
@@ -511,24 +537,39 @@ export default function ProducerBatches() {
                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Live Preview</h4>
                     
                     {/* Live Label Item Rendering */}
-                    <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        {/* Mock QR graphic */}
-                        <div className="w-14 h-14 bg-slate-100 border border-slate-200 flex-none flex items-center justify-center relative rounded-sm p-1">
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-row items-stretch overflow-hidden h-[135px]">
+                      {/* Left: QR code section */}
+                      <div className="w-[100px] flex-none bg-slate-50/50 border-r border-slate-100 flex items-center justify-center p-3">
+                        <div className="w-16 h-16 bg-white border border-slate-200/80 flex items-center justify-center rounded-lg p-1.5 shadow-xs">
                           <IconQrcode className="w-full h-full text-slate-800" />
                         </div>
-                        {/* Token serial placeholder */}
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase">Serial Code</span>
-                          <span className="font-mono text-sm font-bold text-slate-800">XXXX-XXXX</span>
-                          <span className="text-[9px] text-[#0089C1] font-bold uppercase mt-0.5">Signature Valid</span>
+                      </div>
+
+                      {/* Right: Text and metadata section */}
+                      <div className="flex-1 flex flex-col p-3.5 justify-between">
+                        <div>
+                          {/* Serial Code header */}
+                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                            SERIAL: <span className="font-mono text-slate-800 font-extrabold ml-1">XXXX-XXXX</span>
+                          </div>
+
+                          {/* Instructions using IBM Plex Sans font */}
+                          <p className="text-[11px] text-slate-500 font-medium leading-tight font-ibm mt-1 max-w-[220px]">
+                            {printMessage || "(No message specified)"}
+                          </p>
+                        </div>
+
+                        {/* Middle-bottom: Logo and Name */}
+                        <div className="flex items-center gap-2 py-0.5">
+                          <img src="/logo.png" alt="AntiFakeNG Logo" className="w-5.5 h-5.5 object-contain" />
+                          <span className="text-xs font-black text-[#12213B] tracking-tight">AntiFakeNG</span>
+                        </div>
+
+                        {/* Bottom: Blue secure verification portal footer */}
+                        <div className="text-[8px] text-[#0089C1] font-black tracking-wider uppercase">
+                          SECURE VERIFICATION PORTAL
                         </div>
                       </div>
-                      
-                      {/* Label Text Message block */}
-                      <p className="text-[10px] text-slate-500 font-bold border-t border-slate-100 pt-2 leading-relaxed">
-                        {printMessage || "(No message specified)"}
-                      </p>
                     </div>
 
                     {/* Industrial Roll Layout schematic */}
@@ -561,6 +602,209 @@ export default function ProducerBatches() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Document/PDF Preview Modal */}
+      <AnimatePresence>
+        {isPreviewModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsPreviewModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-5xl bg-white border border-slate-200/80 rounded-[32px] p-6 shadow-2xl relative z-10 text-left flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200"
+            >
+              {/* Modal Header */}
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100 animate-fade-in">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <IconPrinter className="w-5 h-5 text-slate-500" />
+                    <h3 className="text-xl font-extrabold text-slate-900 tracking-tight text-display">Print Layout Preview</h3>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    Review generated layouts. You can print directly from the viewer or download the file.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <IconX className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Content / Preview Area */}
+              <div className="bg-slate-100 border border-slate-200/80 rounded-2xl overflow-auto p-6 max-h-[60vh] flex items-start justify-center">
+                {previewUrl === "html" ? (
+                  <div
+                    className="grid gap-3 justify-center"
+                    style={{
+                      gridTemplateColumns: `repeat(auto-fill, minmax(80mm, 1fr))`,
+                      width: "100%",
+                      maxWidth: "100%",
+                    }}
+                  >
+                    {tokensList.map((tokenObj, idx) => (
+                      <div
+                        key={idx}
+                        className="w-[80mm] h-[40mm] border border-slate-200 rounded-lg flex overflow-hidden p-2 bg-white text-slate-800 shrink-0 select-none shadow-xs mx-auto"
+                      >
+                        {/* Left: QR Code */}
+                        <div className="w-[34mm] h-[34mm] flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md p-1">
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://antifake.ng/verify?token=${tokenObj.token}`)}`}
+                            alt="QR Code"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        {/* Right: Metadata */}
+                        <div className="flex-1 flex flex-col justify-between pl-3 text-left">
+                          <div>
+                            <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase">
+                              SERIAL: <span className="font-mono text-slate-800 font-extrabold">{tokenObj.token}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-600 font-medium leading-tight mt-1">
+                              {printMessage || "Scan QR code or visit antifake.ng/verify, input serial to check authenticity."}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 py-0.5">
+                            <img src="/logo.png" alt="Logo" className="w-5.5 h-5.5 object-contain" />
+                            <span className="text-xs font-black text-[#12213B] tracking-tight">AntiFakeNG</span>
+                          </div>
+                          <div className="text-[8px] text-[#0089C1] font-black tracking-wider uppercase">
+                            SECURE VERIFICATION PORTAL
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : previewUrl ? (
+                  <iframe
+                    src={previewUrl}
+                    className="w-full h-[60vh] border-0"
+                    title="Print PDF Preview"
+                  />
+                ) : (
+                  <div className="w-full p-6">
+                    <pre className="bg-slate-900 text-slate-100 p-6 rounded-2xl overflow-auto text-xs font-mono max-h-[50vh] text-left">
+                      {previewText}
+                    </pre>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer / Actions */}
+              <div className="flex justify-between items-center border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all font-bold px-6 py-3 rounded-full text-xs"
+                >
+                  Close Preview
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all font-bold px-6 py-3 rounded-full text-xs flex items-center gap-1.5"
+                  >
+                    <IconDownload className="w-4 h-4" />
+                    Export CSV / Keys
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePrint}
+                    className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-6 py-3 rounded-full text-xs shadow-md flex items-center gap-1.5 animate-bounce-subtle"
+                  >
+                    <IconPrinter className="w-4 h-4" />
+                    Print / Save as PDF
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Hidden Print Container rendered as body level portal specifically targeted by @media print */}
+      {isPreviewModalOpen && typeof document !== "undefined" && createPortal(
+        <div id="print-layout-container" className="hidden print:block bg-white p-4">
+          <style dangerouslySetInnerHTML={{ __html: `
+            @media print {
+              body {
+                background: white !important;
+                color: #000000 !important;
+              }
+              /* Hide the main Next.js layout root and modals */
+              body > *:not(#print-layout-container) {
+                display: none !important;
+              }
+              #print-layout-container {
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+              .print-card {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+            }
+          `}} />
+          <div
+            className="grid gap-[5mm] p-[5mm]"
+            style={{
+              gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
+              width: layoutWidth === "4ft" ? "1219.2mm" : layoutWidth === "6ft" ? "1828.8mm" : layoutWidth === "10ft" ? "3048.0mm" : "100%",
+            }}
+          >
+            {tokensList.map((tokenObj, idx) => (
+              <div
+                key={idx}
+                className="print-card w-[80mm] h-[40mm] border border-slate-300 rounded-lg flex overflow-hidden p-2 bg-white text-slate-800 shrink-0 select-none"
+              >
+                {/* Left: QR Code */}
+                <div className="w-[34mm] h-[34mm] flex items-center justify-center bg-white border border-slate-100 rounded-md p-1">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://antifake.ng/verify?token=${tokenObj.token}`)}`}
+                    alt="QR Code"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                {/* Right: Metadata */}
+                <div className="flex-1 flex flex-col justify-between pl-3 text-left">
+                  <div>
+                    <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase">
+                      SERIAL: <span className="font-mono text-slate-800 font-extrabold">{tokenObj.token}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 font-medium leading-tight mt-1">
+                      {printMessage || "Scan QR code or visit antifake.ng/verify, input serial to check authenticity."}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 py-0.5">
+                    <img src="/logo.png" alt="Logo" className="w-5.5 h-5.5 object-contain" />
+                    <span className="text-xs font-black text-[#12213B] tracking-tight">AntiFakeNG</span>
+                  </div>
+                  <div className="text-[8px] text-[#0089C1] font-black tracking-wider uppercase">
+                    SECURE VERIFICATION PORTAL
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

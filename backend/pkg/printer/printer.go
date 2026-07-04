@@ -4,12 +4,21 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/boombuler/barcode/qr"
 	"github.com/jung-kurt/gofpdf"
 )
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
 
 // PrintConfig holds parameters for the PDF layout sheet
 type PrintConfig struct {
@@ -122,6 +131,61 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 	})
 	pdf.SetMargins(padding, padding, padding)
 	pdf.SetAutoPageBreak(false, 0)
+
+	// Look for IBM Plex Sans fonts to maintain the same body font as on the site
+	fontFamily := "Helvetica"
+	fontRegularPaths := []string{
+		"assets/fonts/IBMPlexSans-Regular.ttf",
+		"../assets/fonts/IBMPlexSans-Regular.ttf",
+		"backend/assets/fonts/IBMPlexSans-Regular.ttf",
+		"../backend/assets/fonts/IBMPlexSans-Regular.ttf",
+	}
+	fontBoldPaths := []string{
+		"assets/fonts/IBMPlexSans-Bold.ttf",
+		"../assets/fonts/IBMPlexSans-Bold.ttf",
+		"backend/assets/fonts/IBMPlexSans-Bold.ttf",
+		"../backend/assets/fonts/IBMPlexSans-Bold.ttf",
+	}
+
+	var foundRegularFont string
+	for _, fp := range fontRegularPaths {
+		if fileExists(fp) {
+			foundRegularFont = fp
+			break
+		}
+	}
+
+	var foundBoldFont string
+	for _, fp := range fontBoldPaths {
+		if fileExists(fp) {
+			foundBoldFont = fp
+			break
+		}
+	}
+
+	if foundRegularFont != "" && foundBoldFont != "" {
+		pdf.AddUTF8Font("IBMPlexSans", "", foundRegularFont)
+		pdf.AddUTF8Font("IBMPlexSans", "B", foundBoldFont)
+		fontFamily = "IBMPlexSans"
+	}
+
+	// Look for site logo to embed
+	logoPaths := []string{
+		"logo.png",
+		"../logo.png",
+		"backend/logo.png",
+		"../backend/logo.png",
+		"web-app/public/logo.png",
+		"../web-app/public/logo.png",
+	}
+	var foundLogo string
+	for _, lp := range logoPaths {
+		if fileExists(lp) {
+			foundLogo = lp
+			break
+		}
+	}
+
 	pdf.AddPage()
 
 	currentRowInPage := 0
@@ -190,18 +254,50 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 		textWidth := labelWidth - labelHeight - 4.0
 
 		// Label title / Brand name (e.g. Serial details)
-		pdf.SetFont("Helvetica", "B", 6)
+		pdf.SetFont(fontFamily, "B", 6)
 		pdf.SetTextColor(120, 120, 120)
 		pdf.Text(textX, y+6.0, fmt.Sprintf("SERIAL: %s", token))
 
 		// Instruction message (wrapped text)
-		pdf.SetFont("Helvetica", "", 4.5)
+		pdf.SetFont(fontFamily, "", 4.5)
 		pdf.SetTextColor(60, 60, 60)
 		pdf.SetXY(textX, y+8.5)
 		pdf.MultiCell(textWidth, 2.2, config.Message, "", "", false)
 
+		// 3. Draw Site Logo and Name ("AntiFakeNG") in the empty space
+		logoY := y + 20.0
+		logoX := textX + 2.0
+
+		if foundLogo != "" {
+			logoSize := 8.0 // 8mm
+			centerY := logoY + (logoSize / 2.0)
+			pdf.Image(foundLogo, logoX, logoY, logoSize, logoSize, false, "PNG", 0, "")
+
+			// Draw Site Name "AntiFakeNG" next to the logo
+			pdf.SetFont(fontFamily, "B", 9.0)
+			pdf.SetTextColor(18, 33, 59) // #12213B (Navy)
+			pdf.Text(logoX+logoSize+2.0, centerY+1.5, "AntiFakeNG")
+		} else {
+			// Fallback: Draw green circular seal vector if logo file not found
+			logoRadius := 4.0
+			centerYVector := logoY + logoRadius
+			pdf.SetFillColor(47, 228, 141) // #2FE48D
+			pdf.Circle(logoX+logoRadius, centerYVector, logoRadius, "F")
+
+			// Draw white checkmark inside the seal
+			pdf.SetLineWidth(0.6)
+			pdf.SetDrawColor(255, 255, 255)
+			pdf.Line(logoX+logoRadius-1.6, centerYVector, logoX+logoRadius-0.4, centerYVector+1.2)
+			pdf.Line(logoX+logoRadius-0.4, centerYVector+1.2, logoX+logoRadius+1.8, centerYVector-1.2)
+
+			// Draw Site Name "AntiFakeNG" next to the seal
+			pdf.SetFont(fontFamily, "B", 9.0)
+			pdf.SetTextColor(18, 33, 59) // #12213B
+			pdf.Text(logoX+logoRadius*2.0+2.0, centerYVector+1.5, "AntiFakeNG")
+		}
+
 		// Verification endpoint footer
-		pdf.SetFont("Helvetica", "B", 4.5)
+		pdf.SetFont(fontFamily, "B", 4.5)
 		pdf.SetTextColor(0, 137, 193) // brand blue
 		pdf.Text(textX, y+labelHeight-3.0, "SECURE VERIFICATION PORTAL")
 

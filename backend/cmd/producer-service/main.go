@@ -321,6 +321,53 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 			codes = append(codes, q)
 		}
 
+		// Auto-generate missing tokens to match batch quantity
+		if len(codes) < batchQty {
+			needed := batchQty - len(codes)
+			tx, err := db.DB.Begin()
+			if err != nil {
+				http.Error(w, `{"error": "Failed to start token generation transaction"}`, http.StatusInternalServerError)
+				return
+			}
+			defer tx.Rollback()
+
+			insertQuery := `INSERT INTO qr_codes (batch_id, token, signature, status, created_at) VALUES (?, ?, ?, ?, ?)`
+			for i := 0; i < needed; i++ {
+				token := generateRandomToken()
+				sig := crypto.SignToken(token)
+				res, err := tx.Exec(insertQuery, batchID, token, sig, models.StatusActive, time.Now())
+				if err != nil {
+					// Retry once on collision
+					token = generateRandomToken()
+					sig = crypto.SignToken(token)
+					res, err = tx.Exec(insertQuery, batchID, token, sig, models.StatusActive, time.Now())
+					if err != nil {
+						http.Error(w, fmt.Sprintf(`{"error": "Failed to generate missing tokens: %v"}`, err), http.StatusInternalServerError)
+						return
+					}
+				}
+				
+				lastID, _ := res.LastInsertId()
+				codes = append(codes, models.QRCode{
+					ID:        int(lastID),
+					Token:     token,
+					Signature: sig,
+					Status:    models.StatusActive,
+					CreatedAt: time.Now(),
+				})
+			}
+
+			if err := tx.Commit(); err != nil {
+				http.Error(w, `{"error": "Failed to commit generated tokens"}`, http.StatusInternalServerError)
+				return
+			}
+
+			// Log this generation action
+			userID, _ := middleware.GetUserID(r.Context())
+			db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
+				VALUES (?, 'GENERATE_QR_CODES', 'batch', ?, ?)`, userID, batchID, time.Now())
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(codes)
 		return
@@ -345,8 +392,46 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 			tokens = append(tokens, token)
 		}
 
+		// Auto-generate missing tokens to match batch quantity
+		if len(tokens) < batchQty {
+			needed := batchQty - len(tokens)
+			tx, err := db.DB.Begin()
+			if err != nil {
+				http.Error(w, `{"error": "Failed to start token generation transaction"}`, http.StatusInternalServerError)
+				return
+			}
+			defer tx.Rollback()
+
+			insertQuery := `INSERT INTO qr_codes (batch_id, token, signature, status, created_at) VALUES (?, ?, ?, ?, ?)`
+			for i := 0; i < needed; i++ {
+				token := generateRandomToken()
+				sig := crypto.SignToken(token)
+				_, err := tx.Exec(insertQuery, batchID, token, sig, models.StatusActive, time.Now())
+				if err != nil {
+					// Retry once on collision
+					token = generateRandomToken()
+					sig = crypto.SignToken(token)
+					if _, err2 := tx.Exec(insertQuery, batchID, token, sig, models.StatusActive, time.Now()); err2 != nil {
+						http.Error(w, fmt.Sprintf(`{"error": "Failed to generate missing tokens: %v"}`, err2), http.StatusInternalServerError)
+						return
+					}
+				}
+				tokens = append(tokens, token)
+			}
+
+			if err := tx.Commit(); err != nil {
+				http.Error(w, `{"error": "Failed to commit generated tokens"}`, http.StatusInternalServerError)
+				return
+			}
+
+			// Log this generation action
+			userID, _ := middleware.GetUserID(r.Context())
+			db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
+				VALUES (?, 'GENERATE_QR_CODES', 'batch', ?, ?)`, userID, batchID, time.Now())
+		}
+
 		if len(tokens) == 0 {
-			http.Error(w, `{"error": "No QR codes found for this batch. Generate them first."}`, http.StatusBadRequest)
+			http.Error(w, `{"error": "No QR codes found for this batch and could not auto-generate."}`, http.StatusBadRequest)
 			return
 		}
 
@@ -375,9 +460,13 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 			Columns:     cols,
 		}
 
-		// Set header to trigger pdf download
+		// Determine if download or inline preview is requested
+		disposition := "inline"
+		if r.URL.Query().Get("download") == "true" {
+			disposition = "attachment"
+		}
 		w.Header().Set("Content-Type", "application/pdf")
-		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"antifake-print-%s.pdf\"", batchIDStr))
+		w.Header().Set("Content-Disposition", fmt.Sprintf("%s; filename=\"antifake-print-%s.pdf\"", disposition, batchIDStr))
 
 		err = printer.GenerateVectorPDF(w, printConfig, tokens)
 		if err != nil {

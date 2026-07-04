@@ -32,7 +32,16 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to parse target URL %s: %v", r.Target, err)
 		}
-		proxies[r.Prefix] = httputil.NewSingleHostReverseProxy(targetURL)
+		proxy := httputil.NewSingleHostReverseProxy(targetURL)
+		proxy.ModifyResponse = func(resp *http.Response) error {
+			resp.Header.Del("Access-Control-Allow-Origin")
+			resp.Header.Del("Access-Control-Allow-Methods")
+			resp.Header.Del("Access-Control-Allow-Headers")
+			resp.Header.Del("Access-Control-Expose-Headers")
+			resp.Header.Del("Access-Control-Allow-Credentials")
+			return nil
+		}
+		proxies[r.Prefix] = proxy
 	}
 
 	gatewayHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
