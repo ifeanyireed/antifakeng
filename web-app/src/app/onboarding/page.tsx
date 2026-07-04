@@ -18,6 +18,7 @@ import {
 import { AhnaraCard } from "@/components/ahnara/AhnaraCard";
 import { AhnaraButton } from "@/components/ahnara/AhnaraButton";
 import { AhnaraInput } from "@/components/ahnara/AhnaraInput";
+import PaystackButton from "@/components/ahnara/PaystackButton";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -364,7 +365,25 @@ export default function OnboardingPage() {
             <div />
           )}
 
-          {currentStep < 3 ? (
+          {currentStep === 2 ? (
+            <PaystackButton
+              config={{
+                reference: "pay_" + Math.random().toString(36).substring(2, 12),
+                email: "billing@brand.com",
+                amount: selectedPlan === "Growth" ? 3000000 : selectedPlan === "Standard" ? 10000000 : 50000000,
+                publicKey: "pk_test_1573581f39d4a4aa7486dc09a13d91856f085063",
+              }}
+              onSuccess={(ref) => {
+                alert(`Payment Confirmed. Tx Ref: ${ref.reference}. Activating plan...`);
+                setCurrentStep(3);
+              }}
+              onClose={() => {
+                alert("Checkout flow terminated by user.");
+              }}
+              text={`Pay & Activate ${selectedPlan}`}
+              className="bg-[#1E293B] text-white hover:bg-slate-800 font-bold px-6 py-2.5 rounded-full text-xs shadow-md"
+            />
+          ) : currentStep < 3 ? (
             <button
               onClick={handleNext}
               className="bg-[#1E293B] text-white hover:bg-slate-800 font-bold px-6 py-2.5 rounded-full text-xs transition-all flex items-center gap-1.5 shadow-sm"

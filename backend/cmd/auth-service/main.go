@@ -172,18 +172,23 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var u models.User
-	query := `SELECT id, email, password_hash, role, producer_id, status FROM users WHERE email = ?`
-	err := db.DB.QueryRow(query, req.Email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.ProducerID, &u.Status)
+	var producerStatus sql.NullString
+	query := `SELECT u.id, u.email, u.password_hash, u.role, u.producer_id, u.status, p.status 
+	          FROM users u 
+	          LEFT JOIN producers p ON u.producer_id = p.id 
+	          WHERE u.email = ?`
+	err := db.DB.QueryRow(query, req.Email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.ProducerID, &u.Status, &producerStatus)
 	if err == sql.ErrNoRows {
 		http.Error(w, `{"error": "Invalid credentials"}`, http.StatusUnauthorized)
 		return
 	} else if err != nil {
+		log.Printf("Login database query failure: %v", err)
 		http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
 		return
 	}
 
-	if u.Status == models.StatusSuspended {
-		http.Error(w, `{"error": "User account is suspended"}`, http.StatusForbidden)
+	if u.Status == models.StatusSuspended || (producerStatus.Valid && producerStatus.String == "suspended") {
+		http.Error(w, `{"error": "Account has been suspended"}`, http.StatusForbidden)
 		return
 	}
 
@@ -200,10 +205,11 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"token":       token,
-		"role":        u.Role,
-		"producer_id": u.ProducerID,
-		"email":       u.Email,
+		"token":           token,
+		"role":            u.Role,
+		"producer_id":     u.ProducerID,
+		"email":           u.Email,
+		"producer_status": producerStatus.String,
 	})
 }
 

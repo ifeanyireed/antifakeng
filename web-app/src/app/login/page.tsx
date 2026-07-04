@@ -30,36 +30,83 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // Mock login simulation
-      setTimeout(() => {
-        setIsLoading(false);
-        login("mock-token-producer", {
-          id: "mock-producer-id",
-          email: email,
-          name: "Aura Labs Brand Admin",
-          role: "PRODUCER",
-        });
-        router.push("/producer/dashboard");
-      }, 1000);
-    } catch (err: any) {
+      const res = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
       setIsLoading(false);
-      setError(err.message || "Invalid credentials.");
+
+      if (res.ok) {
+        const data = await res.json();
+        
+        login(data.token, {
+          id: data.producer_id || "mock-producer-id",
+          email: data.email,
+          name: data.role === "admin" ? "Platform Admin" : "Brand Admin",
+          role: data.role.toUpperCase(),
+        });
+
+        localStorage.setItem("ahnara_token", data.token);
+
+        if (data.role === "admin") {
+          router.push("/admin/dashboard");
+        } else {
+          const status = data.producer_status;
+          if (status === "pending_approval") {
+            setError("Your account is pending administrator approval.");
+          } else if (status === "pending_payment") {
+            router.push("/onboarding");
+          } else {
+            router.push("/producer/dashboard");
+          }
+        }
+      } else {
+        const data = await res.json();
+        setError(data.error || "Invalid credentials.");
+      }
+    } catch (err) {
+      setIsLoading(false);
+      setError("Authentication service is currently offline.");
     }
   };
 
-  const handleQuickLogin = () => {
+  const handleQuickLogin = async () => {
     setIsLoading(true);
     setError(null);
-    setTimeout(() => {
-      setIsLoading(false);
-      login("mock-token-producer", {
-        id: "mock-producer-id",
-        email: "producer@auralabs.com",
-        name: "Aura Labs Admin",
-        role: "PRODUCER",
+    try {
+      const res = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "admin@auraskin.com", password: "aura123456" })
       });
-      router.push("/producer/dashboard");
-    }, 600);
+      setIsLoading(false);
+      if (res.ok) {
+        const data = await res.json();
+        login(data.token, {
+          id: data.producer_id,
+          email: data.email,
+          name: "AURA Skincare Admin",
+          role: data.role.toUpperCase(),
+        });
+        localStorage.setItem("ahnara_token", data.token);
+        
+        const status = data.producer_status;
+        if (status === "pending_approval") {
+          setError("Your account is pending administrator approval.");
+        } else if (status === "pending_payment") {
+          router.push("/onboarding");
+        } else {
+          router.push("/producer/dashboard");
+        }
+      } else {
+        setError("Failed to run seed quick login.");
+      }
+    } catch (err) {
+      setIsLoading(false);
+      setError("Authentication service is currently offline.");
+    }
   };
 
   return (
