@@ -194,7 +194,8 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 	var q models.QRCode
 	var p models.Product
 	var b models.Batch
-	var brandName, brandLogo string
+	var brandName string
+	var brandLogo sql.NullString
 	var desc, img sql.NullString
 
 	query := `SELECT q.id, q.batch_id, q.token, q.signature, q.status, 
@@ -325,13 +326,6 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 			sessionID, _ = res.LastInsertId()
 		}
 
-		// If LastInsertId failed due to driver, fetch it
-		if sessionID == 0 {
-			tx.QueryRow(`INSERT INTO verification_sessions (qr_code_id, consumer_id, device_id, ip_country, result, risk_score, created_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-				q.ID, consumerID, req.DeviceID, req.IPCountry, verdict, riskScore, time.Now()).Scan(&sessionID)
-		}
-
 		// 5. Create Fraud Events for flagged runs
 		if len(signals) > 0 {
 			for _, sigType := range signals {
@@ -355,7 +349,7 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 			Product:   p,
 			Batch:     b,
 			BrandName: brandName,
-			BrandLogo: brandLogo,
+			BrandLogo: brandLogo.String,
 		})
 		return
 	}
@@ -369,7 +363,7 @@ func executeVerificationCheck(w http.ResponseWriter, r *http.Request, token stri
 		Product:   p,
 		Batch:     b,
 		BrandName: brandName,
-		BrandLogo: brandLogo,
+		BrandLogo: brandLogo.String,
 	})
 }
 
