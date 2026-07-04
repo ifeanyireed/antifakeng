@@ -1,0 +1,223 @@
+"use client";
+
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  IconPlus,
+  IconSearch,
+  IconBox,
+  IconTrash,
+  IconEdit,
+  IconCheck,
+  IconX,
+  IconLock
+} from "@tabler/icons-react";
+
+export default function ProducerProducts() {
+  const [products, setProducts] = useState([
+    { id: 1, name: "AURA Skincare Serum 50ml", sku: "AURA-SERUM-50ML", category: "Cosmetics", status: "Active", date: "June 20, 2026", scans: 14210 },
+    { id: 2, name: "AURA Cleanser 100ml", sku: "AURA-CLEANSE-100", category: "Cosmetics", status: "Active", date: "June 22, 2026", scans: 5120 },
+    { id: 3, name: "Hydra Essence", sku: "AURA-HYDRA-ESSENCE", category: "Cosmetics", status: "Active", date: "June 25, 2026", scans: 5482 },
+    { id: 4, name: "Retinol Therapy Gel", sku: "AURA-RETINOL-30", category: "Cosmetics", status: "Active", date: "July 01, 2026", scans: 0 }
+  ]);
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newProductName, setNewProductName] = useState("");
+  const [newProductSku, setNewProductSku] = useState("");
+  const [newProductCat, setNewProductCat] = useState("Cosmetics");
+
+  const handleAddProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newProductName && newProductSku) {
+      setProducts([
+        ...products,
+        {
+          id: products.length + 1,
+          name: newProductName,
+          sku: newProductSku.toUpperCase(),
+          category: newProductCat,
+          status: "Active",
+          date: new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }),
+          scans: 0
+        }
+      ]);
+      setNewProductName("");
+      setNewProductSku("");
+      setIsAddModalOpen(false);
+    }
+  };
+
+  return (
+    <div className="w-full flex flex-col gap-6 text-left">
+      
+      {/* Header Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight text-display">Product Catalog</h2>
+          <p className="text-slate-500 font-medium mt-1">
+            Register and manage your products to issue unique QR authentication tokens.
+          </p>
+        </div>
+        
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-5 py-3 rounded-full text-xs shadow-md flex items-center gap-1.5 self-start sm:self-auto"
+        >
+          <IconPlus className="w-4 h-4" />
+          Add Product SKU
+        </button>
+      </div>
+
+      {/* Catalog Table Card */}
+      <div className="bg-white border border-slate-200/60 rounded-[32px] overflow-hidden shadow-sm flex flex-col">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-sm">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+              <IconSearch className="w-4 h-4" />
+            </span>
+            <input
+              type="text"
+              placeholder="Search catalog..."
+              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-2 pl-10 pr-4 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="p-4 font-mono uppercase text-slate-400 tracking-wider">Product Name</th>
+                <th className="p-4 font-mono uppercase text-slate-400 tracking-wider">SKU Code</th>
+                <th className="p-4 font-mono uppercase text-slate-400 tracking-wider">Category</th>
+                <th className="p-4 font-mono uppercase text-slate-400 tracking-wider">Total Scans</th>
+                <th className="p-4 font-mono uppercase text-slate-400 tracking-wider">Status</th>
+                <th className="p-4 font-mono uppercase text-slate-400 tracking-wider">Registered</th>
+                <th className="p-4 font-mono uppercase text-slate-400 tracking-wider text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((p) => (
+                <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                  <td className="p-4 font-bold text-slate-800 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                      <IconBox className="w-4 h-4" />
+                    </div>
+                    {p.name}
+                  </td>
+                  <td className="p-4 font-mono font-bold text-slate-600">{p.sku}</td>
+                  <td className="p-4 font-bold text-slate-500">{p.category}</td>
+                  <td className="p-4 font-bold text-slate-700">{p.scans.toLocaleString()}</td>
+                  <td className="p-4">
+                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded text-[10px] font-black uppercase">
+                      {p.status}
+                    </span>
+                  </td>
+                  <td className="p-4 font-semibold text-slate-400">{p.date}</td>
+                  <td className="p-4 text-right">
+                    <div className="flex justify-end gap-1.5">
+                      <button className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+                        <IconEdit className="w-4 h-4" />
+                      </button>
+                      <button className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <IconTrash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add Product Modal */}
+      <AnimatePresence>
+        {isAddModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-md bg-white border border-slate-200/80 rounded-[32px] p-6 shadow-2xl relative z-10 text-left flex flex-col gap-6"
+            >
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                <h3 className="text-lg font-black text-slate-800 text-display">Register Product SKU</h3>
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600"
+                >
+                  <IconX className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddProduct} className="flex flex-col gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Product Name</label>
+                  <input
+                    type="text"
+                    value={newProductName}
+                    onChange={(e) => setNewProductName(e.target.value)}
+                    placeholder="e.g. AURA Skincare Gel Cream"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">SKU Code (Must be unique)</label>
+                  <input
+                    type="text"
+                    value={newProductSku}
+                    onChange={(e) => setNewProductSku(e.target.value)}
+                    placeholder="e.g. AURA-GEL-CREAM-30"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Category</label>
+                  <select
+                    value={newProductCat}
+                    onChange={(e) => setNewProductCat(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                  >
+                    <option value="Cosmetics">Cosmetics</option>
+                    <option value="Pharma">Pharmaceuticals</option>
+                    <option value="Consumer Goods">Consumer Goods</option>
+                    <option value="Chemicals">Chemicals</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-3 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all font-bold py-3.5 rounded-full text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md"
+                  >
+                    Register SKU
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+    </div>
+  );
+}

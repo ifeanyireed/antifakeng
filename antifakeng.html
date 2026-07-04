@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AntiFakeNG — Verified Genuine, Every Time</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+  /* ============ FONTS ============ */
+  @font-face {
+    font-family: 'Lufga';
+    src: url('Demo_Fonts/Fontspring-DEMO-lufga-regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Lufga';
+    src: url('Demo_Fonts/Fontspring-DEMO-lufga-medium.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Lufga';
+    src: url('Demo_Fonts/Fontspring-DEMO-lufga-semibold.otf') format('opentype');
+    font-weight: 600;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Lufga';
+    src: url('Demo_Fonts/Fontspring-DEMO-lufga-bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+  }
+
+  /* ============ TOKENS ============ */
+  :root{
+    --navy:#12213B;
+    --navy-2:#1B2E4D;
+    --paper:#EEF0E6;
+    --paper-2:#E3E6D7;
+    --seal:#0F6B4C;
+    --seal-light:#DCEFE6;
+    --gold:#A9822E;
+    --gold-light:#F1E6C8;
+    --rust:#9C4130;
+    --rust-light:#F3DFDA;
+    --slate:#33405A;
+    --slate-soft:#5A6A85;
+    --line:rgba(18,33,59,0.14);
+    --line-soft:rgba(18,33,59,0.08);
+    --font-display:'Lufga', 'Fraunces', Georgia, serif;
+    --font-body:'IBM Plex Sans', -apple-system, Segoe UI, sans-serif;
+    --font-mono:'IBM Plex Mono', 'Courier New', monospace;
+    --radius:10px;
+    --wrap:1160px;
+  }
+
+  /* ============ RESET ============ */
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--slate);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{
+    font-family:var(--font-display);
+    color:var(--navy);
+    margin:0 0 .5em;
+    line-height:1.12;
+    font-weight:600;
+  }
+  p{margin:0 0 1em;}
+  a{color:inherit;}
+  ul{margin:0;padding:0;list-style:none;}
+  img,svg{display:block;max-width:100%;}
+  button{font-family:inherit;}
+  .wrap{max-width:var(--wrap);margin:0 auto;padding:0 28px;}
+  .eyebrow{
+    font-family:var(--font-mono);
+    text-transform:uppercase;
+    letter-spacing:.14em;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--seal);
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:16px;height:1px;background:var(--gold);
+    display:inline-block;
+  }
+  .lede{font-size:1.15rem;color:var(--slate-soft);max-width:640px;}
+  section{padding:96px 0;}
+  .section-tight{padding:72px 0;}
+  .alt{background:var(--paper-2);}
+  .navy-bg{background:var(--navy);color:#CDD6E4;}
+  .navy-bg h2,.navy-bg h3,.navy-bg h4{color:#F6F5EE;}
+  .center{text-align:center;margin-left:auto;margin-right:auto;}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--font-body);font-weight:600;font-size:.95rem;
+    padding:13px 26px;border-radius:999px;border:1.5px solid transparent;
+    cursor:pointer;text-decoration:none;transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px;}
+  .btn-primary{background:var(--seal);color:#fff;box-shadow:0 6px 18px rgba(15,107,76,.25);}
+  .btn-primary:hover{box-shadow:0 10px 22px rgba(15,107,76,.32);}
+  .btn-ghost{border-color:rgba(255,255,255,.5);color:inherit;}
+  .btn-ghost.on-light{border-color:var(--navy);color:var(--navy);}
+  .btn-outline-gold{border-color:var(--gold);color:var(--gold);}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation:none !important;transition:none !important;}
+  }
+
+  /* ============ SEAL SYMBOL (used throughout) ============ */
+  .seal-sprite{position:absolute;width:0;height:0;overflow:hidden;}
+  .seal{display:inline-block;}
+
+  /* ============ NAV ============ */
+  header.nav{
+    position:sticky;top:0;z-index:50;
+    background:rgba(13,13,13,0.96);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid rgba(255,255,255,0.06);
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;height:80px; transition: height 0.3s;}
+  .brand{display:flex;align-items:center;gap:12px;color:#ffffff;text-decoration:none;font-family:'Lufga', var(--font-display);font-weight:700;font-size:1.25rem;letter-spacing:-0.02em;}
+  .brand .seal{width:32px;height:32px;transition: transform 0.3s ease;}
+  .brand:hover .seal{transform: rotate(15deg);}
+  
+  nav.links{
+    display:flex;
+    align-items:center;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:999px;
+    padding:4px 6px;
+    gap:4px;
+  }
+  nav.links a{
+    color:#A3AED0;
+    text-decoration:none;
+    font-size:.74rem;
+    font-weight:500;
+    font-family:'Lufga', var(--font-body);
+    padding:6px 12px;
+    border-radius:999px;
+    transition:all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing:.02em;
+  }
+  nav.links a:hover{
+    color:#ffffff;
+    background:rgba(255,255,255,0.06);
+  }
+  nav.links a.active{
+    background:#ffffff;
+    color:#0D0D0D;
+    font-weight:600;
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .nav-cta{display:flex;align-items:center;gap:12px;}
+  .nav-cta .btn{
+    padding:8px 16px;
+    font-size:0.78rem;
+    font-weight:600;
+    font-family:'Lufga', var(--font-body);
+    border-radius:999px;
+    transition:all 0.2s ease;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    letter-spacing:.01em;
+  }
+  .nav-cta .btn-ghost{
+    background:transparent;
+    color:#E1E1E1;
+    border:1px solid rgba(255,255,255,0.15);
+  }
+  .nav-cta .btn-ghost:hover{
+    background:rgba(255,255,255,0.05);
+    color:#ffffff;
+    border-color:rgba(255,255,255,0.3);
+  }
+  .nav-cta .btn-primary{
+    background:#2FE48D;
+    color:#0D0D0D;
+    border:none;
+    box-shadow:0 4px 14px rgba(47,228,141,0.25);
+  }
+  .nav-cta .btn-primary:hover{
+    background:#25d07f;
+    transform:translateY(-1px);
+    box-shadow:0 6px 20px rgba(47,228,141,0.35);
+  }
+  
+  .nav-toggle{
+    display:none;
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.08);
+    color:#ffffff;
+    font-size:1.1rem;
+    cursor:pointer;
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    align-items:center;
+    justify-content:center;
+    transition:all 0.2s;
+  }
+  .nav-toggle:hover{
+    background:rgba(255,255,255,0.1);
+  }
+
+  @media (max-width:960px){
+    .nav-inner{height:72px;}
+    nav.links{
+      position:absolute;
+      top:80px;left:16px;right:16px;
+      background:rgba(22,22,22,0.98);
+      backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:16px;
+      flex-direction:column;
+      padding:16px;
+      gap:6px;
+      display:none;
+      box-shadow:0 12px 32px rgba(0,0,0,0.5);
+    }
+    nav.links a{
+      width:100%;
+      text-align:left;
+      border-radius:8px;
+      padding:10px 16px;
+    }
+    nav.links a.active{
+      background:#2FE48D;
+      color:#0D0D0D;
+    }
+    nav.links.open{display:flex;}
+    .nav-toggle{display:inline-flex;}
+    .nav-cta .btn-ghost{display:none;}
+  }
+
+  /* ============ HERO ============ */
+  .hero{
+    background:
+      repeating-linear-gradient(115deg, rgba(255,255,255,.015) 0 1px, transparent 1px 34px),
+      radial-gradient(ellipse at 78% 15%, rgba(47,228,141,0.12), transparent 55%),
+      linear-gradient(180deg, #0D0D0D 0%, #161616 100%);
+    color:#EAEDF4;
+    padding:96px 0 88px;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  .hero-inner{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center;}
+  .hero h1{font-size:clamp(2.2rem,4.2vw,3.35rem);color:#F8F7F0;font-family:'Lufga', var(--font-display);font-weight:700;letter-spacing:-0.03em;}
+  .hero .lede{color:#B9C3D6;font-size:1.12rem;}
+  .hero .eyebrow{color:#2FE48D;}
+  .hero .eyebrow::before{background:#2FE48D;}
+  .hero-ctas{display:flex;gap:14px;margin-top:32px;flex-wrap:wrap;}
+  .hero .btn-primary{
+    background:#2FE48D;
+    color:#0D0D0D;
+    border:none;
+    box-shadow:0 6px 20px rgba(47, 228, 141, 0.2);
+  }
+  .hero .btn-primary:hover{
+    background:#25d07f;
+    box-shadow:0 8px 24px rgba(47, 228, 141, 0.35);
+  }
+  .hero .btn-ghost{
+    background:transparent;
+    color:#ffffff;
+    border-color:rgba(255, 255, 255, 0.2);
+  }
+  .hero .btn-ghost:hover{
+    background:rgba(255, 255, 255, 0.05);
+    border-color:rgba(255, 255, 255, 0.4);
+  }
+  .hero-seal-wrap{display:flex;justify-content:center;align-items:center;position:relative;}
+  .hero-seal-wrap .seal{width:min(320px,80%);height:auto;filter:drop-shadow(0 18px 34px rgba(0,0,0,.35));}
+  .hero-seal-wrap .qr-chip{
+    position:absolute;bottom:2%;left:6%;
+    background:#161616;color:#ffffff;
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;
+    padding:8px 12px;border-radius:8px;border:1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:0 12px 30px rgba(0,0,0,0.4);
+  }
+  @media (max-width:880px){ .hero-inner{grid-template-columns:1fr;} .hero-seal-wrap{order:-1;margin-bottom:8px;} .hero-seal-wrap .seal{width:220px;} }
+
+  /* ============ STAT / CLAIM STRIP ============ */
+  .strip{background:var(--seal);color:#EAF6EF;padding:26px 0;}
+  .strip .wrap{display:flex;flex-wrap:wrap;gap:28px;justify-content:space-between;}
+  .strip .item{display:flex;align-items:center;gap:10px;font-family:var(--font-mono);font-size:.86rem;letter-spacing:.03em;}
+  .strip .item::before{content:"✓";font-weight:700;color:var(--gold-light);}
+
+  /* ============ TWO COL GENERIC ============ */
+  .two-col{display:grid;grid-template-columns:.9fr 1.1fr;gap:56px;align-items:center;}
+  @media (max-width:860px){.two-col{grid-template-columns:1fr;}}
+
+  /* ============ FLOW STEPS (real sequences only) ============ */
+  .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:36px;}
+  .flow.six{grid-template-columns:repeat(3,1fr);}
+  @media (max-width:920px){.flow,.flow.six{grid-template-columns:1fr 1fr;}}
+  @media (max-width:560px){.flow,.flow.six{grid-template-columns:1fr;}}
+  .step{background:#fff;border:1px solid var(--line-soft);border-radius:var(--radius);padding:26px 22px;position:relative;}
+  .step .num{
+    font-family:var(--font-mono);font-weight:600;font-size:.8rem;color:var(--gold);
+    display:inline-block;border:1px solid var(--gold);border-radius:999px;
+    width:26px;height:26px;line-height:24px;text-align:center;margin-bottom:14px;
+  }
+  .step h4{font-size:1.05rem;margin-bottom:6px;}
+  .step p{font-size:.92rem;color:var(--slate-soft);margin:0;}
+  .flow-arrow-note{font-family:var(--font-mono);font-size:.78rem;color:var(--slate-soft);text-align:center;margin-top:14px;letter-spacing:.03em;}
+
+  /* ============ FEATURE GRID ============ */
+  .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px;}
+  @media (max-width:920px){.feature-grid{grid-template-columns:1fr 1fr;}}
+  @media (max-width:600px){.feature-grid{grid-template-columns:1fr;}}
+  .feature{background:#fff;border:1px solid var(--line-soft);border-radius:var(--radius);padding:28px 24px;}
+  .feature .icon{width:40px;height:40px;color:var(--seal);margin-bottom:16px;}
+  .feature h4{font-size:1.08rem;margin-bottom:8px;}
+  .feature p{font-size:.92rem;color:var(--slate-soft);margin:0;}
+
+  /* ============ PERSONAS ============ */
+  .persona-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;margin-top:36px;}
+  @media (max-width:960px){.persona-grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:560px){.persona-grid{grid-template-columns:1fr;}}
+  .persona{background:var(--navy-2);border-radius:var(--radius);padding:22px 18px;color:#DCE3EE;}
+  .persona .tag{font-family:var(--font-mono);font-size:.72rem;color:var(--gold-light);text-transform:uppercase;letter-spacing:.08em;}
+  .persona h4{color:#F6F5EE;font-size:1rem;margin:8px 0 6px;}
+  .persona p{font-size:.85rem;color:#AEB9CC;margin:0;}
+
+  /* ============ SECURITY LIST ============ */
+  .sec-list{display:grid;grid-template-columns:repeat(2,1fr);gap:16px 40px;margin-top:36px;}
+  @media (max-width:700px){.sec-list{grid-template-columns:1fr;}}
+  .sec-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line-soft);}
+  .sec-item .icon{width:22px;height:22px;flex:none;color:var(--gold);margin-top:2px;}
+  .sec-item h5{margin:0 0 4px;font-family:var(--font-body);font-weight:600;color:var(--navy);font-size:.98rem;}
+  .sec-item p{margin:0;font-size:.88rem;color:var(--slate-soft);}
+
+  /* ============ PRICING ============ */
+  .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px;align-items:stretch;}
+  @media (max-width:900px){.pricing-grid{grid-template-columns:1fr;}}
+  .price-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:32px 28px;display:flex;flex-direction:column;}
+  .price-card.featured{border-color:var(--seal);box-shadow:0 18px 40px rgba(15,107,76,.14);position:relative;}
+  .price-card.featured::before{
+    content:"MOST CHOSEN";font-family:var(--font-mono);font-size:.68rem;letter-spacing:.1em;
+    color:#fff;background:var(--seal);padding:5px 12px;border-radius:999px;
+    position:absolute;top:-13px;left:28px;
+  }
+  .price-card h3{font-size:1.15rem;margin-bottom:4px;}
+  .price-card .tier-note{font-size:.85rem;color:var(--slate-soft);margin-bottom:18px;}
+  .price-card .amount{font-family:var(--font-display);font-size:2.1rem;color:var(--navy);margin-bottom:2px;}
+  .price-card .amount span{font-family:var(--font-body);font-size:.85rem;color:var(--slate-soft);font-weight:500;}
+  .price-card ul{margin:22px 0 26px;display:flex;flex-direction:column;gap:11px;}
+  .price-card li{font-size:.9rem;display:flex;gap:9px;}
+  .price-card li::before{content:"—";color:var(--gold);flex:none;}
+  .price-card .btn{margin-top:auto;justify-content:center;}
+  .price-note{font-size:.82rem;color:var(--slate-soft);margin-top:20px;text-align:center;}
+
+  /* ============ TESTIMONIALS ============ */
+  .quote-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:36px;}
+  @media (max-width:920px){.quote-grid{grid-template-columns:1fr;}}
+  .quote{background:#fff;border:1px solid var(--line-soft);border-radius:var(--radius);padding:26px 24px;}
+  .quote p.q{font-family:var(--font-display);font-size:1.05rem;color:var(--navy);font-style:italic;margin-bottom:16px;}
+  .quote .who{font-family:var(--font-mono);font-size:.78rem;color:var(--seal);text-transform:uppercase;letter-spacing:.04em;}
+
+  /* ============ FAQ ============ */
+  .faq-list{max-width:760px;margin:40px auto 0;}
+  details{border-bottom:1px solid var(--line);padding:18px 0;}
+  summary{
+    cursor:pointer;font-family:var(--font-display);font-size:1.05rem;color:var(--navy);
+    list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;
+  }
+  summary::-webkit-details-marker{display:none;}
+  summary::after{content:"+";font-family:var(--font-mono);font-size:1.3rem;color:var(--gold);}
+  details[open] summary::after{content:"–";}
+  details p{margin-top:12px;color:var(--slate-soft);font-size:.94rem;max-width:660px;}
+
+  /* ============ CONTACT / CTA ============ */
+  .cta-banner{background:var(--navy);color:#EAEDF4;border-radius:20px;padding:56px;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
+  @media (max-width:860px){.cta-banner{grid-template-columns:1fr;padding:36px 26px;}}
+  .cta-banner h2{color:#F8F7F0;}
+  .form{display:flex;flex-direction:column;gap:12px;}
+  .form input, .form textarea{
+    width:100%;padding:12px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.06);color:#F2F4F8;font-family:var(--font-body);font-size:.92rem;
+  }
+  .form input::placeholder,.form textarea::placeholder{color:#93A0B8;}
+  .form input:focus,.form textarea:focus{outline:2px solid var(--gold);outline-offset:1px;}
+  .form .btn{align-self:flex-start;margin-top:4px;}
+
+  /* ============ FOOTER ============ */
+  footer{background:var(--navy);color:#93A0B8;padding:64px 0 32px;}
+  .foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:36px;padding-bottom:40px;border-bottom:1px solid rgba(255,255,255,.09);}
+  @media (max-width:760px){.foot-grid{grid-template-columns:1fr 1fr;}}
+  .foot-brand{display:flex;align-items:center;gap:10px;color:#F6F5EE;font-family:var(--font-display);font-weight:700;font-size:1.1rem;margin-bottom:12px;}
+  .foot-brand .seal{width:28px;height:28px;}
+  .foot-col h5{font-family:var(--font-mono);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:#C7D0DF;margin-bottom:14px;}
+  .foot-col a{display:block;color:#93A0B8;text-decoration:none;font-size:.88rem;margin-bottom:10px;}
+  .foot-col a:hover{color:#fff;}
+  .foot-bottom{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;padding-top:24px;font-size:.8rem;}
+
+  /* ============ BLUEPRINT (technical dossier) ============ */
+  .blueprint{background:#FBFAF4;border-top:1px solid var(--line);}
+  .doc-cover{padding:80px 0 40px;}
+  .doc-cover .tag-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;}
+  .doc-tag{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--slate-soft);}
+  .doc-nav{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:28px;padding-top:24px;border-top:1px dashed var(--line);}
+  .doc-nav a{font-family:var(--font-mono);font-size:.8rem;color:var(--seal);text-decoration:none;}
+  .doc-nav a:hover{text-decoration:underline;}
+  .doc-section{padding:56px 0;border-top:1px solid var(--line-soft);}
+  .doc-section h3{font-size:1.5rem;}
+  .doc-section .doc-num{font-family:var(--font-mono);color:var(--gold);font-size:.85rem;letter-spacing:.06em;display:block;margin-bottom:8px;}
+  table.doc-table{width:100%;border-collapse:collapse;margin-top:20px;font-size:.9rem;}
+  table.doc-table caption{text-align:left;font-family:var(--font-mono);font-size:.78rem;color:var(--slate-soft);margin-bottom:8px;letter-spacing:.03em;}
+  table.doc-table th{
+    font-family:var(--font-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
+    text-align:left;color:var(--navy);background:var(--gold-light);padding:10px 12px;border:1px solid var(--line);
+  }
+  table.doc-table td{padding:10px 12px;border:1px solid var(--line);vertical-align:top;color:var(--slate);}
+  table.doc-table tr:nth-child(even) td{background:rgba(18,33,59,.02);}
+  .module-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:24px;}
+  @media (max-width:800px){.module-grid{grid-template-columns:1fr;}}
+  .module-card{border:1px solid var(--line);border-radius:8px;padding:18px 20px;background:#fff;}
+  .module-card .m-title{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;}
+  .module-card .m-index{font-family:var(--font-mono);color:var(--gold);font-size:.85rem;}
+  .module-card h4{font-size:1rem;margin:0;color:var(--navy);}
+  .module-card ul{margin-top:6px;}
+  .module-card li{font-size:.85rem;color:var(--slate-soft);padding-left:14px;position:relative;margin-bottom:5px;}
+  .module-card li::before{content:"·";position:absolute;left:0;color:var(--gold);font-weight:700;}
+  .badge{display:inline-block;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:999px;}
+  .badge.p1{background:var(--seal-light);color:var(--seal);}
+  .badge.p2{background:var(--gold-light);color:var(--gold);}
+  .badge.p3{background:var(--rust-light);color:var(--rust);}
+  .doc-two{display:grid;grid-template-columns:1fr 1fr;gap:32px;}
+  @media (max-width:800px){.doc-two{grid-template-columns:1fr;}}
+  .verdict{border-left:3px solid var(--line);padding-left:14px;margin-bottom:16px;}
+  .verdict.genuine{border-color:var(--seal);}
+  .verdict.suspicious{border-color:var(--gold);}
+  .verdict.invalid, .verdict.blocked, .verdict.highrisk{border-color:var(--rust);}
+  .verdict h5{margin:0 0 4px;font-size:.95rem;color:var(--navy);}
+  .verdict p{margin:0;font-size:.86rem;color:var(--slate-soft);}
+  code.inline{font-family:var(--font-mono);background:var(--gold-light);color:var(--navy);padding:1px 6px;border-radius:4px;font-size:.85em;}
+
+  /* ============ REVEAL ============ */
+  .reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease, transform .5s ease;}
+  .reveal.in{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+
+<!-- ================= SEAL SPRITE ================= -->
+<svg class="seal-sprite" aria-hidden="true">
+  <symbol id="seal-mark" viewBox="0 0 200 200">
+    <path id="sealTextPath" d="M100,100 m-78,0 a78,78 0 1,1 156,0 a78,78 0 1,1 -156,0" fill="none"/>
+    <circle cx="100" cy="100" r="95" fill="none" stroke="rgba(255, 255, 255, 0.25)" stroke-width="1.5"/>
+    <circle cx="100" cy="100" r="86" fill="none" stroke="#2FE48D" stroke-width="5" stroke-dasharray="1.4 5.2"/>
+    <circle cx="100" cy="100" r="64" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1.5"/>
+    <text font-family="'IBM Plex Mono', monospace" font-size="9.5" letter-spacing="2.2" fill="#2FE48D">
+      <textPath href="#sealTextPath" startOffset="2%">AUTHENTIC • VERIFIED • ANTIFAKENG • AUTHENTIC • VERIFIED • ANTIFAKENG •</textPath>
+    </text>
+    <g transform="translate(100,100)">
+      <circle r="45" fill="#2FE48D"/>
+      <path d="M-19,-1 L-6,14 L21,-17" stroke="#0D0D0D" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </symbol>
+</svg>
+
+<!-- ================= NAV ================= -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a href="#home" class="brand"><svg class="seal"><use href="#seal-mark"/></svg> AntiFakeNG</a>
+    <nav class="links" id="navLinks">
+      <a href="#how-it-works">How it works</a>
+      <a href="#producers">For producers</a>
+      <a href="#features">Features</a>
+      <a href="#security">Security</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#blueprint">Product blueprint</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="#contact" class="btn btn-ghost">Talk to us</a>
+      <a href="#contact" class="btn btn-primary">Request a demo</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+    </div>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section class="hero" id="home">
+  <div class="wrap hero-inner">
+    <div class="reveal in">
+      <span class="eyebrow">Product authenticity platform</span>
+      <h1>Real products shouldn't need to argue with fakes.</h1>
+      <p class="lede">AntiFakeNG gives every unit you produce a verifiable identity. Customers confirm it's genuine from any phone browser in under a minute — no app, no guesswork — while you watch counterfeit activity surface in real time, by batch, by region, by retailer.</p>
+      <div class="hero-ctas">
+        <a href="#contact" class="btn btn-primary">Request a demo</a>
+        <a href="#how-it-works" class="btn btn-ghost">See how verification works</a>
+      </div>
+    </div>
+    <div class="hero-seal-wrap">
+      <svg class="seal"><use href="#seal-mark"/></svg>
+      <div class="qr-chip">TOKEN 9F3C-71AE <span style="color: #2FE48D;">✓</span> GENUINE</div>
+    </div>
+  </div>
+</section>
+
+<div class="strip">
+  <div class="wrap">
+    <span class="item">No app required</span>
+    <span class="item">Verification in under a minute</span>
+    <span class="item">Built for multi-brand platforms</span>
+    <span class="item">Live risk scoring on every scan</span>
+  </div>
+</div>
+
+<!-- ================= PROBLEM ================= -->
+<section>
+  <div class="wrap two-col">
+    <div>
+      <span class="eyebrow">The problem</span>
+      <h2>Counterfeits don't announce themselves.</h2>
+      <p class="lede">Fake medicine, drinks, cosmetics, agro-inputs and electronics sit on the same shelves as the genuine article, in the same packaging, at the same price. By the time a customer notices something's wrong, the damage — to their health, or to your brand — is already done.</p>
+      <p class="lede">A hologram sticker can be copied. A serial number printed on a box can be reused. What can't be faked as easily is a system that checks a code's entire history the instant someone asks about it.</p>
+    </div>
+    <div class="flow" style="grid-template-columns:1fr 1fr;">
+      <div class="step"><h4>Same shelf</h4><p>Counterfeit and genuine units are sold side by side, often without either party knowing.</p></div>
+      <div class="step"><h4>Copied marks</h4><p>Static stickers, holograms and printed serials can be photographed and reproduced.</p></div>
+      <div class="step"><h4>Silent losses</h4><p>Brands often learn about counterfeiting from a complaint, not from their own data.</p></div>
+      <div class="step"><h4>No easy check</h4><p>Consumers have no simple, trusted way to confirm authenticity before they buy or use a product.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HOW IT WORKS (consumer) ================= -->
+<section class="alt" id="how-it-works">
+  <div class="wrap">
+    <span class="eyebrow">For consumers</span>
+    <h2>Four steps between a shelf and certainty.</h2>
+    <p class="lede">Every unit carries a unique QR code. There's nothing to install — the whole flow happens in the browser your customer already has.</p>
+    <div class="flow">
+      <div class="step"><span class="num">1</span><h4>Scan the code</h4><p>The code opens the official verification page for that product — never a third-party app.</p></div>
+      <div class="step"><span class="num">2</span><h4>Confirm a phone number</h4><p>A one-time password ties the check to a real, reachable person, not a script.</p></div>
+      <div class="step"><span class="num">3</span><h4>Risk analysis runs</h4><p>The engine weighs the code's history, location and pattern of use — not just whether it exists.</p></div>
+      <div class="step"><span class="num">4</span><h4>Get a plain answer</h4><p>Genuine, Previously Verified, Suspicious or Invalid, with a clear next step for each.</p></div>
+    </div>
+    <p class="flow-arrow-note">Consumers can also file a report directly from the result screen if something looks wrong.</p>
+  </div>
+</section>
+
+<!-- ================= FOR PRODUCERS ================= -->
+<section id="producers">
+  <div class="wrap">
+    <span class="eyebrow">For producers</span>
+    <h2>From production line to proof, in one workspace.</h2>
+    <p class="lede">Register a product once. Generate authentication codes by the batch. Print, ship, and then watch verification data come back from the field.</p>
+    <div class="flow six">
+      <div class="step"><span class="num">1</span><h4>Create the product</h4><p>Add a SKU, category and the details that should show up in a verification result.</p></div>
+      <div class="step"><span class="num">2</span><h4>Open a production batch</h4><p>Tie a quantity, manufacture date and expiry to a specific production run.</p></div>
+      <div class="step"><span class="num">3</span><h4>Generate the codes</h4><p>Each code is a unique, cryptographically random token — never reused, never guessable.</p></div>
+      <div class="step"><span class="num">4</span><h4>Download & print</h4><p>Export print-ready label files sized for your existing packaging line.</p></div>
+      <div class="step"><span class="num">5</span><h4>Monitor verification</h4><p>See scan volume, location and outcome roll in as products reach real customers.</p></div>
+      <div class="step"><span class="num">6</span><h4>Investigate alerts</h4><p>Turn a cluster of suspicious scans into a case your team can actually close.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FEATURES ================= -->
+<section class="alt" id="features">
+  <div class="wrap">
+    <span class="eyebrow">What's inside</span>
+    <h2>Built like security infrastructure, not a sticker.</h2>
+    <div class="feature-grid">
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="10" width="18" height="10" rx="2"/><path d="M7 10V7a5 5 0 0110 0v3"/></svg>
+        <h4>Multi-tenant by design</h4>
+        <p>Run many brands safely on one platform. Each producer's data, users and codes stay in their own boundary.</p>
+      </div>
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 8h18M8 3v4"/></svg>
+        <h4>Browser-first verification</h4>
+        <p>No app download, no login for consumers. Works on ordinary smartphone browsers, even on a slow connection.</p>
+      </div>
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/></svg>
+        <h4>Phone + OTP identity</h4>
+        <p>Every verification is tied to a real, reachable phone number, discouraging bulk automated checks.</p>
+      </div>
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V9M12 19V4M20 19v-6"/></svg>
+        <h4>A risk engine, not a lookup</h4>
+        <p>Genuine-or-fake isn't binary here. Device, location, timing and history are weighed on every single scan.</p>
+      </div>
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <h4>An investigation workspace</h4>
+        <p>Scattered fraud alerts become linked cases your team can assign, evidence and resolve.</p>
+      </div>
+      <div class="feature">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4v16h16M8 15l3-4 3 3 4-6"/></svg>
+        <h4>Analytics that reach the shelf</h4>
+        <p>See which batches, regions and retail points are seeing trouble first — not just totals.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PERSONAS ================= -->
+<section class="navy-bg">
+  <div class="wrap">
+    <span class="eyebrow" style="color:#E7D9A8;">Built for every role</span>
+    <h2>One platform, five very different jobs.</h2>
+    <div class="persona-grid">
+      <div class="persona"><span class="tag">Admin</span><h4>Platform Administrator</h4><p>Oversees every tenant, watches global fraud signals, configures the platform.</p></div>
+      <div class="persona"><span class="tag">Producer</span><h4>Manufacturer</h4><p>Registers products, issues codes, watches verification and fraud activity.</p></div>
+      <div class="persona"><span class="tag">QA</span><h4>Quality Officer</h4><p>Confirms a batch is sound before its codes go live, manages recalls.</p></div>
+      <div class="persona"><span class="tag">Buyer</span><h4>Consumer</h4><p>Checks a product before trusting it, and reports anything suspicious.</p></div>
+      <div class="persona"><span class="tag">Support</span><h4>Customer Support</h4><p>Resolves disputes, answers reports, escalates confirmed fraud.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SECURITY ================= -->
+<section id="security">
+  <div class="wrap two-col">
+    <div>
+      <span class="eyebrow">Security</span>
+      <h2>Trust is the product, so it has to be earned in the code.</h2>
+      <p class="lede">Every design decision — from how a token is generated to who can see an audit log — starts from the assumption that someone, somewhere, is actively trying to defeat it.</p>
+    </div>
+    <div class="sec-list">
+      <div class="sec-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg><div><h5>Cryptographically random codes</h5><p>Tokens are generated, not guessed — and checked for collisions before issue.</p></div></div>
+      <div class="sec-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/></svg><div><h5>Signed verification tokens</h5><p>Every code carries a signature that's checked on each scan, not just its existence.</p></div></div>
+      <div class="sec-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/></svg><div><h5>OTP on every consumer check</h5><p>No verification completes without confirming a real phone number.</p></div></div>
+      <div class="sec-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><div><h5>Rate limiting throughout</h5><p>OTP requests, scans and API calls are throttled to blunt automated abuse.</p></div></div>
+      <div class="sec-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4v16h16M8 12h8M8 16h5"/></svg><div><h5>Full audit trail</h5><p>Every privileged action is logged and exportable for compliance review.</p></div></div>
+      <div class="sec-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><div><h5>Role-based permissions</h5><p>Admins, producers, QA and support each see only what their role needs.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRICING ================= -->
+<section class="alt" id="pricing">
+  <div class="wrap">
+    <span class="eyebrow">Pricing</span>
+    <h2>Priced around how much you produce, not how many features you use.</h2>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <h3>Starter</h3>
+        <p class="tier-note">For a single brand getting its first codes into the market.</p>
+        <div class="amount">₦150,000<span>/month</span></div>
+        <ul>
+          <li>Up to 25,000 codes per month</li>
+          <li>Browser verification portal</li>
+          <li>Standard verification analytics</li>
+          <li>Email support</li>
+        </ul>
+        <a href="#contact" class="btn btn-outline-gold">Start here</a>
+      </div>
+      <div class="price-card featured">
+        <h3>Growth</h3>
+        <p class="tier-note">For producers scaling across states and retail partners.</p>
+        <div class="amount">₦450,000<span>/month</span></div>
+        <ul>
+          <li>Up to 250,000 codes per month</li>
+          <li>Fraud detection engine</li>
+          <li>Counterfeit investigation center</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="#contact" class="btn btn-primary">Talk to sales</a>
+      </div>
+      <div class="price-card">
+        <h3>Enterprise</h3>
+        <p class="tier-note">For platforms running several brands or tenants at once.</p>
+        <div class="amount">Custom</div>
+        <ul>
+          <li>Unlimited codes</li>
+          <li>Multi-tenant administration</li>
+          <li>Dedicated onboarding</li>
+          <li>SLA-backed support</li>
+        </ul>
+        <a href="#contact" class="btn btn-outline-gold">Contact us</a>
+      </div>
+    </div>
+    <p class="price-note">Figures above are illustrative and can be tailored to your production volume and region.</p>
+  </div>
+</section>
+
+<!-- ================= TESTIMONIALS ================= -->
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Why teams choose it</span>
+    <h2>Built around what brand protection teams actually do all day.</h2>
+    <div class="quote-grid">
+      <div class="quote"><p class="q">"We stopped hearing about counterfeits from angry customers. Now we see the cluster forming before it becomes a story."</p><p class="who">Head of Brand Protection, Beverage Manufacturer</p></div>
+      <div class="quote"><p class="q">"The OTP step sounded like friction until we saw how much bot traffic it filtered out on day one."</p><p class="who">QA Lead, Personal Care Producer</p></div>
+      <div class="quote"><p class="q">"Running three sister brands on one dashboard, each with its own data, was the actual deciding factor for us."</p><p class="who">Operations Director, FMCG Group</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="alt" id="faq">
+  <div class="wrap">
+    <span class="eyebrow">Questions</span>
+    <h2 class="center" style="max-width:600px;">Before you ask, we probably already have.</h2>
+    <div class="faq-list">
+      <details open>
+        <summary>Does my customer need to install an app?</summary>
+        <p>No. Scanning the code opens a normal web page. The whole flow — phone number, OTP, result — happens in the browser they already have.</p>
+      </details>
+      <details>
+        <summary>What happens if someone scans a genuine code twice?</summary>
+        <p>A second scan of the same code isn't automatically treated as fraud. It's shown as "Previously Verified," and the risk engine looks at how, where and how often it's being repeated before deciding whether it's normal or worth flagging.</p>
+      </details>
+      <details>
+        <summary>What if a customer doesn't have a smartphone with a camera?</summary>
+        <p>The code can be typed into the verification page manually, and the OTP step still works over a basic SMS-capable phone.</p>
+      </details>
+      <details>
+        <summary>How do you catch counterfeits without inspecting the physical product?</summary>
+        <p>By treating every scan as a data point, not just a lookup. Location, device, timing and repetition patterns across the whole platform reveal counterfeit activity that a single valid/invalid check would miss.</p>
+      </details>
+      <details>
+        <summary>Can AntiFakeNG run several brands under one account?</summary>
+        <p>Yes. That's the core of the platform — an administrator can onboard multiple producers, each with its own products, users and data boundary, while still seeing fraud patterns across the whole platform.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONTACT ================= -->
+<section id="contact">
+  <div class="wrap">
+    <div class="cta-banner">
+      <div>
+        <h2>See it running on your own product.</h2>
+        <p class="lede" style="color:#B9C3D6;">Send us a few details and we'll walk you through generating your first batch of codes.</p>
+      </div>
+      <form class="form" onsubmit="return false;">
+        <input type="text" placeholder="Full name" required>
+        <input type="text" placeholder="Company" required>
+        <input type="email" placeholder="Work email" required>
+        <textarea rows="3" placeholder="What are you looking to authenticate?"></textarea>
+        <button type="submit" class="btn btn-primary">Send request</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-brand"><svg class="seal"><use href="#seal-mark"/></svg> AntiFakeNG</div>
+        <p style="font-size:.88rem;max-width:260px;">A multi-tenant authenticity and counterfeit-detection platform for manufacturers.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Product</h5>
+        <a href="#how-it-works">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#security">Security</a>
+        <a href="#pricing">Pricing</a>
+      </div>
+      <div class="foot-col">
+        <h5>Company</h5>
+        <a href="#producers">For producers</a>
+        <a href="#blueprint">Product blueprint</a>
+        <a href="#contact">Contact</a>
+      </div>
+      <div class="foot-col">
+        <h5>Get in touch</h5>
+        <a href="mailto:hello@antifakeng.com">hello@antifakeng.com</a>
+        <a href="#contact">Request a demo</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 AntiFakeNG. All rights reserved.</span>
+      <span>Lagos, Nigeria</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ================================================================= -->
+<!-- =====================  PRODUCT BLUEPRINT  ====================== -->
+<!-- ================================================================= -->
+<div class="blueprint" id="blueprint">
+  <div class="wrap doc-cover">
+    <div class="tag-row">
+      <span class="doc-tag">Internal document</span>
+      <span class="doc-tag">v2.0 — Detailed</span>
+      <span class="doc-tag">Product & Engineering</span>
+    </div>
+    <span class="eyebrow">Product blueprint</span>
+    <h2 style="font-size:2rem;max-width:820px;">AntiFakeNG — Product Authenticity &amp; Counterfeit Detection Platform</h2>
+    <p class="lede" style="max-width:760px;">This section is the detailed working blueprint behind the brochure above: vision, personas, modules, data model, API surface, fraud scoring logic and roadmap, in enough depth to brief engineering, design and operations.</p>
+    <div class="doc-nav">
+      <a href="#bp-vision">01 Vision &amp; objectives</a>
+      <a href="#bp-personas">02 Personas</a>
+      <a href="#bp-modules">03 Modules</a>
+      <a href="#bp-flows">04 Flows</a>
+      <a href="#bp-screens">05 Screen inventory</a>
+      <a href="#bp-data">06 Data model</a>
+      <a href="#bp-api">07 API surface</a>
+      <a href="#bp-fraud">08 Fraud detection engine</a>
+      <a href="#bp-notify">09 Notification matrix</a>
+      <a href="#bp-security">10 Security &amp; compliance</a>
+      <a href="#bp-nfr">11 Non-functional requirements</a>
+      <a href="#bp-stack">12 Suggested tech stack</a>
+      <a href="#bp-roadmap">13 Roadmap</a>
+    </div>
+  </div>
+
+  <!-- 01 VISION -->
+  <div class="doc-section" id="bp-vision">
+    <div class="wrap">
+      <span class="doc-num">01</span>
+      <h3>Vision &amp; objectives</h3>
+      <p class="lede">A multi-tenant SaaS enabling manufacturers to generate secure authenticity codes, verify products through a browser, detect counterfeit activity, and gain intelligence on product movement without requiring a mobile application.</p>
+      <div class="doc-two">
+        <div>
+          <h4 style="font-size:1.05rem;">Primary objectives</h4>
+          <ul style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+            <li style="font-size:.92rem;">— Give every physical unit a verifiable digital identity.</li>
+            <li style="font-size:.92rem;">— Let any consumer confirm authenticity without installing software.</li>
+            <li style="font-size:.92rem;">— Convert every verification into supply-chain intelligence for the brand.</li>
+            <li style="font-size:.92rem;">— Detect and localize counterfeit activity as it happens, not after a complaint.</li>
+            <li style="font-size:.92rem;">— Operate many brands securely on one shared, multi-tenant platform.</li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="font-size:1.05rem;">Core value proposition</h4>
+          <ul style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+            <li style="font-size:.92rem;">— Unique QR per individual product, never reused.</li>
+            <li style="font-size:.92rem;">— Browser-based verification, no app required.</li>
+            <li style="font-size:.92rem;">— Phone-number + OTP identity binding on every check.</li>
+            <li style="font-size:.92rem;">— A risk engine, not simple valid/invalid logic.</li>
+            <li style="font-size:.92rem;">— Multi-brand platform operated by one SaaS provider.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 PERSONAS -->
+  <div class="doc-section" id="bp-personas">
+    <div class="wrap">
+      <span class="doc-num">02</span>
+      <h3>Personas</h3>
+      <p class="lede">Five roles, each with a distinct goal and a distinct slice of the product.</p>
+      <table class="doc-table">
+        <tr><th>Persona</th><th>Primary goal</th><th>Key screens</th></tr>
+        <tr><td>Platform Administrator</td><td>Oversee all tenants, monitor global fraud, configure the platform.</td><td>Admin Dashboard, Fraud Center, Audit Logs</td></tr>
+        <tr><td>Producer / Manufacturer</td><td>Register products, generate codes, monitor verification activity.</td><td>Producer Dashboard, Batches, Analytics</td></tr>
+        <tr><td>Quality Assurance Officer</td><td>Confirm batch integrity before code issuance, manage recalls.</td><td>Batches, Batch Recall, Alert Details</td></tr>
+        <tr><td>Consumer</td><td>Verify a product before trusting or using it.</td><td>QR Landing, OTP, Result screens</td></tr>
+        <tr><td>Customer Support</td><td>Resolve disputes, respond to reports, escalate confirmed fraud.</td><td>Support Tickets, Report Product, Verification History</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 03 MODULES -->
+  <div class="doc-section" id="bp-modules">
+    <div class="wrap">
+      <span class="doc-num">03</span>
+      <h3>Modules</h3>
+      <p class="lede">Sixteen modules, grouped roughly in the order a tenant would encounter them.</p>
+      <div class="module-grid">
+        <div class="module-card"><div class="m-title"><span class="m-index">01</span><h4>Authentication &amp; Identity</h4></div><ul><li>Email/password login for staff, optional SSO</li><li>Role-based access control</li><li>Phone + OTP identity for consumers, no password</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">02</span><h4>Producer Management</h4></div><ul><li>Tenant onboarding and plan assignment</li><li>Per-tenant branding: logo, support contact</li><li>Producer status: active, suspended, trial</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">03</span><h4>Product Catalog</h4></div><ul><li>SKU and category management</li><li>Product metadata and imagery</li><li>Custom result messaging per product</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">04</span><h4>Production Batch Management</h4></div><ul><li>Batch tied to product and quantity</li><li>Status: draft, active, recalled</li><li>Manufacture and expiry date tracking</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">05</span><h4>QR Generation Engine</h4></div><ul><li>Cryptographically random token generation</li><li>Signed payload per code</li><li>Bulk generation with collision checking</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">06</span><h4>QR Download &amp; Print Assets</h4></div><ul><li>Print-ready PDF/PNG export</li><li>Configurable label size templates</li><li>Sequential numbering for print operators</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">07</span><h4>Verification Portal</h4></div><ul><li>Public, no-login web page</li><li>Optimized for low-bandwidth conditions</li><li>Localized language options</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">08</span><h4>OTP Service</h4></div><ul><li>SMS delivery via aggregator</li><li>Throttling, expiry and resend limits</li><li>Voice OTP fallback where SMS is unreliable</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">09</span><h4>Fraud Detection Engine</h4></div><ul><li>Real-time signal scoring per verification</li><li>Configurable rule weights per tenant</li><li>Architecture ready for future ML scoring</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">10</span><h4>Verification Analytics</h4></div><ul><li>Time-series scan volume</li><li>Geographic distribution of scans</li><li>Batch-level verification rates</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">11</span><h4>Counterfeit Investigation Center</h4></div><ul><li>Case management for flagged clusters</li><li>Linking related fraud events</li><li>Evidence attachment and resolution workflow</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">12</span><h4>Consumer Reports</h4></div><ul><li>In-page complaint submission with photo</li><li>Status tracking for the reporter</li><li>Auto-routing to producer or support</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">13</span><h4>Notification Center</h4></div><ul><li>SMS, email and in-app delivery</li><li>Templated, event-driven messages</li><li>Delivery status tracking</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">14</span><h4>Audit Logs</h4></div><ul><li>Immutable record of privileged actions</li><li>Filterable by actor, entity and date</li><li>Exportable for compliance review</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">15</span><h4>Platform Administration</h4></div><ul><li>Global configuration and feature flags</li><li>Per-tenant plan limits enforcement</li><li>Cross-tenant fraud monitoring</li></ul></div>
+        <div class="module-card"><div class="m-title"><span class="m-index">16</span><h4>Settings</h4></div><ul><li>Branding and notification preferences</li><li>API keys and webhook endpoints</li><li>Team member and role management</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 FLOWS -->
+  <div class="doc-section" id="bp-flows">
+    <div class="wrap">
+      <span class="doc-num">04</span>
+      <h3>Flows</h3>
+      <p class="lede">Six flows cover the working paths through the platform.</p>
+
+      <h4 style="font-size:1rem;margin-top:28px;">Consumer verification flow</h4>
+      <p style="font-family:var(--font-mono);font-size:.85rem;color:var(--slate-soft);">Scan QR → Official verification page → Enter phone number → OTP verification → QR validation → Risk analysis → Genuine / Previously Verified / Suspicious / Invalid → Optional report submission</p>
+
+      <h4 style="font-size:1rem;margin-top:22px;">Producer flow</h4>
+      <p style="font-family:var(--font-mono);font-size:.85rem;color:var(--slate-soft);">Login → Create product → Create production batch → Generate QR codes → Download print package → Print labels → Monitor verification analytics → Investigate suspicious activity</p>
+
+      <h4 style="font-size:1rem;margin-top:22px;">Administrator flow</h4>
+      <p style="font-family:var(--font-mono);font-size:.85rem;color:var(--slate-soft);">Create producer → Manage tenants → Monitor global fraud → Investigate alerts → View audit logs → Manage platform configuration</p>
+
+      <h4 style="font-size:1rem;margin-top:22px;">QA batch approval flow</h4>
+      <p style="font-family:var(--font-mono);font-size:.85rem;color:var(--slate-soft);">Batch created (draft) → QA reviews production data → Approve batch → QR generation unlocked → Batch marked active</p>
+
+      <h4 style="font-size:1rem;margin-top:22px;">Fraud investigation flow</h4>
+      <p style="font-family:var(--font-mono);font-size:.85rem;color:var(--slate-soft);">Fraud event raised → Auto-clustered with related events → Assigned to investigator → Evidence and notes attached → Resolution recorded → Producer notified</p>
+
+      <h4 style="font-size:1rem;margin-top:22px;">Recall flow</h4>
+      <p style="font-family:var(--font-mono);font-size:.85rem;color:var(--slate-soft);">Batch flagged for recall → All codes in batch marked "Recalled" → Consumers who previously verified are notified → Verification portal shows Recalled result → Support tracks follow-up</p>
+    </div>
+  </div>
+
+  <!-- 05 SCREENS -->
+  <div class="doc-section" id="bp-screens">
+    <div class="wrap">
+      <span class="doc-num">05</span>
+      <h3>Screen inventory</h3>
+      <div class="doc-two">
+        <div>
+          <h4 style="font-size:1rem;">Consumer</h4>
+          <p style="font-size:.88rem;color:var(--slate-soft);">QR Landing · Phone Number · OTP · Verification Progress · Genuine Product · Previously Verified · Suspicious Product · Invalid QR · Batch Recall · Report Product · Submission Success</p>
+          <h4 style="font-size:1rem;margin-top:22px;">Producer</h4>
+          <p style="font-size:.88rem;color:var(--slate-soft);">Login · Dashboard · Products · Add/Edit Product · Product Details · Batches · Create Batch · QR Generation · QR Download History · Verification Reports · Analytics · Counterfeit Alerts · Alert Details · Verification History · Company Settings · Notification Settings · Billing &amp; Subscription · API Keys · Profile</p>
+        </div>
+        <div>
+          <h4 style="font-size:1rem;">Platform Admin</h4>
+          <p style="font-size:.88rem;color:var(--slate-soft);">Dashboard · Producer Management · Producer Details · QR Inventory · Fraud Center · Fraud Investigation · Support Tickets · Audit Logs · Feature Flags · Billing Overview · Platform Settings · Reports</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06 DATA MODEL -->
+  <div class="doc-section" id="bp-data">
+    <div class="wrap">
+      <span class="doc-num">06</span>
+      <h3>Data model</h3>
+      <p class="lede">Field-level detail for the core entities. Names are illustrative and can be adapted to the chosen ORM/naming convention.</p>
+      <table class="doc-table">
+        <tr><th>Entity</th><th>Key fields</th><th>Notes</th></tr>
+        <tr><td>Users</td><td><code class="inline">id, email, password_hash, role, producer_id, status, last_login_at</code></td><td>producer_id is null for platform admins</td></tr>
+        <tr><td>Producers</td><td><code class="inline">id, name, slug, plan_tier, contact_email, brand_logo_url, status</code></td><td>Root of tenant data boundary</td></tr>
+        <tr><td>Products</td><td><code class="inline">id, producer_id, name, sku, category, description, image_url</code></td><td>Scoped to a single producer</td></tr>
+        <tr><td>Batches</td><td><code class="inline">id, product_id, batch_code, quantity, manufacture_date, expiry_date, status</code></td><td>Status: draft, active, recalled</td></tr>
+        <tr><td>QRCodes</td><td><code class="inline">id, batch_id, token, signature, status, printed_at</code></td><td>token is unique and indexed</td></tr>
+        <tr><td>Consumers</td><td><code class="inline">id, phone_number_hash, first_seen_at, verification_count</code></td><td>Phone stored hashed, not in plain text</td></tr>
+        <tr><td>VerificationSessions</td><td><code class="inline">id, qr_code_id, consumer_id, device_id, ip_country, result, risk_score, created_at</code></td><td>One row per verification attempt</td></tr>
+        <tr><td>Devices</td><td><code class="inline">id, fingerprint_hash, first_seen_at</code></td><td>Browser/device fingerprint, not personally identifying alone</td></tr>
+        <tr><td>FraudEvents</td><td><code class="inline">id, verification_session_id, signal_type, severity, resolved_by, resolved_at</code></td><td>One or more per flagged session</td></tr>
+        <tr><td>Reports</td><td><code class="inline">id, qr_code_id, consumer_id, description, photo_url, status</code></td><td>Consumer-submitted complaints</td></tr>
+        <tr><td>AuditLogs</td><td><code class="inline">id, actor_user_id, action, target_entity, target_id, created_at</code></td><td>Immutable, append-only</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 07 API -->
+  <div class="doc-section" id="bp-api">
+    <div class="wrap">
+      <span class="doc-num">07</span>
+      <h3>API surface (illustrative)</h3>
+      <p class="lede">A representative slice of the REST surface — enough to show shape, not a complete specification.</p>
+      <table class="doc-table">
+        <tr><th>Method &amp; path</th><th>Purpose</th></tr>
+        <tr><td><code class="inline">POST /v1/auth/login</code></td><td>Staff authentication (producer or admin)</td></tr>
+        <tr><td><code class="inline">POST /v1/verify/otp/request</code></td><td>Request an OTP for a consumer verification</td></tr>
+        <tr><td><code class="inline">POST /v1/verify/otp/confirm</code></td><td>Confirm the OTP and proceed to risk analysis</td></tr>
+        <tr><td><code class="inline">GET /v1/verify/{token}</code></td><td>Run validation and risk scoring for a scanned code</td></tr>
+        <tr><td><code class="inline">POST /v1/products</code></td><td>Create a product under the authenticated producer</td></tr>
+        <tr><td><code class="inline">POST /v1/batches</code></td><td>Open a new production batch</td></tr>
+        <tr><td><code class="inline">POST /v1/batches/{id}/qr-codes</code></td><td>Generate a batch of signed QR tokens</td></tr>
+        <tr><td><code class="inline">GET /v1/analytics/verifications</code></td><td>Time-series and geographic verification data</td></tr>
+        <tr><td><code class="inline">POST /v1/reports</code></td><td>Submit a consumer report</td></tr>
+        <tr><td><code class="inline">GET /v1/fraud-events</code></td><td>List and filter fraud events for investigation</td></tr>
+        <tr><td><code class="inline">POST /v1/webhooks</code></td><td>Register a tenant webhook endpoint for events</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 08 FRAUD ENGINE -->
+  <div class="doc-section" id="bp-fraud">
+    <div class="wrap">
+      <span class="doc-num">08</span>
+      <h3>Fraud detection engine</h3>
+      <p class="lede">Each verification is scored against a weighted set of signals rather than judged on a single rule.</p>
+      <table class="doc-table">
+        <tr><th>Signal</th><th>Weight</th><th>Description</th></tr>
+        <tr><td>Tampered token</td><td>Critical</td><td>The code's signature fails verification.</td></tr>
+        <tr><td>Unknown QR</td><td>Critical</td><td>The token does not exist in the system at all.</td></tr>
+        <tr><td>Impossible travel</td><td>High</td><td>Related tokens verified from geographically distant locations within an implausible window.</td></tr>
+        <tr><td>Different phone number reused</td><td>High</td><td>The same phone verifies an unusual number of distinct products in a short window.</td></tr>
+        <tr><td>Device mismatch</td><td>Medium</td><td>One code verified from many distinct device fingerprints.</td></tr>
+        <tr><td>Country mismatch</td><td>Medium</td><td>Verification originates outside the product's expected distribution region.</td></tr>
+        <tr><td>Multiple scans in short period</td><td>Medium</td><td>A single code verified repeatedly beyond typical consumer behavior.</td></tr>
+        <tr><td>High-volume repeated scans</td><td>Medium</td><td>Batch-level scan volume spikes beyond historical baseline.</td></tr>
+        <tr><td>Known VPN or proxy</td><td>Low–Medium</td><td>The verification's network origin is obscured.</td></tr>
+      </table>
+
+      <h4 style="font-size:1.05rem;margin-top:32px;">Verdicts</h4>
+      <div class="doc-two" style="margin-top:16px;">
+        <div>
+          <div class="verdict genuine"><h5>Genuine</h5><p>Valid signature, first verification, no signals raised.</p></div>
+          <div class="verdict genuine"><h5>Previously Verified</h5><p>Valid code, verified before, within expected repeat behavior.</p></div>
+          <div class="verdict suspicious"><h5>Suspicious</h5><p>Valid code, one or more medium-weight signals raised.</p></div>
+        </div>
+        <div>
+          <div class="verdict highrisk"><h5>High Risk</h5><p>Valid code, multiple signals or one high-weight signal raised.</p></div>
+          <div class="verdict invalid"><h5>Invalid</h5><p>Token unknown or signature tampered.</p></div>
+          <div class="verdict invalid"><h5>Recalled / Blocked</h5><p>Code belongs to a recalled batch, or has been manually blocked.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 09 NOTIFICATIONS -->
+  <div class="doc-section" id="bp-notify">
+    <div class="wrap">
+      <span class="doc-num">09</span>
+      <h3>Notification matrix</h3>
+      <table class="doc-table">
+        <tr><th>Event</th><th>Channel</th><th>Recipient</th></tr>
+        <tr><td>OTP requested</td><td>SMS, voice fallback</td><td>Consumer</td></tr>
+        <tr><td>Suspicious verification detected</td><td>Email, in-app</td><td>Producer, Platform Admin</td></tr>
+        <tr><td>Batch verification summary</td><td>Email</td><td>Producer</td></tr>
+        <tr><td>Weekly analytics digest</td><td>Email</td><td>Producer</td></tr>
+        <tr><td>Consumer report submitted</td><td>In-app, email</td><td>Support, Producer</td></tr>
+        <tr><td>Recall issued</td><td>SMS, email</td><td>Opted-in consumers who verified the batch, Producer</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 10 SECURITY -->
+  <div class="doc-section" id="bp-security">
+    <div class="wrap">
+      <span class="doc-num">10</span>
+      <h3>Security &amp; compliance</h3>
+      <div class="doc-two">
+        <div>
+          <h4 style="font-size:1rem;">Baseline controls</h4>
+          <ul style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+            <li style="font-size:.9rem;">— HTTPS enforced everywhere, no plain-HTTP fallback.</li>
+            <li style="font-size:.9rem;">— Encryption at rest and in transit for sensitive fields.</li>
+            <li style="font-size:.9rem;">— Consumer phone numbers stored hashed, never in plain text.</li>
+            <li style="font-size:.9rem;">— Signed, time-boxed verification tokens.</li>
+            <li style="font-size:.9rem;">— Rate limiting on OTP, verification and API endpoints.</li>
+            <li style="font-size:.9rem;">— Row-level isolation between tenants at the database layer.</li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="font-size:1rem;">Data protection posture</h4>
+          <p style="font-size:.9rem;color:var(--slate-soft);">Consumer data handling is designed with the Nigeria Data Protection Act (NDPA) in mind: minimal collection, hashed storage of identifiers, defined retention periods, and an audit trail of who accessed what. A formal compliance review and any relevant registration should be completed with qualified counsel before handling personal data at scale.</p>
+          <h4 style="font-size:1rem;margin-top:18px;">Operational practice</h4>
+          <ul style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+            <li style="font-size:.9rem;">— Independent penetration testing before major releases.</li>
+            <li style="font-size:.9rem;">— Documented data retention and deletion policy.</li>
+            <li style="font-size:.9rem;">— Immutable audit logs, exportable for review.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11 NFR -->
+  <div class="doc-section" id="bp-nfr">
+    <div class="wrap">
+      <span class="doc-num">11</span>
+      <h3>Non-functional requirements</h3>
+      <table class="doc-table">
+        <tr><th>Area</th><th>Target</th></tr>
+        <tr><td>Multi-tenancy isolation</td><td>Strict row-level separation; a producer can never query another tenant's data.</td></tr>
+        <tr><td>Availability</td><td>Verification portal treated as the most latency- and uptime-sensitive surface, since a slow or down page erodes trust at the point of purchase.</td></tr>
+        <tr><td>Scalability</td><td>Verification traffic can spike sharply around a product launch or promotion; the portal should scale horizontally independent of the dashboards.</td></tr>
+        <tr><td>Backup &amp; recovery</td><td>Regular automated backups with a documented, tested restore procedure.</td></tr>
+        <tr><td>Localization</td><td>Verification portal copy translatable without a code change.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 12 STACK -->
+  <div class="doc-section" id="bp-stack">
+    <div class="wrap">
+      <span class="doc-num">12</span>
+      <h3>Suggested tech stack</h3>
+      <p class="lede">A reasonable, unopinionated starting point — swap freely for what the team already knows well.</p>
+      <table class="doc-table">
+        <tr><th>Layer</th><th>Suggestion</th></tr>
+        <tr><td>Producer &amp; admin dashboards</td><td>A component-based frontend framework (e.g. React/Next.js) for data-heavy, authenticated screens.</td></tr>
+        <tr><td>Verification portal</td><td>A lightweight, server-rendered page optimized for low-bandwidth mobile browsers.</td></tr>
+        <tr><td>Backend / API</td><td>A typed backend framework with strong support for role-based access control.</td></tr>
+        <tr><td>Primary database</td><td>PostgreSQL, using row-level security for tenant isolation.</td></tr>
+        <tr><td>Cache &amp; queues</td><td>Redis for OTP throttling, rate limiting and background job queues.</td></tr>
+        <tr><td>SMS / OTP delivery</td><td>A regional SMS aggregator with voice-call fallback.</td></tr>
+        <tr><td>Infrastructure</td><td>Containerized services behind a CDN for the verification portal's static assets.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 13 ROADMAP -->
+  <div class="doc-section" id="bp-roadmap">
+    <div class="wrap">
+      <span class="doc-num">13</span>
+      <h3>Roadmap</h3>
+      <table class="doc-table">
+        <tr><th>Phase</th><th>Scope</th></tr>
+        <tr><td><span class="badge p1">Phase 1 · MVP</span></td><td>Authentication, Producer Management, Product Catalog, Batch Management, QR Generation, QR Download, Verification Portal, OTP Service, core Verification Analytics.</td></tr>
+        <tr><td><span class="badge p2">Phase 2</span></td><td>Fraud Detection Engine, Counterfeit Investigation Center, Consumer Reports, Notification Center, Audit Logs.</td></tr>
+        <tr><td><span class="badge p3">Phase 3 · Future expansion</span></td><td>NFC authentication, Digital Product Passport, Distributor portal, Retailer verification, Warranty activation, Recall management, ERP integrations, AI-driven fraud intelligence, supply chain tracking.</td></tr>
+      </table>
+      <p class="price-note" style="text-align:left;margin-top:24px;">This blueprint is a working document — module boundaries, the data model and the fraud scoring weights are all expected to evolve as real verification data comes in.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // mobile nav toggle
+  var toggle = document.getElementById('navToggle');
+  var links = document.getElementById('navLinks');
+  if(toggle){
+    toggle.addEventListener('click', function(){
+      var open = links.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle.innerHTML = open ? '✕' : '☰';
+    });
+    links.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click', function(){
+        links.classList.remove('open');
+        toggle.setAttribute('aria-expanded','false');
+        toggle.innerHTML = '☰';
+        
+        // Remove active class from all and add to this one
+        links.querySelectorAll('a').forEach(function(item){ item.classList.remove('active'); });
+        a.classList.add('active');
+      });
+    });
+  }
+
+  // Scrollspy to set active class on nav links
+  if ('IntersectionObserver' in window) {
+    var observerOptions = {
+      root: null,
+      rootMargin: '-40% 0px -50% 0px', // Trigger when section is in middle of viewport
+      threshold: 0
+    };
+    
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          var id = entry.target.getAttribute('id');
+          if (id) {
+            links.querySelectorAll('a').forEach(function(a) {
+              if (a.getAttribute('href') === '#' + id) {
+                a.classList.add('active');
+              } else {
+                a.classList.remove('active');
+              }
+            });
+          }
+        }
+      });
+    }, observerOptions);
+    
+    // Target sections
+    var sectionIds = ['how-it-works', 'producers', 'features', 'security', 'pricing', 'blueprint', 'faq'];
+    sectionIds.forEach(function(id) {
+      var section = document.getElementById(id);
+      if (section) observer.observe(section);
+    });
+  }
+
+  // subtle reveal-on-scroll for section headings, respecting reduced motion
+  if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window){
+    var targets = document.querySelectorAll('section h2, .doc-section h3');
+    targets.forEach(function(el){ el.classList.add('reveal'); });
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){ entry.target.classList.add('in'); io.unobserve(entry.target); }
+      });
+    }, {threshold:0.2});
+    targets.forEach(function(el){ io.observe(el); });
+  } else {
+    document.querySelectorAll('section h2, .doc-section h3').forEach(function(el){ el.style.opacity = 1; });
+  }
+</script>
+
+</body>
+</html>

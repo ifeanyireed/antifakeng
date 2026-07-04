@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+web-app/node_modules/
+
+# Local databases & logs
+*.db
+backend/antifake.db
+backend/logs/
+logs/
+
+# Build outputs
+/web-app/.next/
+/web-app/out/
+/web-app/build/
+/web-app/tsconfig.tsbuildinfo
+backend/bin/
+
+# Temporary directories
+web-app/tmp/
+tmp/
+
+# OS files
+.DS_Store
