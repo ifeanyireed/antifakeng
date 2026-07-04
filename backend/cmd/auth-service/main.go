@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/ahnara/antifake/backend/pkg/db"
 	"github.com/ahnara/antifake/backend/pkg/middleware"
 	"github.com/ahnara/antifake/backend/pkg/models"
+	"github.com/ahnara/antifake/backend/pkg/termii"
 	"github.com/ahnara/antifake/backend/pkg/whatsapp"
 )
 
@@ -32,8 +34,9 @@ type LoginReq struct {
 }
 
 type OTPReq struct {
-	Token string `json:"token"`
-	Phone string `json:"phone"`
+	Token   string `json:"token"`
+	Phone   string `json:"phone"`
+	Channel string `json:"channel"`
 }
 
 type OTPVerifyReq struct {
@@ -234,26 +237,38 @@ func handleOTPRequest(w http.ResponseWriter, r *http.Request) {
 	otpStore[req.Phone] = code
 	otpMutex.Unlock()
 
-	log.Printf("[OTP] Generated code %s for consumer phone %s for token %s", code, req.Phone, req.Token)
+	log.Printf("[OTP] Generated code %s for consumer phone %s for token %s via %s", code, req.Phone, req.Token, req.Channel)
 
-	// Send real OTP via WhatsApp
-	var waStatus = "mock_sent"
-	var waError = ""
-	err := whatsapp.SendOTP(req.Phone, code, req.Token)
-	if err != nil {
-		log.Printf("[WhatsApp] Failed to send OTP to %s: %v", req.Phone, err)
-		waStatus = "failed"
-		waError = err.Error()
+	// Send real OTP via selected channel
+	var dispatchStatus = "mock_sent"
+	var dispatchError = ""
+
+	if strings.ToLower(req.Channel) == "sms" {
+		err := termii.SendSMS(req.Phone, code, req.Token)
+		if err != nil {
+			log.Printf("[Termii SMS] Failed to send OTP to %s: %v", req.Phone, err)
+			dispatchStatus = "failed"
+			dispatchError = err.Error()
+		} else {
+			dispatchStatus = "sms_sent"
+		}
 	} else {
-		waStatus = "whatsapp_sent"
+		err := whatsapp.SendOTP(req.Phone, code, req.Token)
+		if err != nil {
+			log.Printf("[WhatsApp] Failed to send OTP to %s: %v", req.Phone, err)
+			dispatchStatus = "failed"
+			dispatchError = err.Error()
+		} else {
+			dispatchStatus = "whatsapp_sent"
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":          "sent",
 		"message":         fmt.Sprintf("OTP request received. For testing, use code: %s", code),
-		"whatsapp_status": waStatus,
-		"whatsapp_error":  waError,
+		"whatsapp_status": dispatchStatus,
+		"whatsapp_error":  dispatchError,
 	})
 }
 

@@ -82,14 +82,42 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
     "Finalizing threat risk score..."
   ];
 
+  const [channel, setChannel] = useState<"whatsapp" | "sms">("whatsapp");
+  const [sessionToken, setSessionToken] = useState("");
+  const [apiError, setApiError] = useState("");
+
   useEffect(() => {
     if (step === "verifying") {
       const interval = setInterval(() => {
         setVerifyingLogStep((prev) => {
           if (prev >= verifyingLogs.length - 1) {
             clearInterval(interval);
+            
+            // Execute real backend risk engine check
+            const runCheck = async () => {
+              try {
+                const res = await fetch(`http://localhost:8080/api/verify/token/${token}/check`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    session_token: sessionToken,
+                    device_id: "browser-client-uid-992",
+                    ip_country: "NG"
+                  })
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  setVerdict(data.verdict);
+                }
+              } catch (err) {
+                console.error("Risk scan request error:", err);
+              } finally {
+                setStep("verdict");
+              }
+            };
+            
             setTimeout(() => {
-              setStep("verdict");
+              runCheck();
             }, 800);
             return prev;
           }
@@ -98,23 +126,58 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
       }, 700);
       return () => clearInterval(interval);
     }
-  }, [step]);
+  }, [step, sessionToken, token]);
 
-  const handlePhoneSubmit = (e: React.FormEvent) => {
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApiError("");
     if (phoneNumber.length >= 10) {
-      setOtpSent(true);
-      setStep("otp");
+      try {
+        const res = await fetch("http://localhost:8080/api/auth/otp/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token,
+            phone: "+234" + phoneNumber,
+            channel
+          })
+        });
+        if (res.ok) {
+          setOtpSent(true);
+          setStep("otp");
+        } else {
+          const data = await res.json();
+          setApiError(data.error || "Failed to request code.");
+        }
+      } catch (err) {
+        setApiError("Auth server is currently offline.");
+      }
     }
   };
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otpCode === "123456" || otpCode.length === 6) {
-      setStep("verifying");
-      setVerifyingLogStep(0);
-    } else {
-      setOtpError(true);
+    setApiError("");
+    try {
+      const res = await fetch("http://localhost:8080/api/auth/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          phone: "+234" + phoneNumber,
+          code: otpCode
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSessionToken(data.session_token);
+        setStep("verifying");
+        setVerifyingLogStep(0);
+      } else {
+        setOtpError(true);
+      }
+    } catch (err) {
+      setApiError("Authentication connection timeout.");
     }
   };
 
@@ -131,6 +194,7 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
     setOtpCode("");
     setOtpSent(false);
     setOtpError(false);
+    setApiError("");
   };
 
   return (
@@ -254,9 +318,42 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
                     </div>
                   </div>
 
+                  {/* Channel Toggle */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery Channel</label>
+                    <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200/50">
+                      <button
+                        type="button"
+                        onClick={() => setChannel("whatsapp")}
+                        className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                          channel === "whatsapp"
+                            ? "bg-white text-slate-800 shadow-xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        WhatsApp
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setChannel("sms")}
+                        className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                          channel === "sms"
+                            ? "bg-white text-slate-800 shadow-xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        SMS Message
+                      </button>
+                    </div>
+                  </div>
+
+                  {apiError && (
+                    <p className="text-[10px] text-red-500 font-bold leading-normal text-center">{apiError}</p>
+                  )}
+
                   <button
                     type="submit"
-                    className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md"
+                    className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md mt-2"
                   >
                     Request OTP Code
                   </button>
