@@ -309,19 +309,20 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
 			return
 		}
-		defer rows.Close()
 
 		var codes []models.QRCode
 		for rows.Next() {
 			var q models.QRCode
 			if err := rows.Scan(&q.ID, &q.Token, &q.Signature, &q.Status, &q.CreatedAt); err != nil {
+				rows.Close()
 				http.Error(w, `{"error": "Failed to scan QR codes"}`, http.StatusInternalServerError)
 				return
 			}
 			codes = append(codes, q)
 		}
+		rows.Close()
 
-		// Auto-generate missing tokens to match batch quantity
+		// Auto-generate missing tokens to match batch quantity (Bulk Insert optimized)
 		if len(codes) < batchQty {
 			needed := batchQty - len(codes)
 			tx, err := db.DB.Begin()
@@ -331,30 +332,41 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 			}
 			defer tx.Rollback()
 
-			insertQuery := `INSERT INTO qr_codes (batch_id, token, signature, status, created_at) VALUES (?, ?, ?, ?, ?)`
-			for i := 0; i < needed; i++ {
-				token := generateRandomToken()
-				sig := crypto.SignToken(token)
-				res, err := tx.Exec(insertQuery, batchID, token, sig, models.StatusActive, time.Now())
-				if err != nil {
-					// Retry once on collision
-					token = generateRandomToken()
-					sig = crypto.SignToken(token)
-					res, err = tx.Exec(insertQuery, batchID, token, sig, models.StatusActive, time.Now())
-					if err != nil {
-						http.Error(w, fmt.Sprintf(`{"error": "Failed to generate missing tokens: %v"}`, err), http.StatusInternalServerError)
-						return
-					}
+			chunkSize := 500
+			for i := 0; i < needed; i += chunkSize {
+				end := i + chunkSize
+				if end > needed {
+					end = needed
 				}
-				
-				lastID, _ := res.LastInsertId()
-				codes = append(codes, models.QRCode{
-					ID:        int(lastID),
-					Token:     token,
-					Signature: sig,
-					Status:    models.StatusActive,
-					CreatedAt: time.Now(),
-				})
+				currentChunkSize := end - i
+
+				queryStrings := make([]string, 0, currentChunkSize)
+				valueArgs := make([]interface{}, 0, currentChunkSize*5)
+
+				for j := 0; j < currentChunkSize; j++ {
+					token := generateRandomToken()
+					sig := crypto.SignToken(token)
+					queryStrings = append(queryStrings, "(?, ?, ?, ?, ?)")
+					valueArgs = append(valueArgs, batchID, token, sig, models.StatusActive, time.Now())
+				}
+
+				stmt := fmt.Sprintf("INSERT INTO qr_codes (batch_id, token, signature, status, created_at) VALUES %s", strings.Join(queryStrings, ","))
+				res, err := tx.Exec(stmt, valueArgs...)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error": "Failed to bulk generate tokens: %v"}`, err), http.StatusInternalServerError)
+					return
+				}
+
+				firstID, _ := res.LastInsertId()
+				for j := 0; j < currentChunkSize; j++ {
+					codes = append(codes, models.QRCode{
+						ID:        int(firstID) + j,
+						Token:     valueArgs[j*5+1].(string),
+						Signature: valueArgs[j*5+2].(string),
+						Status:    models.StatusActive,
+						CreatedAt: valueArgs[j*5+4].(time.Time),
+					})
+				}
 			}
 
 			if err := tx.Commit(); err != nil {
@@ -380,19 +392,20 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
 			return
 		}
-		defer rows.Close()
 
 		var tokens []string
 		for rows.Next() {
 			var token string
 			if err := rows.Scan(&token); err != nil {
+				rows.Close()
 				http.Error(w, `{"error": "Failed to scan tokens"}`, http.StatusInternalServerError)
 				return
 			}
 			tokens = append(tokens, token)
 		}
+		rows.Close()
 
-		// Auto-generate missing tokens to match batch quantity
+		// Auto-generate missing tokens to match batch quantity (Bulk Insert optimized)
 		if len(tokens) < batchQty {
 			needed := batchQty - len(tokens)
 			tx, err := db.DB.Begin()
@@ -402,21 +415,32 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 			}
 			defer tx.Rollback()
 
-			insertQuery := `INSERT INTO qr_codes (batch_id, token, signature, status, created_at) VALUES (?, ?, ?, ?, ?)`
-			for i := 0; i < needed; i++ {
-				token := generateRandomToken()
-				sig := crypto.SignToken(token)
-				_, err := tx.Exec(insertQuery, batchID, token, sig, models.StatusActive, time.Now())
-				if err != nil {
-					// Retry once on collision
-					token = generateRandomToken()
-					sig = crypto.SignToken(token)
-					if _, err2 := tx.Exec(insertQuery, batchID, token, sig, models.StatusActive, time.Now()); err2 != nil {
-						http.Error(w, fmt.Sprintf(`{"error": "Failed to generate missing tokens: %v"}`, err2), http.StatusInternalServerError)
-						return
-					}
+			chunkSize := 500
+			for i := 0; i < needed; i += chunkSize {
+				end := i + chunkSize
+				if end > needed {
+					end = needed
 				}
-				tokens = append(tokens, token)
+				currentChunkSize := end - i
+
+				queryStrings := make([]string, 0, currentChunkSize)
+				valueArgs := make([]interface{}, 0, currentChunkSize*5)
+
+				for j := 0; j < currentChunkSize; j++ {
+					token := generateRandomToken()
+					sig := crypto.SignToken(token)
+					queryStrings = append(queryStrings, "(?, ?, ?, ?, ?)")
+					valueArgs = append(valueArgs, batchID, token, sig, models.StatusActive, time.Now())
+					
+					tokens = append(tokens, token)
+				}
+
+				stmt := fmt.Sprintf("INSERT INTO qr_codes (batch_id, token, signature, status, created_at) VALUES %s", strings.Join(queryStrings, ","))
+				_, err := tx.Exec(stmt, valueArgs...)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error": "Failed to bulk generate tokens: %v"}`, err), http.StatusInternalServerError)
+					return
+				}
 			}
 
 			if err := tx.Commit(); err != nil {

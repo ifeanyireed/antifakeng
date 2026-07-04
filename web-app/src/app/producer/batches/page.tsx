@@ -48,7 +48,7 @@ export default function ProducerBatches() {
   // Print Layout states
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [activePrintBatch, setActivePrintBatch] = useState<any>(null);
-  const [printMessage, setPrintMessage] = useState("Scan QR code or visit antifake.ng/verify, input serial to check authenticity.");
+  const [printMessage, setPrintMessage] = useState("Scan QR code or visit www.antifake.ng/verify, input serial to check authenticity.");
   const [layoutWidth, setLayoutWidth] = useState("4ft");
   const [customWidth, setCustomWidth] = useState("48");
   const [customWidthUnit, setCustomWidthUnit] = useState("inch");
@@ -385,7 +385,7 @@ export default function ProducerBatches() {
                 <div>
                   <h3 className="text-xl font-black text-slate-800 text-display flex items-center gap-2">
                     <IconPrinter className="w-5 h-5 text-slate-500" />
-                    Configure Print Layout ({activePrintBatch.id})
+                    Configure Print Layout (Batch: {activePrintBatch.batch_code} — {activePrintBatch.quantity} Codes)
                   </h3>
                   <p className="text-slate-400 text-xs mt-0.5">Customize roll widths, messages, and output formats for print runs.</p>
                 </div>
@@ -428,7 +428,8 @@ export default function ProducerBatches() {
                         value={printMessage}
                         onChange={(e) => setPrintMessage(e.target.value)}
                         rows={2}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white resize-none leading-normal"
+                        disabled={isGenerating}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white resize-none leading-normal disabled:opacity-60 disabled:cursor-not-allowed"
                         placeholder="Message printed next to each code..."
                       />
                     </div>
@@ -440,7 +441,8 @@ export default function ProducerBatches() {
                         <select
                           value={layoutWidth}
                           onChange={(e) => setLayoutWidth(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                          disabled={isGenerating}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white disabled:opacity-60"
                         >
                           <option value="4ft">4ft Roll (approx. 120cm)</option>
                           <option value="6ft">6ft Roll (approx. 180cm)</option>
@@ -454,7 +456,8 @@ export default function ProducerBatches() {
                         <select
                           value={fileFormat}
                           onChange={(e) => setFileFormat(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                          disabled={isGenerating}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white disabled:opacity-60"
                         >
                           <option value="pdf">Vector PDF (CMYK Print Ready)</option>
                           <option value="png_zip">High-Res PNG Sheets (ZIP)</option>
@@ -472,7 +475,8 @@ export default function ProducerBatches() {
                             type="number"
                             value={customWidth}
                             onChange={(e) => setCustomWidth(e.target.value)}
-                            className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-xs font-bold text-slate-800 outline-none focus:border-[#0089C1]"
+                            disabled={isGenerating}
+                            className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-xs font-bold text-slate-800 outline-none focus:border-[#0089C1] disabled:opacity-60"
                           />
                         </div>
                         <div className="flex flex-col gap-1.5">
@@ -480,7 +484,8 @@ export default function ProducerBatches() {
                           <select
                             value={customWidthUnit}
                             onChange={(e) => setCustomWidthUnit(e.target.value)}
-                            className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-xs font-bold text-slate-800 outline-none"
+                            disabled={isGenerating}
+                            className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-xs font-bold text-slate-800 outline-none disabled:opacity-60"
                           >
                             <option value="inch">Inches (in)</option>
                             <option value="ft">Feet (ft)</option>
@@ -497,7 +502,8 @@ export default function ProducerBatches() {
                         <select
                           value={gridColumns}
                           onChange={(e) => setGridColumns(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                          disabled={isGenerating}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white disabled:opacity-60"
                         >
                           <option value="8">8 labels wide</option>
                           <option value="12">12 labels wide</option>
@@ -518,14 +524,16 @@ export default function ProducerBatches() {
                       <button
                         type="button"
                         onClick={() => setIsPrintModalOpen(false)}
-                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all font-bold py-3.5 rounded-full text-xs text-center"
+                        disabled={isGenerating}
+                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all font-bold py-3.5 rounded-full text-xs text-center disabled:opacity-60"
                       >
                         Cancel
                       </button>
                       <button
                         type="button"
                         onClick={handleStartGeneration}
-                        className="flex-1 bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md"
+                        disabled={isGenerating}
+                        className="flex-1 bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md disabled:opacity-60"
                       >
                         Generate &amp; Preview
                       </button>
@@ -642,47 +650,54 @@ export default function ProducerBatches() {
               {/* Modal Content / Preview Area */}
               <div className="bg-slate-100 border border-slate-200/80 rounded-2xl overflow-auto p-6 max-h-[60vh] flex items-start justify-center">
                 {previewUrl === "html" ? (
-                  <div
-                    className="grid gap-3 justify-center"
-                    style={{
-                      gridTemplateColumns: `repeat(auto-fill, minmax(80mm, 1fr))`,
-                      width: "100%",
-                      maxWidth: "100%",
-                    }}
-                  >
-                    {tokensList.map((tokenObj, idx) => (
-                      <div
-                        key={idx}
-                        className="w-[80mm] h-[40mm] border border-slate-200 rounded-lg flex overflow-hidden p-2 bg-white text-slate-800 shrink-0 select-none shadow-xs mx-auto"
-                      >
-                        {/* Left: QR Code */}
-                        <div className="w-[34mm] h-[34mm] flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md p-1">
-                          <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://antifake.ng/verify?token=${tokenObj.token}`)}`}
-                            alt="QR Code"
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                        {/* Right: Metadata */}
-                        <div className="flex-1 flex flex-col justify-between pl-3 text-left">
-                          <div>
-                            <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase">
-                              SERIAL: <span className="font-mono text-slate-800 font-extrabold">{tokenObj.token}</span>
+                  <div className="flex flex-col gap-4 w-full">
+                    <div
+                      className="grid gap-3 justify-center"
+                      style={{
+                        gridTemplateColumns: `repeat(auto-fill, minmax(80mm, 1fr))`,
+                        width: "100%",
+                        maxWidth: "100%",
+                      }}
+                    >
+                      {tokensList.slice(0, 100).map((tokenObj, idx) => (
+                        <div
+                          key={idx}
+                          className="w-[80mm] h-[40mm] border border-slate-200 rounded-lg flex overflow-hidden p-2 bg-white text-slate-800 shrink-0 select-none shadow-xs mx-auto"
+                        >
+                          {/* Left: QR Code */}
+                          <div className="w-[34mm] h-[34mm] flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md p-1">
+                            <img
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://antifake.ng/verify?token=${tokenObj.token}`)}`}
+                              alt="QR Code"
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          {/* Right: Metadata */}
+                          <div className="flex-1 flex flex-col justify-between pl-3 text-left">
+                            <div>
+                              <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase">
+                                SERIAL: <span className="font-mono text-slate-800 font-extrabold">{tokenObj.token}</span>
+                              </div>
+                              <p className="text-[11px] text-slate-600 font-medium leading-tight mt-1">
+                                {printMessage || "Scan QR code or visit antifake.ng/verify, input serial to check authenticity."}
+                              </p>
                             </div>
-                            <p className="text-[11px] text-slate-600 font-medium leading-tight mt-1">
-                              {printMessage || "Scan QR code or visit antifake.ng/verify, input serial to check authenticity."}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 py-0.5">
-                            <img src="/logo.png" alt="Logo" className="w-5.5 h-5.5 object-contain" />
-                            <span className="text-xs font-black text-[#12213B] tracking-tight">AntiFakeNG</span>
-                          </div>
-                          <div className="text-[8px] text-[#0089C1] font-black tracking-wider uppercase">
-                            SECURE VERIFICATION PORTAL
+                            <div className="flex items-center gap-2 py-0.5">
+                              <img src="/logo.png" alt="Logo" className="w-5.5 h-5.5 object-contain" />
+                              <span className="text-xs font-black text-[#12213B] tracking-tight">AntiFakeNG</span>
+                            </div>
+                            <div className="text-[8px] text-[#0089C1] font-black tracking-wider uppercase">
+                              SECURE VERIFICATION PORTAL
+                            </div>
                           </div>
                         </div>
+                      ))}
+                    </div>
+                    {tokensList.length > 100 && (
+                      <div className="bg-slate-200/60 border border-slate-300/40 rounded-xl p-3 text-center text-xs font-bold text-slate-600">
+                        ⚠️ Preview is limited to the first 100 labels to preserve browser performance. All {tokensList.length} labels will be printed when you click "Print / Save as PDF".
                       </div>
-                    ))}
+                    )}
                   </div>
                 ) : previewUrl ? (
                   <iframe
