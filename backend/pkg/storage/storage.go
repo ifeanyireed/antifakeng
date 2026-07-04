@@ -50,12 +50,35 @@ func UploadImage(file multipart.File, header *multipart.FileHeader) (string, err
 		port = "65002" // default Hostinger SSH port
 	}
 
+	// Setup SSH authentication methods
+	var authMethods []ssh.AuthMethod
+	keyPath := os.Getenv("SFTP_KEY_PATH")
+
+	if keyPath != "" {
+		keyBytes, err := os.ReadFile(keyPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read SSH private key file %s: %w", keyPath, err)
+		}
+
+		var signer ssh.Signer
+		passphrase := os.Getenv("SFTP_KEY_PASSPHRASE")
+		if passphrase != "" {
+			signer, err = ssh.ParsePrivateKeyWithPassphrase(keyBytes, []byte(passphrase))
+		} else {
+			signer, err = ssh.ParsePrivateKey(keyBytes)
+		}
+		if err != nil {
+			return "", fmt.Errorf("failed to parse SSH private key: %w", err)
+		}
+		authMethods = append(authMethods, ssh.PublicKeys(signer))
+	} else {
+		authMethods = append(authMethods, ssh.Password(pass))
+	}
+
 	// SSH Config
 	sshConfig := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(pass),
-		},
+		User:            user,
+		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         10 * time.Second,
 	}
