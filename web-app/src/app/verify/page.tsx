@@ -1,14 +1,28 @@
-import { redirect } from "next/navigation";
+"use client";
 
-interface PageProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+import { useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+function VerifyRedirectContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const token = searchParams.get("token");
+    if (token) {
+      router.replace(`/verify/${token}`);
+    } else {
+      router.replace("/consumer");
+    }
+  }, [router, searchParams]);
+
+  return null;
 }
 
-export default async function VerifyRedirectPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const token = params.token;
-  if (typeof token === "string" && token) {
-    redirect(`/verify/${token}`);
-  }
-  redirect("/consumer");
+export default function VerifyRedirectPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyRedirectContent />
+    </Suspense>
+  );
 }

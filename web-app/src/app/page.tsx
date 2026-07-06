@@ -102,7 +102,8 @@ export default function HomePage() {
     setChatLoading(true);
 
     try {
-      const response = await fetch("/api/support/chat", {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const response = await fetch(`${API_BASE}/api/analytics/support/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -48,7 +48,8 @@ export default function ProducerProducts() {
           headers["Authorization"] = `Bearer ${token}`;
         }
         
-        const res = await fetch("http://localhost:8080/api/producer/upload", {
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+        const res = await fetch(`${API_BASE}/api/producer/upload`, {
           method: "POST",
           headers,
           body: formData

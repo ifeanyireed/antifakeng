@@ -1,32 +1,97 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "next/navigation";
 import {
-  IconCheck,
-  IconShieldCheck,
-  IconAlertTriangle,
-  IconX,
-  IconAlertCircle,
-  IconReload,
-  IconPhone,
-  IconLock,
-  IconMapPin,
-  IconUpload,
-  IconChevronRight,
-  IconQrcode
+	IconCheck,
+	IconShieldCheck,
+	IconAlertTriangle,
+	IconX,
+	IconAlertCircle,
+	IconReload,
+	IconPhone,
+	IconLock,
+	IconMapPin,
+	IconUpload,
+	IconChevronRight
 } from "@tabler/icons-react";
+import { useLocation } from "@/components/ahnara/LocationContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-export default function ConsumerPortal() {
-  const [step, setStep] = useState<"enter_token" | "landing" | "phone" | "otp" | "verifying" | "verdict" | "report" | "report_success">("enter_token");
-  const [token, setToken] = useState("");
+export default function ConsumerVerifyClient({ params }: { params: Promise<{ token: string }> }) {
+  const { currentCity, currentArea } = useLocation();
+  const searchParams = useSearchParams();
+  const unwrappedParams = use(params);
+  
+  let token = unwrappedParams.token;
+  if ((!token || token === "fallback" || token === "[token]") && typeof window !== "undefined") {
+    const pathParts = window.location.pathname.split("/");
+    const verifyIdx = pathParts.indexOf("verify");
+    if (verifyIdx !== -1 && pathParts[verifyIdx + 1]) {
+      token = decodeURIComponent(pathParts[verifyIdx + 1]);
+    }
+  }
+  if (!token) {
+    token = "9F3C-71AE";
+  }
+  
+  // Get simulated verdict from query parameters or default to genuine
+  const initialVerdict = searchParams.get("v") || "genuine";
+
+  const [step, setStep] = useState<"landing" | "phone" | "otp" | "verifying" | "verdict" | "report" | "report_success">("landing");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
-  const [verdict, setVerdict] = useState("genuine");
+  const [verdict, setVerdict] = useState<string>(initialVerdict);
   const [otpError, setOtpError] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+
+  interface ProductDetails {
+    name: string;
+    sku: string;
+    category: string;
+    description: string;
+    image_url: string;
+    brand_name: string;
+  }
+
+  const [product, setProduct] = useState<ProductDetails | null>(null);
+  const [verificationData, setVerificationData] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProductDetails = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/verify/token/${token}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.verdict === "invalid") {
+            setVerdict("invalid");
+            setStep("verdict");
+            setVerificationData(data);
+          } else if (data.verdict === "recalled") {
+            setVerdict("recalled");
+            setStep("verdict");
+            setVerificationData(data);
+          } else {
+            if (data.product) {
+              setProduct({
+                name: data.product.name,
+                sku: data.product.sku,
+                category: data.product.category,
+                description: data.product.description,
+                image_url: data.product.image_url || "/logo.png",
+                brand_name: data.brand_name || "AntiFake Brand"
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load product details from backend:", err);
+      }
+    };
+    fetchProductDetails();
+  }, [token]);
   
   // Form states for reporting
   const [retailerLocation, setRetailerLocation] = useState("");
@@ -46,17 +111,6 @@ export default function ConsumerPortal() {
   const [channel, setChannel] = useState<"whatsapp" | "sms">("whatsapp");
   const [sessionToken, setSessionToken] = useState("");
   const [apiError, setApiError] = useState("");
-  const [verificationData, setVerificationData] = useState<any>(null);
-
-  interface ProductDetails {
-    name: string;
-    sku: string;
-    category: string;
-    description: string;
-    image_url: string;
-    brand_name: string;
-  }
-  const [product, setProduct] = useState<ProductDetails | null>(null);
 
   useEffect(() => {
     if (step === "verifying") {
@@ -65,16 +119,21 @@ export default function ConsumerPortal() {
           if (prev >= verifyingLogs.length - 1) {
             clearInterval(interval);
             
-            // Execute real backend risk check
+            // Execute real backend risk engine check
             const runCheck = async () => {
               try {
+                // Dynamically compile the browser-detected geolocator coordinates details
+                const geoTag = currentCity?.name && currentCity.slug
+                  ? `${currentArea ? currentArea + ", " : ""}${currentCity.name}, NG`
+                  : "NG";
+
                 const res = await fetch(`${API_BASE}/api/verify/token/${token}/check`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     session_token: sessionToken,
-                    device_id: "browser-manual-check",
-                    ip_country: "Nigeria"
+                    device_id: "browser-client-uid-992",
+                    ip_country: geoTag
                   })
                 });
                 if (res.ok) {
@@ -99,45 +158,7 @@ export default function ConsumerPortal() {
       }, 700);
       return () => clearInterval(interval);
     }
-  }, [step, sessionToken, token]);
-
-  const handleTokenSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (token.length >= 4) {
-      setApiError("");
-      try {
-        const res = await fetch(`${API_BASE}/api/verify/token/${token}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.verdict === "invalid") {
-            setVerdict("invalid");
-            setStep("verdict");
-          } else if (data.verdict === "recalled") {
-            setVerdict("recalled");
-            setStep("verdict");
-            setVerificationData(data);
-          } else {
-            if (data.product) {
-              setProduct({
-                name: data.product.name,
-                sku: data.product.sku,
-                category: data.product.category,
-                description: data.product.description,
-                image_url: data.product.image_url || "/logo.png",
-                brand_name: data.brand_name || "AntiFake Brand"
-              });
-            }
-            setStep("landing");
-          }
-        } else {
-          setVerdict("invalid");
-          setStep("verdict");
-        }
-      } catch (err) {
-        setApiError("Verification service is offline.");
-      }
-    }
-  };
+  }, [step, sessionToken, token, currentCity, currentArea]);
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,7 +225,7 @@ export default function ConsumerPortal() {
           description: reportComment,
           retailer_name: retailerName,
           retailer_location: retailerLocation,
-          photo_url: ""
+          photo_url: "" // File uploader mock
         })
       });
       if (res.ok) {
@@ -219,6 +240,7 @@ export default function ConsumerPortal() {
     }
   };
 
+  // Reset verification simulator
   const handleReset = (newVerdict: string) => {
     setVerdict(newVerdict);
     setStep("landing");
@@ -227,7 +249,6 @@ export default function ConsumerPortal() {
     setOtpSent(false);
     setOtpError(false);
     setApiError("");
-    setVerificationData(null);
   };
 
   return (
@@ -253,61 +274,12 @@ export default function ConsumerPortal() {
         </div>
       </div>
 
-      {/* Main Card */}
+      {/* Main Form/Result Card */}
       <div className="w-full max-w-md flex-1 flex flex-col justify-center my-6">
         <div className="bg-white border border-slate-200/80 rounded-[32px] p-6 shadow-xl flex flex-col gap-6 relative overflow-hidden">
           
           <AnimatePresence mode="wait">
             
-            {/* STEP 0: ENTER TOKEN MANUAL ENTRY */}
-            {step === "enter_token" && (
-              <motion.div
-                key="enter_token"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                className="flex flex-col gap-6"
-              >
-                <div className="flex flex-col items-center text-center gap-2">
-                  <div className="w-12 h-12 bg-sky-50 text-[#0089C1] rounded-full flex items-center justify-center border border-sky-100">
-                    <IconQrcode className="w-5 h-5" />
-                  </div>
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight text-display">Consumer Verification</h2>
-                  <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                    Verify product authenticity. Scan the product's QR code, or type the 8-character verification token printed on the packaging.
-                  </p>
-                </div>
-
-                <form onSubmit={handleTokenSubmit} className="flex flex-col gap-4 text-left">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Product Code / Token</label>
-                    <input
-                      type="text"
-                      value={token}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                        let formatted = raw;
-                        if (raw.length > 4) {
-                          formatted = `${raw.slice(0, 4)}-${raw.slice(4, 8)}`;
-                        }
-                        setToken(formatted);
-                      }}
-                      placeholder="e.g. 9F3C-71AE"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-center tracking-widest text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
-                      required
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md"
-                  >
-                    Load Code Details
-                  </button>
-                </form>
-              </motion.div>
-            )}
-
             {/* STEP 1: LANDING */}
             {step === "landing" && (
               <motion.div
@@ -329,34 +301,39 @@ export default function ConsumerPortal() {
 
                 {/* Product Metadata Card */}
                 <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 flex gap-4 items-center">
-                  <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    <img src={product?.image_url || "/logo.png"} alt="Brand Logo" className="w-10 h-10 object-contain" />
+                  <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                    <img 
+                      src={product?.image_url || "/logo.png"} 
+                      alt={product?.name || "Product image"} 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/logo.png";
+                      }}
+                    />
                   </div>
                   <div className="text-left flex-1 min-w-0">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{product?.brand_name || "Product Details"}</span>
-                    <h3 className="text-sm font-bold text-slate-800 leading-tight truncate mt-0.5">{product?.name || "Authenticating..."}</h3>
-                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">SKU: {product?.sku || "---"}</p>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                      {product?.brand_name || "Product Details"}
+                    </span>
+                    <h3 className="text-sm font-bold text-slate-800 leading-tight truncate mt-0.5">
+                      {product?.name || "AURA Skincare Serum"}
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                      SKU: {product?.sku || "AURA-SERUM-50ML"}
+                    </p>
                     <span className="inline-block px-2 py-0.5 bg-slate-200 rounded font-mono text-[9px] font-bold text-slate-600 mt-1">
-                      ID: {token || "9F3C-71AE"}
+                      ID: {token}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setStep("enter_token")}
-                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-full text-xs"
-                  >
-                    Enter Different Code
-                  </button>
-                  <button
-                    onClick={() => setStep("phone")}
-                    className="flex-1 bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md flex items-center justify-center gap-1.5"
-                  >
-                    Verify Authenticity
-                    <IconChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => setStep("phone")}
+                  className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md flex items-center justify-center gap-1.5"
+                >
+                  Verify Authenticity
+                  <IconChevronRight className="w-4 h-4" />
+                </button>
               </motion.div>
             )}
 
@@ -430,7 +407,7 @@ export default function ConsumerPortal() {
 
                   <button
                     type="submit"
-                    className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md"
+                    className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md mt-2"
                   >
                     Request OTP Code
                   </button>
@@ -554,28 +531,28 @@ export default function ConsumerPortal() {
                       <span className="text-[9px] font-black text-[#608216] uppercase tracking-widest">Authentication Certificate</span>
                       <div className="grid grid-cols-2 gap-y-3 gap-x-2 font-medium text-slate-700 mt-1">
                         <div>
-                          <span className="text-slate-400 text-[10px]">Product SKU</span>
-                          <p className="font-bold text-slate-800 truncate">{verificationData?.product?.sku || product?.sku || "---"}</p>
+                           <span className="text-slate-400 text-[10px]">Product SKU</span>
+                           <p className="font-bold text-slate-800 truncate">{verificationData?.product?.sku || product?.sku || "---"}</p>
                         </div>
                         <div>
-                          <span className="text-slate-400 text-[10px]">Production Batch</span>
-                          <p className="font-bold text-slate-800">{verificationData?.batch?.batch_code || "---"}</p>
+                           <span className="text-slate-400 text-[10px]">Production Batch</span>
+                           <p className="font-bold text-slate-800">{verificationData?.batch?.batch_code || "---"}</p>
                         </div>
                         <div>
-                          <span className="text-slate-400 text-[10px]">Manufacture Date</span>
-                          <p className="font-bold text-slate-800">
-                            {verificationData?.batch?.manufacture_date 
-                              ? new Date(verificationData.batch.manufacture_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) 
-                              : "---"}
-                          </p>
+                           <span className="text-slate-400 text-[10px]">Manufacture Date</span>
+                           <p className="font-bold text-slate-800">
+                             {verificationData?.batch?.manufacture_date 
+                               ? new Date(verificationData.batch.manufacture_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) 
+                               : "---"}
+                           </p>
                         </div>
                         <div>
-                          <span className="text-slate-400 text-[10px]">Expiry Date</span>
-                          <p className="font-bold text-slate-800 font-mono">
-                            {verificationData?.batch?.expiry_date 
-                              ? new Date(verificationData.batch.expiry_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) 
-                              : "---"}
-                          </p>
+                           <span className="text-slate-400 text-[10px]">Expiry Date</span>
+                           <p className="font-bold text-slate-800 font-mono">
+                             {verificationData?.batch?.expiry_date 
+                               ? new Date(verificationData.batch.expiry_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) 
+                               : "---"}
+                           </p>
                         </div>
                       </div>
                     </div>

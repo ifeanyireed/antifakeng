@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +36,7 @@ func main() {
 
 	// Public routes
 	mux.HandleFunc("/api/analytics/reports/submit", handlePublicReportSubmit)
+	mux.HandleFunc("/api/analytics/support/chat", handleSupportChat)
 
 	// Auth-required routes
 	mux.Handle("/api/analytics/summary", middleware.RequireAuth(http.HandlerFunc(handleSummary)))
@@ -625,4 +629,157 @@ func handleAuditLogs(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(logs)
+}
+
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type MistralRequest struct {
+	Model       string        `json:"model"`
+	Messages    []ChatMessage `json:"messages"`
+	Temperature float64       `json:"temperature"`
+	MaxTokens   int           `json:"max_tokens"`
+}
+
+type MistralChoice struct {
+	Message ChatMessage `json:"message"`
+}
+
+type MistralResponse struct {
+	Choices []MistralChoice `json:"choices"`
+}
+
+type SupportChatRequest struct {
+	Messages []ChatMessage `json:"messages"`
+}
+
+type SupportChatResponse struct {
+	Reply string `json:"reply"`
+	Error string `json:"error,omitempty"`
+}
+
+func handleSupportChat(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte(`{"error": "Method not allowed"}`))
+		return
+	}
+
+	var req SupportChatRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{"error": "Invalid request payload"}`))
+		return
+	}
+
+	mistralAPIKey := os.Getenv("MISTRAL_API_KEY")
+	if mistralAPIKey == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(SupportChatResponse{Error: "MISTRAL_API_KEY environment variable is not configured"})
+		return
+	}
+	mistralAPIKey = strings.Trim(strings.ReplaceAll(mistralAPIKey, "\"", ""), " ")
+	mistralAPIKey = strings.Trim(strings.ReplaceAll(mistralAPIKey, "'", ""), " ")
+
+	systemContent := `You are the AntiFakeNG Assistant, an AI support agent trained on the AntiFakeNG knowledge base.
+AntiFakeNG is a modern product authenticity platform that secures manufacturer goods using unique, encrypted QR codes and serial tokens.
+
+Key Knowledge Details:
+1. Product Verification:
+   - Consumers scan the QR code on a product label or manually type the 8-digit serial token (formatted as XXXX-XXXX) at the consumer portal (http://localhost:3000/consumer).
+   - The platform prompts the consumer to bind their scan session with a phone number (via WhatsApp or SMS).
+   - An OTP (One-Time Password) is sent to the consumer to verify their session.
+   - WhatsApp is the default, primary delivery channel of choice. SMS is the secondary fallback.
+   - Consumers must insist on using their OWN phone numbers for accurate validation and loyalty rewards.
+   - If verification fails (verdict is SUSPICIOUS or INVALID), consumers should NOT buy the product and should file a report on the Support page.
+
+2. Brand/Producer Management:
+   - Manufacturers/Producers register accounts, add products, and generate unique serial token batches.
+   - Batches can be bulk-generated (e.g., 2000 codes at once).
+   - Producers print codes using the Roll Width Layout. The layout grid auto-calculates columns and enforces exactly 1px spacing (TBLR) and 2px label padding around each QR code to ensure clean cutting.
+   - Producers can access analytics to view scan counts, locations, and suspicious/invalid scanning trends.
+
+3. General Platform Info:
+   - Secure verification utilizes whatsmeow for WhatsApp pairing on startup via simple 8-digit pairing codes.
+   - Admin email notifications are automatically sent using SMTP (Hostinger secure TLS/SSL).
+   - Self-healing checks run daily to ensure the WhatsApp OTP gateway remains paired and healthy.
+
+Instructions:
+- Be concise, helpful, and highly professional.
+- Address consumers and manufacturers politely.
+- If they report a counterfeit, guide them to use the "Report Fake" tab on the Support page.
+- Do not mention technical implementation details unless specifically asked.`
+
+	systemPrompt := ChatMessage{
+		Role:    "system",
+		Content: systemContent,
+	}
+
+	mistralMessages := append([]ChatMessage{systemPrompt}, req.Messages...)
+
+	mistralReqBody := MistralRequest{
+		Model:       "open-mixtral-8x7b",
+		Messages:    mistralMessages,
+		Temperature: 0.7,
+		MaxTokens:   500,
+	}
+
+	jsonBytes, err := json.Marshal(mistralReqBody)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "Failed to marshal request"}`))
+		return
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	httpReq, err := http.NewRequest(http.MethodPost, "https://api.mistral.ai/v1/chat/completions", bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "Failed to create request"}`))
+		return
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+mistralAPIKey)
+
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(SupportChatResponse{Error: fmt.Sprintf("Failed to contact Mistral API: %v", err)})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBodyBytes, _ := io.ReadAll(resp.Body)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(resp.StatusCode)
+		json.NewEncoder(w).Encode(SupportChatResponse{Error: fmt.Sprintf("Mistral API error (%d): %s", resp.StatusCode, string(respBodyBytes))})
+		return
+	}
+
+	var mistralResp MistralResponse
+	if err := json.NewDecoder(resp.Body).Decode(&mistralResp); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(SupportChatResponse{Error: "Failed to parse Mistral response"})
+		return
+	}
+
+	reply := ""
+	if len(mistralResp.Choices) > 0 {
+		reply = mistralResp.Choices[0].Message.Content
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(SupportChatResponse{Reply: reply})
 }
