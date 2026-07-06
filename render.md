@@ -1,0 +1,1 @@
+mkdir -p bin && for service in gateway auth-service producer-service verification-service analytics- service; do go build -o bin/$service cmd/$service/main.go; done
