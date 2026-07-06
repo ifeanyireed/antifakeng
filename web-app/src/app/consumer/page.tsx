@@ -232,7 +232,7 @@ export default function ConsumerPortal() {
     <div className="min-h-screen bg-[#E8EFF4] text-slate-800 flex flex-col items-center justify-between p-4 font-sans select-none">
       
       {/* Dev Verdict Controls - Fixed Top Row for Easy Testing */}
-      <div className="w-full max-w-md bg-white border border-slate-200 shadow-sm rounded-2xl p-3 flex flex-col gap-2 z-30">
+      <div className="hidden w-full max-w-md bg-white border border-slate-200 shadow-sm rounded-2xl p-3 flex-col gap-2 z-30">
         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Dev Controls: Simulate Verdicts</span>
         <div className="flex flex-wrap gap-1.5 justify-center">
           {["genuine", "previously_verified", "suspicious", "invalid", "recalled"].map((v) => (
@@ -282,7 +282,14 @@ export default function ConsumerPortal() {
                     <input
                       type="text"
                       value={token}
-                      onChange={(e) => setToken(e.target.value.toUpperCase().slice(0, 9))}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                        let formatted = raw;
+                        if (raw.length > 4) {
+                          formatted = `${raw.slice(0, 4)}-${raw.slice(4, 8)}`;
+                        }
+                        setToken(formatted);
+                      }}
                       placeholder="e.g. 9F3C-71AE"
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-center tracking-widest text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
                       required
@@ -366,7 +373,7 @@ export default function ConsumerPortal() {
                   </div>
                   <h2 className="text-xl font-black text-slate-900 tracking-tight text-display">Secure Phone Binding</h2>
                   <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                    Enter your phone number. We'll send a one-time OTP to bind this scan to a real verification session.
+                    Enter your phone number. We'll send a one-time OTP to bind this scan to a real verification session. <strong className="text-slate-800 font-black">Please insist on adding your own number for accurate validation and loyalty rewards.</strong>
                   </p>
                 </div>
 
@@ -385,6 +392,39 @@ export default function ConsumerPortal() {
                       />
                     </div>
                   </div>
+
+                  {/* Channel Toggle */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery Channel</label>
+                    <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200/50">
+                      <button
+                        type="button"
+                        onClick={() => setChannel("whatsapp")}
+                        className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                          channel === "whatsapp"
+                            ? "bg-white text-slate-800 shadow-xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        WhatsApp
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setChannel("sms")}
+                        className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                          channel === "sms"
+                            ? "bg-white text-slate-800 shadow-xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        SMS Message
+                      </button>
+                    </div>
+                  </div>
+
+                  {apiError && (
+                    <p className="text-[10px] text-red-500 font-bold leading-normal text-center">{apiError}</p>
+                  )}
 
                   <button
                     type="submit"

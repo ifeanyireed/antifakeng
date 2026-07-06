@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { 
@@ -13,7 +13,10 @@ import {
   IconSparkles,
   IconArrowRight,
   IconArrowLeft,
-  IconKey
+  IconKey,
+  IconCamera,
+  IconPhoto,
+  IconFileText
 } from "@tabler/icons-react";
 import { AhnaraCard } from "@/components/ahnara/AhnaraCard";
 import { AhnaraButton } from "@/components/ahnara/AhnaraButton";
@@ -34,6 +37,96 @@ export default function OnboardingPage() {
   const [industry, setIndustry] = useState("Cosmetics");
   const [website, setWebsite] = useState("");
   const [hqAddress, setHqAddress] = useState("");
+
+  // Step 2: KYC Compliance state
+  const [idCardUrl, setIdCardUrl] = useState("");
+  const [selfieUrl, setSelfieUrl] = useState("");
+  const [utilityBillUrl, setUtilityBillUrl] = useState("");
+
+  const [uploadingIdCard, setUploadingIdCard] = useState(false);
+  const [uploadingSelfie, setUploadingSelfie] = useState(false);
+  const [uploadingUtilityBill, setUploadingUtilityBill] = useState(false);
+
+  const [cameraActive, setCameraActive] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const startCamera = async () => {
+    try {
+      setCameraActive(true);
+      // Access camera stream
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Camera access failed:", err);
+      alert("Could not access camera. Please upload a pre-taken selfie instead.");
+      setCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const context = canvasRef.current.getContext("2d");
+    if (!context) return;
+
+    context.drawImage(videoRef.current, 0, 0, 320, 240);
+    stopCamera();
+
+    canvasRef.current.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+      await uploadKycFile(file, "selfie");
+    }, "image/jpeg");
+  };
+
+  const uploadKycFile = async (file: File, type: "id_card" | "selfie" | "utility_bill") => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
+    const formData = new FormData();
+    formData.append("image", file);
+
+    if (type === "id_card") setUploadingIdCard(true);
+    if (type === "selfie") setUploadingSelfie(true);
+    if (type === "utility_bill") setUploadingUtilityBill(true);
+
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const res = await fetch(`${API_BASE}/api/producer/upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (type === "id_card") setIdCardUrl(data.url);
+        if (type === "selfie") setSelfieUrl(data.url);
+        if (type === "utility_bill") setUtilityBillUrl(data.url);
+      } else {
+        alert("File upload failed.");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Upload service offline.");
+    } finally {
+      if (type === "id_card") setUploadingIdCard(false);
+      if (type === "selfie") setUploadingSelfie(false);
+      if (type === "utility_bill") setUploadingUtilityBill(false);
+    }
+  };
   
   // Step 2: Plan Selection state
   const [selectedPlan, setSelectedPlan] = useState("Growth");
@@ -61,7 +154,11 @@ export default function OnboardingPage() {
       alert("Please enter your brand name to continue.");
       return;
     }
-    if (currentStep === 2 && !selectedPlan) {
+    if (currentStep === 2 && (!idCardUrl || !selfieUrl || !utilityBillUrl)) {
+      alert("Please upload NIN/License, captured Selfie, and Utility Bill to proceed.");
+      return;
+    }
+    if (currentStep === 3 && !selectedPlan) {
       alert("Please select a subscription level.");
       return;
     }
@@ -75,7 +172,8 @@ export default function OnboardingPage() {
   const handleComplete = async () => {
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
-      const res = await fetch("http://localhost:8080/api/producer/profile", {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const res = await fetch(`${API_BASE}/api/producer/profile`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",
@@ -85,7 +183,10 @@ export default function OnboardingPage() {
           name: brandName,
           contact_email: typeof window !== "undefined" ? (JSON.parse(localStorage.getItem("producer_brand_data") || "{}").email || "admin@brand.com") : "admin@brand.com",
           brand_logo_url: "/logo.png",
-          plan_tier: selectedPlan.toLowerCase()
+          plan_tier: selectedPlan.toLowerCase(),
+          id_card_url: idCardUrl,
+          selfie_url: selfieUrl,
+          utility_bill_url: utilityBillUrl
         })
       });
 
@@ -98,6 +199,9 @@ export default function OnboardingPage() {
           selectedPlan,
           apiKey,
           apiSecret,
+          idCardUrl,
+          selfieUrl,
+          utilityBillUrl,
           setupCompleted: true,
           timestamp: new Date().toISOString()
         };
@@ -129,7 +233,7 @@ export default function OnboardingPage() {
 
         {/* Multi-step progress indicator */}
         <div className="px-8 pt-6 flex items-center justify-between">
-          {[1, 2, 3].map((step) => (
+          {[1, 2, 3, 4].map((step) => (
             <React.Fragment key={step}>
               <div className="flex items-center gap-2.5">
                 <div 
@@ -146,12 +250,13 @@ export default function OnboardingPage() {
                 <span className={`text-xs font-bold hidden sm:inline ${
                   currentStep === step ? "text-[#0D090C]" : "text-slate-400"
                 }`}>
-                  {step === 1 && "Brand Profile"}
-                  {step === 2 && "License Plan"}
-                  {step === 3 && "API Credentials"}
+                  {step === 1 && "Profile"}
+                  {step === 2 && "KYC Verification"}
+                  {step === 3 && "License Plan"}
+                  {step === 4 && "Credentials"}
                 </span>
               </div>
-              {step < 3 && (
+              {step < 4 && (
                 <div className={`flex-1 h-0.5 mx-4 rounded-full transition-all duration-300 ${
                   currentStep > step ? "bg-[#8BB436]" : "bg-slate-100"
                 }`} />
@@ -223,10 +328,139 @@ export default function OnboardingPage() {
               </motion.div>
             )}
 
-            {/* STEP 2: PLAN SELECTION */}
+            {/* STEP 2: KYC COMPLIANCE DOCUMENTS */}
             {currentStep === 2 && (
               <motion.div
                 key="step2"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25 }}
+                className="flex flex-col gap-5 text-left"
+              >
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 tracking-tight text-display font-sans">Identity & Address Verification (KYC)</h2>
+                  <p className="text-xs text-slate-500 font-semibold mt-1">
+                    To comply with security and counterfeit regulations, upload your government ID, take a live verification selfie, and provide a recent utility bill.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  {/* Document 1: NIN / Driving License */}
+                  <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-2xl flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <IconPhoto className="w-5 h-5 text-[#0089C1]" />
+                        <span className="text-xs font-bold text-slate-800">NIN Card / Driving License</span>
+                      </div>
+                      {idCardUrl && <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-100">Uploaded</span>}
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-medium">Upload a scanned copy of your national identity card or driver's license.</p>
+                    <input 
+                      type="file" 
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadKycFile(file, "id_card");
+                      }}
+                      className="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 cursor-pointer"
+                    />
+                    {uploadingIdCard && <p className="text-[10px] text-slate-400 italic animate-pulse">Uploading document...</p>}
+                    {idCardUrl && <p className="text-[9px] text-slate-400 font-mono truncate">{idCardUrl}</p>}
+                  </div>
+
+                  {/* Document 2: Camera Selfie Capture */}
+                  <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-2xl flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <IconCamera className="w-5 h-5 text-[#0089C1]" />
+                        <span className="text-xs font-bold text-slate-800">Verification Selfie Photo</span>
+                      </div>
+                      {selfieUrl && <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-100">Captured</span>}
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-medium">Use your device webcam to capture a live photo of yourself for representative validation.</p>
+                    
+                    {cameraActive ? (
+                      <div className="flex flex-col items-center gap-2 border border-slate-200 bg-black rounded-xl overflow-hidden p-2">
+                        <video ref={videoRef} autoPlay playsInline className="w-[240px] h-[180px] bg-slate-900 rounded-lg object-cover" />
+                        <div className="flex gap-2">
+                          <button 
+                            type="button" 
+                            onClick={capturePhoto}
+                            className="bg-[#0089C1] hover:bg-sky-600 text-white font-bold py-1.5 px-4 rounded-lg text-[10px] transition-colors"
+                          >
+                            Capture Photo
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={stopCamera}
+                            className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-1.5 px-4 rounded-lg text-[10px] transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-3 items-center">
+                        <button 
+                          type="button" 
+                          onClick={startCamera}
+                          className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-1.5 px-4 rounded-xl text-xs transition-colors"
+                        >
+                          Start Camera
+                        </button>
+                        <span className="text-[10px] text-slate-400 font-semibold">Or upload pre-taken:</span>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) uploadKycFile(file, "selfie");
+                          }}
+                          className="text-xs text-slate-500 file:mr-3 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 cursor-pointer"
+                        />
+                      </div>
+                    )}
+                    <canvas ref={canvasRef} width="320" height="240" className="hidden" />
+                    {uploadingSelfie && <p className="text-[10px] text-slate-400 italic animate-pulse">Uploading selfie...</p>}
+                    {selfieUrl && (
+                      <div className="flex items-center gap-3">
+                        <img src={selfieUrl} alt="Captured Selfie Preview" className="w-12 h-12 rounded-lg object-cover border border-slate-200" />
+                        <p className="text-[9px] text-slate-400 font-mono truncate flex-1">{selfieUrl}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Document 3: Utility Bill */}
+                  <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-2xl flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <IconFileText className="w-5 h-5 text-[#0089C1]" />
+                        <span className="text-xs font-bold text-slate-800">Utility Bill (Proof of Address)</span>
+                      </div>
+                      {utilityBillUrl && <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-100">Uploaded</span>}
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-medium">Upload a recent utility bill (electricity, water, waste) matching your corporate headquarters address.</p>
+                    <input 
+                      type="file" 
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadKycFile(file, "utility_bill");
+                      }}
+                      className="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 cursor-pointer"
+                    />
+                    {uploadingUtilityBill && <p className="text-[10px] text-slate-400 italic animate-pulse">Uploading utility bill...</p>}
+                    {utilityBillUrl && <p className="text-[9px] text-slate-400 font-mono truncate">{utilityBillUrl}</p>}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 3: PLAN SELECTION */}
+            {currentStep === 3 && (
+              <motion.div
+                key="step3"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
@@ -307,10 +541,10 @@ export default function OnboardingPage() {
               </motion.div>
             )}
 
-            {/* STEP 3: API CREDENTIALS */}
-            {currentStep === 3 && (
+            {/* STEP 4: API CREDENTIALS */}
+            {currentStep === 4 && (
               <motion.div
-                key="step3"
+                key="step4"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
@@ -394,12 +628,12 @@ export default function OnboardingPage() {
             <div />
           )}
 
-          {currentStep === 2 ? (
+          {currentStep === 3 ? (
             selectedPlan === "Enterprise" ? (
               <button
                 onClick={() => {
                   alert("Enterprise Custom contract activation requested. A representative will contact your billing department. Activating platform trial access...");
-                  setCurrentStep(3);
+                  setCurrentStep(4);
                 }}
                 className="bg-[#1E293B] text-white hover:bg-slate-800 font-bold px-6 py-2.5 rounded-full text-xs shadow-md transition-all"
               >
@@ -415,7 +649,7 @@ export default function OnboardingPage() {
                 }}
                 onSuccess={(ref) => {
                   alert(`Payment Confirmed. Tx Ref: ${ref.reference}. Activating plan...`);
-                  setCurrentStep(3);
+                  setCurrentStep(4);
                 }}
                 onClose={() => {
                   alert("Checkout flow terminated by user.");
@@ -424,7 +658,7 @@ export default function OnboardingPage() {
                 className="bg-[#1E293B] text-white hover:bg-slate-800 font-bold px-6 py-2.5 rounded-full text-xs shadow-md"
               />
             )
-          ) : currentStep < 3 ? (
+          ) : currentStep < 4 ? (
             <button
               onClick={handleNext}
               className="bg-[#1E293B] text-white hover:bg-slate-800 font-bold px-6 py-2.5 rounded-full text-xs transition-all flex items-center gap-1.5 shadow-sm"

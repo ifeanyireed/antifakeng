@@ -284,5 +284,11 @@ func createTables(driver string) {
 			log.Fatalf("Failed to execute database migration query: %v\nQuery: %s", err, q)
 		}
 	}
+
+	// Run schema migrations to add KYC columns to producers table (ignore errors if columns already exist)
+	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN id_card_url VARCHAR(512) NULL`)
+	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN selfie_url VARCHAR(512) NULL`)
+	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN utility_bill_url VARCHAR(512) NULL`)
+
 	log.Println("Database migration completed successfully.")
 }

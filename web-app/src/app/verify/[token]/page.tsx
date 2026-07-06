@@ -242,7 +242,7 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
     <div className="min-h-screen bg-[#E8EFF4] text-slate-800 flex flex-col items-center justify-between p-4 font-sans select-none">
       
       {/* Dev Verdict Controls - Fixed Top Row for Easy Testing */}
-      <div className="w-full max-w-md bg-white border border-slate-200 shadow-sm rounded-2xl p-3 flex flex-col gap-2 z-30">
+      <div className="hidden w-full max-w-md bg-white border border-slate-200 shadow-sm rounded-2xl p-3 flex-col gap-2 z-30">
         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Dev Controls: Simulate Verdicts</span>
         <div className="flex flex-wrap gap-1.5 justify-center">
           {["genuine", "previously_verified", "suspicious", "invalid", "recalled"].map((v) => (
@@ -339,7 +339,7 @@ export default function ConsumerVerifyPage({ params }: { params: Promise<{ token
                   </div>
                   <h2 className="text-xl font-black text-slate-900 tracking-tight text-display">Secure Phone Binding</h2>
                   <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                    Enter your phone number. We'll send a one-time OTP to bind this scan to a real verification session.
+                    Enter your phone number. We'll send a one-time OTP to bind this scan to a real verification session. <strong className="text-slate-800 font-black">Please insist on adding your own number for accurate validation and loyalty rewards.</strong>
                   </p>
                 </div>
 

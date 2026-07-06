@@ -596,9 +596,9 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		var p models.Producer
-		var logo sql.NullString
-		err := db.DB.QueryRow(`SELECT id, name, slug, plan_tier, contact_email, brand_logo_url, status, created_at 
-			FROM producers WHERE id = ?`, prodID).Scan(&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, &p.Status, &p.CreatedAt)
+		var logo, idCard, selfie, utilBill sql.NullString
+		err := db.DB.QueryRow(`SELECT id, name, slug, plan_tier, contact_email, brand_logo_url, id_card_url, selfie_url, utility_bill_url, status, created_at 
+			FROM producers WHERE id = ?`, prodID).Scan(&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, &idCard, &selfie, &utilBill, &p.Status, &p.CreatedAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				http.Error(w, `{"error": "Producer profile not found"}`, http.StatusNotFound)
@@ -608,16 +608,22 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		p.BrandLogoURL = logo.String
+		p.IDCardURL = idCard.String
+		p.SelfieURL = selfie.String
+		p.UtilityBillURL = utilBill.String
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(p)
 
 	case http.MethodPut:
 		var req struct {
-			Name         string `json:"name"`
-			ContactEmail string `json:"contact_email"`
-			BrandLogoURL string `json:"brand_logo_url"`
-			PlanTier     string `json:"plan_tier"`
+			Name           string `json:"name"`
+			ContactEmail   string `json:"contact_email"`
+			BrandLogoURL   string `json:"brand_logo_url"`
+			PlanTier       string `json:"plan_tier"`
+			IDCardURL      string `json:"id_card_url"`
+			SelfieURL      string `json:"selfie_url"`
+			UtilityBillURL string `json:"utility_bill_url"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
@@ -639,6 +645,18 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		if req.PlanTier != "" {
 			query += `, plan_tier = ?`
 			args = append(args, req.PlanTier)
+		}
+		if req.IDCardURL != "" {
+			query += `, id_card_url = ?`
+			args = append(args, req.IDCardURL)
+		}
+		if req.SelfieURL != "" {
+			query += `, selfie_url = ?`
+			args = append(args, req.SelfieURL)
+		}
+		if req.UtilityBillURL != "" {
+			query += `, utility_bill_url = ?`
+			args = append(args, req.UtilityBillURL)
 		}
 		query += ` WHERE id = ?`
 		args = append(args, prodID)

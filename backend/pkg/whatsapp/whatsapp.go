@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/ahnara/antifake/backend/pkg/email"
 	_ "github.com/mattn/go-sqlite3"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
@@ -35,26 +37,51 @@ func InitWhatsApp() {
 	Client = whatsmeow.NewClient(deviceStore, clientLog)
 
 	if Client.Store.ID == nil {
-		// No logged-in session, get QR channel
-		qrChan, _ := Client.GetQRChannel(context.Background())
 		err = Client.Connect()
 		if err != nil {
 			log.Printf("Failed to connect whatsmeow: %v", err)
 			return
 		}
-		go func() {
-			for evt := range qrChan {
-				if evt.Event == "code" {
-					log.Printf("\n==================================================")
-					log.Printf("  WhatsApp Pairing Link Required (AntiFakeNG)")
-					log.Printf("  Pairing code: %s", evt.Code)
-					log.Printf("  Paste code into a QR scanner or link in WhatsApp.")
-					log.Printf("==================================================\n")
+
+		phoneNum := os.Getenv("WHATSAPP_PHONE")
+		if phoneNum != "" {
+			// Generate 8-character pairing code
+			code, err := Client.PairPhone(context.Background(), phoneNum, true, whatsmeow.PairClientChrome, "Chrome (Linux)")
+			if err != nil {
+				log.Printf("Failed to generate WhatsApp phone pairing code: %v", err)
+			} else {
+				log.Printf("\n==================================================")
+				log.Printf("  WHATSAPP PHONE PAIRING CODE GENERATED")
+				log.Printf("  Phone Number: %s", phoneNum)
+				log.Printf("  Pairing Code: %s", code)
+				log.Printf("  Go to WhatsApp on your phone -> Linked Devices -> Link with Phone Number and enter this code.")
+				log.Printf("==================================================\n")
+
+				// Automatically email the pairing code to the admin
+				errEmail := email.SendWhatsAppPairingCode(phoneNum, code)
+				if errEmail != nil {
+					log.Printf("[WhatsApp Pairing] Failed to email pairing code: %v", errEmail)
 				} else {
-					log.Printf("WhatsApp pairing event: %s", evt.Event)
+					log.Printf("[WhatsApp Pairing] Successfully emailed pairing code to ifeanyireed@gmail.com")
 				}
 			}
-		}()
+		} else {
+			// Fallback to QR channel pairing URL
+			qrChan, _ := Client.GetQRChannel(context.Background())
+			go func() {
+				for evt := range qrChan {
+					if evt.Event == "code" {
+						log.Printf("\n==================================================")
+						log.Printf("  WhatsApp Pairing Link Required (AntiFakeNG)")
+						log.Printf("  Pairing code: %s", evt.Code)
+						log.Printf("  Paste code into a QR scanner or link in WhatsApp.")
+						log.Printf("==================================================\n")
+					} else {
+						log.Printf("WhatsApp pairing event: %s", evt.Event)
+					}
+				}
+			}()
+		}
 	} else {
 		// Already paired, just connect
 		err = Client.Connect()

@@ -48,7 +48,7 @@ export default function ProducerBatches() {
   // Print Layout states
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [activePrintBatch, setActivePrintBatch] = useState<any>(null);
-  const [printMessage, setPrintMessage] = useState("Scan QR code or visit www.antifake.ng/verify, input serial to check authenticity.");
+  const [printMessage, setPrintMessage] = useState("Scan QR code or visit www.antifake.ng/verify, input serial to check authenticity. Insist on adding your own number for accurate validation & loyalty rewards.");
   const [layoutWidth, setLayoutWidth] = useState("4ft");
   const [customWidth, setCustomWidth] = useState("48");
   const [customWidthUnit, setCustomWidthUnit] = useState("inch");

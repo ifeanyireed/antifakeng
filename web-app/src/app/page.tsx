@@ -13,6 +13,93 @@ export default function HomePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
+  // Chatbot states
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([
+    {
+      role: "assistant",
+      content: "Hello! I am your AntiFakeNG support assistant. Ask me anything about verifying products, printing layouts, or managing security!"
+    }
+  ]);
+  const [chatLoading, setChatLoading] = useState(false);
+
+  // Homepage Demo Request form states
+  const [demoName, setDemoName] = useState("");
+  const [demoCompany, setDemoCompany] = useState("");
+  const [demoEmail, setDemoEmail] = useState("");
+  const [demoMessage, setDemoMessage] = useState("");
+  const [demoSubmitted, setDemoSubmitted] = useState(false);
+
+  const handleDemoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const res = await fetch(`${API_BASE}/api/auth/support/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          form_type: "contact",
+          name: demoName,
+          email: demoEmail,
+          phone: "",
+          subject: "Demo Request from Homepage",
+          token: "",
+          store_name: demoCompany,
+          message: demoMessage
+        })
+      });
+
+      if (res.ok) {
+        setDemoSubmitted(true);
+        setDemoName("");
+        setDemoCompany("");
+        setDemoEmail("");
+        setDemoMessage("");
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to submit demo request.");
+      }
+    } catch (err) {
+      alert("Demo request service is currently offline.");
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+
+    const userMessage = chatInput;
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setChatLoading(true);
+
+    try {
+      const response = await fetch("/api/support/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [...chatMessages.map(m => ({ role: m.role, content: m.content })), { role: "user", content: userMessage }]
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.reply) {
+        setChatMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+      } else {
+        setChatMessages((prev) => [...prev, { role: "assistant", content: `Error: ${data.error || "Failed to get reply."}` }]);
+      }
+    } catch (err: any) {
+      setChatMessages((prev) => [...prev, { role: "assistant", content: `Network error: ${err.message}` }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!loading && user) {
       if (user.role === "ADMIN") {
@@ -42,16 +129,19 @@ export default function HomePage() {
 
         {/* Mid Navigation Links */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
-          <a href="#how-it-works" className="hover:text-slate-950 transition-colors">How it works</a>
-          <a href="#producers" className="hover:text-slate-950 transition-colors">For producers</a>
           <a href="#features" className="hover:text-slate-950 transition-colors">Features</a>
-          <a href="#security" className="hover:text-slate-950 transition-colors">Security</a>
           <a href="#pricing" className="hover:text-slate-950 transition-colors">Pricing</a>
           <a href="#faq" className="hover:text-slate-950 transition-colors">FAQ</a>
+          <Link href="/support" className="hover:text-slate-950 transition-colors">Support</Link>
         </nav>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        {/* Action Buttons (Desktop Only) */}
+        <div className="hidden md:flex items-center gap-2">
+          <Link href="/consumer">
+            <button className="bg-[#0089C1] hover:bg-sky-600 text-white transition-all font-bold px-5 py-2.5 rounded-full text-sm shadow-sm">
+              Verify Product
+            </button>
+          </Link>
           <Link href="/login">
             <button className="bg-white border border-slate-200 text-slate-800 font-bold px-5 py-2.5 rounded-full text-sm hover:bg-slate-50 transition-all shadow-sm">
               Sign In
@@ -62,13 +152,15 @@ export default function HomePage() {
               Register
             </button>
           </Link>
-          <button 
-            className="md:hidden text-slate-800 text-2xl font-bold focus:outline-none" 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            ☰
-          </button>
         </div>
+
+        {/* Burger Button (Mobile Only) */}
+        <button 
+          className="md:hidden text-slate-800 text-2xl font-bold focus:outline-none" 
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          ☰
+        </button>
       </header>
 
       {/* Mobile Nav Links Dropdown */}
@@ -80,12 +172,31 @@ export default function HomePage() {
             exit={{ height: 0, opacity: 0 }}
             className="md:hidden w-full bg-[#E8EFF4] border-b border-slate-300/30 px-6 py-4 flex flex-col gap-4 text-sm font-semibold text-slate-600 z-40"
           >
-            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">How it works</a>
-            <a href="#producers" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">For producers</a>
             <a href="#features" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">Features</a>
-            <a href="#security" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">Security</a>
             <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">Pricing</a>
             <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">FAQ</a>
+            <Link href="/support" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">Support</Link>
+
+            {/* Action Buttons inside Mobile Menu Dropdown */}
+            <div className="flex flex-col gap-2 pt-3 border-t border-slate-300/20">
+              <Link href="/consumer" onClick={() => setMobileMenuOpen(false)}>
+                <button className="w-full bg-[#0089C1] hover:bg-sky-600 text-white transition-all font-bold py-2.5 rounded-full text-sm shadow-sm text-center">
+                  Verify Product
+                </button>
+              </Link>
+              <div className="flex gap-2">
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex-1">
+                  <button className="w-full bg-white border border-slate-200 text-slate-800 font-bold py-2.5 rounded-full text-sm hover:bg-slate-50 transition-all shadow-sm text-center">
+                    Sign In
+                  </button>
+                </Link>
+                <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="flex-1">
+                  <button className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-2.5 rounded-full text-sm shadow-sm text-center">
+                    Register
+                  </button>
+                </Link>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -97,16 +208,17 @@ export default function HomePage() {
         <div className="w-full bg-[#E9F2F5] rounded-[48px] pt-16 px-6 md:px-12 flex flex-col items-center text-center relative overflow-hidden border border-slate-200/20">
           
           {/* Floating 3D Shapes */}
-          {/* Left Shape (Lime Green Cylinder) */}
+          {/* Left Shape (3D Pill Bottle Mockup) */}
           <motion.div
-            animate={{ y: [0, -12, 0], rotate: [0, 4, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute left-[-4%] top-[25%] w-64 h-64 hidden xl:block pointer-events-none z-10"
+            animate={{ y: [0, -15, 0], rotate: [0, 5, 0] }}
+            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute left-[-2%] top-[20%] w-72 h-72 hidden xl:block pointer-events-none z-10"
           >
-            <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-2xl">
-              <path d="M 40,80 L 40,110 A 60,30 0 0,0 160,110 L 160,80 Z" fill="#B5D95C" />
-              <ellipse cx="100" cy="80" rx="60" ry="30" fill="#D4F475" />
-            </svg>
+            <img 
+              src="/pill_bottle_mockup.png" 
+              alt="Secure Pill Container 3D Mockup" 
+              className="w-full h-full object-contain drop-shadow-2xl rounded-3xl"
+            />
           </motion.div>
 
           {/* Right Shape (Teal Cylinder) */}
@@ -138,6 +250,11 @@ export default function HomePage() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center gap-4 mb-6 relative z-20">
+            <Link href="/consumer">
+              <button className="bg-[#0089C1] hover:bg-sky-600 text-white transition-all font-bold px-8 py-3.5 rounded-full shadow-lg whitespace-nowrap">
+                Verify Product
+              </button>
+            </Link>
             <a href="#contact">
               <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-8 py-3.5 rounded-full shadow-lg whitespace-nowrap">
                 Request a Demo
@@ -624,15 +741,63 @@ export default function HomePage() {
                 Send us a few details and we'll walk you through generating your first batch of codes and deploying your custom brand portal.
               </p>
             </div>
-            <form className="flex flex-col gap-4 bg-white/5 p-6 rounded-2xl border border-white/10" onSubmit={(e) => e.preventDefault()}>
-              <input type="text" placeholder="Full name" className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1]" required />
-              <input type="text" placeholder="Company" className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1]" required />
-              <input type="email" placeholder="Work email" className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1]" required />
-              <textarea placeholder="What products are you looking to authenticate?" rows={3} className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1] resize-none" required />
-              <button type="submit" className="bg-[#8BB436] hover:bg-[#729c25] text-white transition-all font-bold py-3 rounded-full text-xs shadow-md">
-                Send Request
-              </button>
-            </form>
+            {demoSubmitted ? (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white/5 p-8 rounded-2xl border border-white/10 text-center flex flex-col items-center gap-3"
+              >
+                <div className="text-3xl">🚀</div>
+                <h3 className="text-sm font-bold text-white">Request Submitted Successfully</h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Thank you for reaching out! We've received your inquiry and have dispatched a notification email. An AntiFakeNG expert will contact you shortly.
+                </p>
+                <button
+                  onClick={() => setDemoSubmitted(false)}
+                  className="mt-2 bg-[#8BB436] hover:bg-[#729c25] text-white transition-all font-bold py-2 px-6 rounded-full text-xs shadow-md"
+                >
+                  Send Another Request
+                </button>
+              </motion.div>
+            ) : (
+              <form className="flex flex-col gap-4 bg-white/5 p-6 rounded-2xl border border-white/10" onSubmit={handleDemoSubmit}>
+                <input 
+                  type="text" 
+                  placeholder="Full name" 
+                  value={demoName}
+                  onChange={(e) => setDemoName(e.target.value)}
+                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1]" 
+                  required 
+                />
+                <input 
+                  type="text" 
+                  placeholder="Company" 
+                  value={demoCompany}
+                  onChange={(e) => setDemoCompany(e.target.value)}
+                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1]" 
+                  required 
+                />
+                <input 
+                  type="email" 
+                  placeholder="Work email" 
+                  value={demoEmail}
+                  onChange={(e) => setDemoEmail(e.target.value)}
+                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1]" 
+                  required 
+                />
+                <textarea 
+                  placeholder="What products are you looking to authenticate?" 
+                  rows={3} 
+                  value={demoMessage}
+                  onChange={(e) => setDemoMessage(e.target.value)}
+                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1] resize-none" 
+                  required 
+                />
+                <button type="submit" className="bg-[#8BB436] hover:bg-[#729c25] text-white transition-all font-bold py-3 rounded-full text-xs shadow-md">
+                  Send Request
+                </button>
+              </form>
+            )}
           </div>
         </section>
 
@@ -676,12 +841,111 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-slate-300/30 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           <span>&copy; {new Date().getFullYear()} AntiFakeNG. All rights reserved.</span>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-slate-600 transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-slate-600 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-slate-600 transition-colors">Compliance Posture</a>
+            <Link href="/terms" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
+            <Link href="/compliance" className="hover:text-slate-600 transition-colors">Compliance Posture</Link>
           </div>
         </div>
       </footer>
+
+      {/* CHATBOT WIDGET */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+        {/* Chat Window */}
+        <AnimatePresence>
+          {chatOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.9 }}
+              className="bg-white rounded-3xl shadow-2xl border border-slate-200/60 w-[320px] sm:w-[360px] h-[450px] flex flex-col mb-4 overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-[#1E293B] px-5 py-4 flex items-center justify-between text-white font-sans">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#0089C1] flex items-center justify-center text-white">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.813 15.904L9 21m4.188-5.096L15 21M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-xs">AntiFakeNG Help Bot</h3>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span className="text-[9px] text-slate-300 font-semibold uppercase">Online assistant</span>
+                    </div>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setChatOpen(false)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Message List */}
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-[#F8FAFC]">
+                {chatMessages.map((msg, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                      msg.role === "user" 
+                        ? "bg-[#0089C1] text-white self-end rounded-tr-none" 
+                        : "bg-white text-slate-700 border border-slate-100 self-start rounded-tl-none shadow-sm"
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="bg-white text-slate-400 border border-slate-100 self-start rounded-2xl rounded-tl-none px-4 py-2.5 text-xs italic shadow-sm flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce delay-100"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce delay-200"></span>
+                    Thinking...
+                  </div>
+                )}
+              </div>
+
+              {/* Message Input Form */}
+              <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-100 bg-white flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Ask a question..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  className="flex-1 bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-[#0089C1] transition-colors"
+                />
+                <button
+                  type="submit"
+                  disabled={chatLoading || !chatInput.trim()}
+                  className="bg-[#0089C1] hover:bg-sky-600 text-white font-bold px-4 rounded-xl text-xs transition-colors disabled:opacity-50"
+                >
+                  Send
+                </button>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Floating Button */}
+        <button
+          onClick={() => setChatOpen(!chatOpen)}
+          className="bg-[#0089C1] hover:bg-sky-600 text-white rounded-full p-4 shadow-xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 focus:outline-none"
+        >
+          {chatOpen ? (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          )}
+        </button>
+      </div>
 
     </div>
   );

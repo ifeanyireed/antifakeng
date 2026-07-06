@@ -75,6 +75,8 @@ func main() {
 
 	// Admin route to seed default data if DB is empty
 	mux.HandleFunc("/api/auth/seed", handleSeedData)
+	mux.HandleFunc("/api/auth/whatsapp/status", handleWhatsAppStatus)
+	mux.HandleFunc("/api/auth/support/submit", handleSupportSubmit)
 
 	log.Println("Auth Service starting on port 8081...")
 	log.Fatal(http.ListenAndServe(":8081", middleware.CORS(mux)))
@@ -479,5 +481,68 @@ func handleMe(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(res)
+}
+
+func handleWhatsAppStatus(w http.ResponseWriter, r *http.Request) {
+	status := "disconnected"
+	if whatsapp.Client != nil {
+		if whatsapp.Client.Store.ID == nil {
+			status = "unpaired"
+		} else if whatsapp.Client.IsConnected() {
+			status = "connected"
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": status,
+	})
+}
+
+func handleSupportSubmit(w http.ResponseWriter, r *http.Request) {
+	// Enable CORS (this is a public endpoint)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		FormType  string `json:"form_type"` // contact, report
+		Name      string `json:"name"`
+		Email     string `json:"email"`
+		Phone     string `json:"phone"`
+		Subject   string `json:"subject"`
+		Token     string `json:"token"`
+		StoreName string `json:"store_name"`
+		Message   string `json:"message"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Dispatch notification email to administrator (ifeanyireed@gmail.com)
+	err := email.SendSupportNotification(req.FormType, req.Name, req.Email, req.Phone, req.Subject, req.Token, req.StoreName, req.Message)
+	if err != nil {
+		log.Printf("Failed to dispatch support notification email: %v", err)
+		http.Error(w, fmt.Sprintf(`{"error": "Failed to send email notification: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "success",
+		"message": "Notification dispatched successfully",
+	})
 }
 

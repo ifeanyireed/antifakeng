@@ -29,6 +29,9 @@ type Producer struct {
 	ContactEmail  string    `json:"contact_email" db:"contact_email"`
 	BrandLogoURL  string    `json:"brand_logo_url" db:"brand_logo_url"`
 	Status        string    `json:"status" db:"status"` // active, suspended
+	IDCardURL     string    `json:"id_card_url" db:"id_card_url"`
+	SelfieURL     string    `json:"selfie_url" db:"selfie_url"`
+	UtilityBillURL string   `json:"utility_bill_url" db:"utility_bill_url"`
 	CreatedAt     time.Time `json:"created_at" db:"created_at"`
 }
 
