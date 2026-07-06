@@ -10,7 +10,7 @@ logs/
 
 # Build outputs
 /web-app/.next/
-/web-app/out/
+# /web-app/out/
 /web-app/build/
 /web-app/tsconfig.tsbuildinfo
 backend/bin/
@@ -28,3 +28,7 @@ tmp/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# SSH / Local keys
+a.md
+b.md
