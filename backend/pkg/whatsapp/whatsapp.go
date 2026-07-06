@@ -23,7 +23,7 @@ var Client *whatsmeow.Client
 // InitWhatsApp initializes the WhatsApp client and handles pairing if not logged in
 func InitWhatsApp() {
 	dbLog := waLog.Stdout("Database", "WARN", true)
-	container, err := sqlstore.New(context.Background(), "sqlite3", "file:wameow_session.db?_foreign_keys=on", dbLog)
+	container, err := sqlstore.New(context.Background(), "sqlite3", "file:wameow_session.db?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000", dbLog)
 	if err != nil {
 		log.Printf("Failed to initialize SQLite for whatsmeow: %v", err)
 		return
