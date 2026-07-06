@@ -35,6 +35,7 @@ func InitWhatsApp() {
 	}
 	clientLog := waLog.Stdout("Client", "WARN", true)
 	Client = whatsmeow.NewClient(deviceStore, clientLog)
+	Client.ManualHistorySyncDownload = true
 
 	if Client.Store.ID == nil {
 		err = Client.Connect()
