@@ -260,7 +260,59 @@ export default function AdminProducers() {
                   </select>
                 </div>
 
-                <div className="flex gap-3 mt-4">
+                {/* KYC Verification Documents Section */}
+                <div className="border-t border-slate-100 pt-4 flex flex-col gap-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">KYC Compliance Documents</label>
+                  
+                  {selectedProducer.id_card_url || selectedProducer.selfie_url || selectedProducer.utility_bill_url ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* ID Card */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase">NIN/ID</span>
+                        {selectedProducer.id_card_url ? (
+                          <a href={selectedProducer.id_card_url} target="_blank" rel="noopener noreferrer" className="relative group aspect-[4/3] rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center hover:border-slate-400 transition-all">
+                            <img src={selectedProducer.id_card_url} alt="ID Card" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[8px] font-bold text-white">View</div>
+                          </a>
+                        ) : (
+                          <div className="aspect-[4/3] rounded-lg border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 text-[9px]">Missing</div>
+                        )}
+                      </div>
+
+                      {/* Selfie */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase">Selfie</span>
+                        {selectedProducer.selfie_url ? (
+                          <a href={selectedProducer.selfie_url} target="_blank" rel="noopener noreferrer" className="relative group aspect-[4/3] rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center hover:border-slate-400 transition-all">
+                            <img src={selectedProducer.selfie_url} alt="Selfie" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[8px] font-bold text-white">View</div>
+                          </a>
+                        ) : (
+                          <div className="aspect-[4/3] rounded-lg border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 text-[9px]">Missing</div>
+                        )}
+                      </div>
+
+                      {/* Utility Bill */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase">Utility</span>
+                        {selectedProducer.utility_bill_url ? (
+                          <a href={selectedProducer.utility_bill_url} target="_blank" rel="noopener noreferrer" className="relative group aspect-[4/3] rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center hover:border-slate-400 transition-all">
+                            <img src={selectedProducer.utility_bill_url} alt="Utility Bill" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[8px] font-bold text-white">View</div>
+                          </a>
+                        ) : (
+                          <div className="aspect-[4/3] rounded-lg border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 text-[9px]">Missing</div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center text-slate-400 text-[10px] font-semibold">
+                      No KYC compliance documents uploaded yet.
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 mt-2">
                   <button
                     type="button"
                     onClick={() => setIsEditModalOpen(false)}

@@ -49,33 +49,40 @@ func UploadImage(file multipart.File, header *multipart.FileHeader) (string, err
 		port = "65002" // default Hostinger SSH port
 	}
 
-	// Setup SSH authentication methods (require SSH private key for security)
+	// Setup SSH authentication methods (try SSH private key, fallback to password)
+	var auths []ssh.AuthMethod
+
 	keyPath := os.Getenv("SFTP_KEY_PATH")
-	if keyPath == "" {
-		return "", fmt.Errorf("SFTP key authentication required: SFTP_KEY_PATH environment variable is not set")
+	if keyPath != "" {
+		keyBytes, err := os.ReadFile(keyPath)
+		if err == nil {
+			var signer ssh.Signer
+			passphrase := os.Getenv("SFTP_KEY_PASSPHRASE")
+			var parseErr error
+			if passphrase != "" {
+				signer, parseErr = ssh.ParsePrivateKeyWithPassphrase(keyBytes, []byte(passphrase))
+			} else {
+				signer, parseErr = ssh.ParsePrivateKey(keyBytes)
+			}
+			if parseErr == nil {
+				auths = append(auths, ssh.PublicKeys(signer))
+			}
+		}
 	}
 
-	keyBytes, err := os.ReadFile(keyPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read SSH private key file %s: %w", keyPath, err)
+	sftpPass := os.Getenv("SFTP_PASS")
+	if sftpPass != "" {
+		auths = append(auths, ssh.Password(sftpPass))
 	}
 
-	var signer ssh.Signer
-	passphrase := os.Getenv("SFTP_KEY_PASSPHRASE")
-	var parseErr error
-	if passphrase != "" {
-		signer, parseErr = ssh.ParsePrivateKeyWithPassphrase(keyBytes, []byte(passphrase))
-	} else {
-		signer, parseErr = ssh.ParsePrivateKey(keyBytes)
-	}
-	if parseErr != nil {
-		return "", fmt.Errorf("failed to parse SSH private key: %w", parseErr)
+	if len(auths) == 0 {
+		return "", fmt.Errorf("no SSH authentication method found: private key missing and SFTP_PASS not set")
 	}
 
-	// SSH Config using Key Authentication only
+	// SSH Config using Key and/or Password Authentication
 	sshConfig := &ssh.ClientConfig{
 		User:            user,
-		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		Auth:            auths,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         10 * time.Second,
 	}

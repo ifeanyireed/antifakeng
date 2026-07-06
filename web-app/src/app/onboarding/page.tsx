@@ -21,6 +21,9 @@ import {
 import { AhnaraCard } from "@/components/ahnara/AhnaraCard";
 import { AhnaraButton } from "@/components/ahnara/AhnaraButton";
 import { AhnaraInput } from "@/components/ahnara/AhnaraInput";
+import { AhnaraLoader } from "@/components/ahnara/AhnaraLoader";
+import { useAuth } from "@/components/ahnara/AuthContext";
+import { api } from "@/lib/api";
 import dynamic from "next/dynamic";
 
 const PaystackButton = dynamic(
@@ -30,7 +33,14 @@ const PaystackButton = dynamic(
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
   
   // Step 1: Brand Info state
   const [brandName, setBrandName] = useState("");
@@ -92,7 +102,6 @@ export default function OnboardingPage() {
   };
 
   const uploadKycFile = async (file: File, type: "id_card" | "selfie" | "utility_bill") => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
     const formData = new FormData();
     formData.append("image", file);
 
@@ -101,26 +110,13 @@ export default function OnboardingPage() {
     if (type === "utility_bill") setUploadingUtilityBill(true);
 
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const res = await fetch(`${API_BASE}/api/producer/upload`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (type === "id_card") setIdCardUrl(data.url);
-        if (type === "selfie") setSelfieUrl(data.url);
-        if (type === "utility_bill") setUtilityBillUrl(data.url);
-      } else {
-        alert("File upload failed.");
-      }
-    } catch (err) {
+      const data = await api.upload("/producer/upload", formData);
+      if (type === "id_card") setIdCardUrl(data.url);
+      if (type === "selfie") setSelfieUrl(data.url);
+      if (type === "utility_bill") setUtilityBillUrl(data.url);
+    } catch (err: any) {
       console.error("Upload error:", err);
-      alert("Upload service offline.");
+      alert(err.message || "File upload failed.");
     } finally {
       if (type === "id_card") setUploadingIdCard(false);
       if (type === "selfie") setUploadingSelfie(false);
@@ -216,6 +212,14 @@ export default function OnboardingPage() {
       alert("Onboarding service is offline.");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#E8EFF4] flex items-center justify-center">
+        <AhnaraLoader label="Authenticating session..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#E8EFF4] text-[#0D090C] font-sans flex flex-col items-center justify-center p-4 md:p-8">

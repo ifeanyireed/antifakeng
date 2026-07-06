@@ -693,7 +693,7 @@ func handleAdminProducers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := db.DB.Query(`SELECT id, name, slug, plan_tier, contact_email, brand_logo_url, status, created_at FROM producers ORDER BY name ASC`)
+	rows, err := db.DB.Query(`SELECT id, name, slug, plan_tier, contact_email, brand_logo_url, id_card_url, selfie_url, utility_bill_url, status, created_at FROM producers ORDER BY name ASC`)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
 		return
@@ -703,10 +703,13 @@ func handleAdminProducers(w http.ResponseWriter, r *http.Request) {
 	var list []models.Producer
 	for rows.Next() {
 		var p models.Producer
-		var logo sql.NullString
-		err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, &p.Status, &p.CreatedAt)
+		var logo, idCard, selfie, utilBill sql.NullString
+		err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, &idCard, &selfie, &utilBill, &p.Status, &p.CreatedAt)
 		if err == nil {
 			p.BrandLogoURL = logo.String
+			p.IDCardURL = idCard.String
+			p.SelfieURL = selfie.String
+			p.UtilityBillURL = utilBill.String
 			list = append(list, p)
 		}
 	}
