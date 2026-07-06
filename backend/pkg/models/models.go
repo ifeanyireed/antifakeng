@@ -22,17 +22,19 @@ const (
 
 // Producer represents a tenant brand
 type Producer struct {
-	ID            int       `json:"id" db:"id"`
-	Name          string    `json:"name" db:"name"`
-	Slug          string    `json:"slug" db:"slug"`
-	PlanTier      string    `json:"plan_tier" db:"plan_tier"`
-	ContactEmail  string    `json:"contact_email" db:"contact_email"`
-	BrandLogoURL  string    `json:"brand_logo_url" db:"brand_logo_url"`
-	Status        string    `json:"status" db:"status"` // active, suspended
-	IDCardURL     string    `json:"id_card_url" db:"id_card_url"`
-	SelfieURL     string    `json:"selfie_url" db:"selfie_url"`
-	UtilityBillURL string   `json:"utility_bill_url" db:"utility_bill_url"`
-	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+	ID             int       `json:"id" db:"id"`
+	Name           string    `json:"name" db:"name"`
+	Slug           string    `json:"slug" db:"slug"`
+	PlanTier       string    `json:"plan_tier" db:"plan_tier"`
+	ContactEmail   string    `json:"contact_email" db:"contact_email"`
+	BrandLogoURL   string    `json:"brand_logo_url" db:"brand_logo_url"`
+	Status         string    `json:"status" db:"status"` // active, suspended
+	IDCardURL      string    `json:"id_card_url" db:"id_card_url"`
+	SelfieURL      string    `json:"selfie_url" db:"selfie_url"`
+	UtilityBillURL string    `json:"utility_bill_url" db:"utility_bill_url"`
+	APIKey         string    `json:"api_key" db:"api_key"`
+	APISecret      string    `json:"api_secret" db:"api_secret"`
+	CreatedAt      time.Time `json:"created_at" db:"created_at"`
 }
 
 // User represents a staff member or administrator

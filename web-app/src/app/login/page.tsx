@@ -172,100 +172,6 @@ export default function LoginPage() {
     setSuccessMessage(`A password reset link has been sent to ${email} (Mock service).`);
   };
 
-  const handleQuickLogin = async () => {
-    setIsLoading(true);
-    setError(null);
-    setSuccessMessage(null);
-    try {
-      const res = await fetch("http://localhost:8080/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "admin@auraskin.com", password: "aura123456" })
-      });
-      setIsLoading(false);
-      if (res.ok) {
-        const data = await res.json();
-        login(data.token, {
-          id: data.producer_id,
-          email: data.email,
-          name: "AURA Skincare Admin",
-          role: data.role.toUpperCase(),
-        });
-        localStorage.setItem("ahnara_token", data.token);
-        
-        const status = data.producer_status;
-        if (status === "pending_approval") {
-          setError("Your account is pending administrator approval.");
-        } else if (status === "pending_payment") {
-          router.push("/onboarding");
-        } else {
-          router.push("/producer/dashboard");
-        }
-      } else {
-        setError("Failed to run seed quick login.");
-      }
-    } catch (err) {
-      setIsLoading(false);
-      setError("Authentication service is currently offline.");
-    }
-  };
-
-  const handleQuickRegister = async () => {
-    setIsLoading(true);
-    setError(null);
-    setSuccessMessage(null);
-    try {
-      const randomId = Math.floor(Math.random() * 1000);
-      const randEmail = `brand${randomId}@auralabs.com`;
-      const randName = `Aura Labs ${randomId}`;
-      const slug = `aura-labs-${randomId}`;
-      const randPassword = "password123";
-
-      const res = await fetch("http://localhost:8080/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          producer_name: randName,
-          producer_slug: slug,
-          contact_email: randEmail,
-          plan_tier: "growth",
-          email: randEmail,
-          password: randPassword
-        })
-      });
-
-      if (res.ok) {
-        const loginRes = await fetch("http://localhost:8080/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: randEmail, password: randPassword })
-        });
-        setIsLoading(false);
-        if (loginRes.ok) {
-          const loginData = await loginRes.json();
-          login(loginData.token, {
-            id: String(loginData.producer_id),
-            email: loginData.email,
-            name: randName,
-            role: "PRODUCER",
-          });
-          localStorage.setItem("ahnara_token", loginData.token);
-          router.push("/onboarding");
-        } else {
-          setView("login");
-          setSuccessMessage("Quick Registration successful! Please log in.");
-        }
-      } else {
-        setIsLoading(false);
-        const data = await res.json();
-        setError(data.error || "Failed to quick register.");
-      }
-    } catch (err) {
-      setIsLoading(false);
-      setError("Registration service is offline.");
-    }
-  };
-
   const handleViewChange = (newView: "login" | "register" | "forgot") => {
     setView(newView);
     setError(null);
@@ -360,17 +266,7 @@ export default function LoginPage() {
                   </AhnaraButton>
                 </form>
 
-                {/* Quick Login Shortcuts */}
-                <div className="flex flex-col gap-2.5 pt-2 border-t border-slate-100">
-                  <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest text-center">Demo Quick Login</span>
-                  <button
-                    type="button"
-                    onClick={handleQuickLogin}
-                    className="w-full py-3 px-3 bg-[#E8F3CE]/60 hover:bg-[#E8F3CE]/80 border border-[#CDE0A4]/45 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#608216] transition-colors"
-                  >
-                    Quick Login as Producer
-                  </button>
-                </div>
+
 
                 {/* Footnotes */}
                 <div className="text-center mt-2">
@@ -465,17 +361,7 @@ export default function LoginPage() {
                   </AhnaraButton>
                 </form>
 
-                {/* Quick Register Shortcuts */}
-                <div className="flex flex-col gap-2.5 pt-2 border-t border-slate-100">
-                  <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest text-center">Demo Quick Register</span>
-                  <button
-                    type="button"
-                    onClick={handleQuickRegister}
-                    className="w-full py-3 px-3 bg-[#E8F3CE]/60 hover:bg-[#E8F3CE]/80 border border-[#CDE0A4]/45 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#608216] transition-colors"
-                  >
-                    Quick Register Brand
-                  </button>
-                </div>
+
 
                 {/* Footnotes */}
                 <div className="text-center mt-2">

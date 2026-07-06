@@ -596,9 +596,9 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		var p models.Producer
-		var logo, idCard, selfie, utilBill sql.NullString
-		err := db.DB.QueryRow(`SELECT id, name, slug, plan_tier, contact_email, brand_logo_url, id_card_url, selfie_url, utility_bill_url, status, created_at 
-			FROM producers WHERE id = ?`, prodID).Scan(&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, &idCard, &selfie, &utilBill, &p.Status, &p.CreatedAt)
+		var logo, idCard, selfie, utilBill, apiKey, apiSecret sql.NullString
+		err := db.DB.QueryRow(`SELECT id, name, slug, plan_tier, contact_email, brand_logo_url, id_card_url, selfie_url, utility_bill_url, api_key, api_secret, status, created_at 
+			FROM producers WHERE id = ?`, prodID).Scan(&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, &idCard, &selfie, &utilBill, &apiKey, &apiSecret, &p.Status, &p.CreatedAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				http.Error(w, `{"error": "Producer profile not found"}`, http.StatusNotFound)
@@ -611,6 +611,8 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		p.IDCardURL = idCard.String
 		p.SelfieURL = selfie.String
 		p.UtilityBillURL = utilBill.String
+		p.APIKey = apiKey.String
+		p.APISecret = apiSecret.String
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(p)
@@ -624,6 +626,9 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 			IDCardURL      string `json:"id_card_url"`
 			SelfieURL      string `json:"selfie_url"`
 			UtilityBillURL string `json:"utility_bill_url"`
+			Status         string `json:"status"`
+			APIKey         string `json:"api_key"`
+			APISecret      string `json:"api_secret"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
@@ -657,6 +662,21 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		if req.UtilityBillURL != "" {
 			query += `, utility_bill_url = ?`
 			args = append(args, req.UtilityBillURL)
+		}
+		if req.APIKey != "" {
+			query += `, api_key = ?`
+			args = append(args, req.APIKey)
+		}
+		if req.APISecret != "" {
+			query += `, api_secret = ?`
+			args = append(args, req.APISecret)
+		}
+		if req.Status != "" {
+			// Limit client status updates to authorized transitions
+			if req.Status == "pending_approval" || req.Status == "active" {
+				query += `, status = ?`
+				args = append(args, req.Status)
+			}
 		}
 		query += ` WHERE id = ?`
 		args = append(args, prodID)

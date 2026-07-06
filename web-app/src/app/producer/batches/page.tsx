@@ -39,11 +39,23 @@ export default function ProducerBatches() {
     fetchData();
   }, []);
 
+  // Helper date functions
+  const getTodayString = () => {
+    return new Date().toISOString().split("T")[0];
+  };
+  const getTwoYearsString = () => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 2);
+    return d.toISOString().split("T")[0];
+  };
+
   // Create Batch states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState("");
   const [codeQuantity, setCodeQuantity] = useState("1000");
   const [batchId, setBatchId] = useState("");
+  const [manufactureDate, setManufactureDate] = useState(getTodayString());
+  const [expiryDate, setExpiryDate] = useState(getTwoYearsString());
 
   // Print Layout states
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -92,6 +104,8 @@ export default function ProducerBatches() {
           product_id: parseInt(selectedProduct),
           batch_code: code,
           quantity: qty,
+          manufacture_date: manufactureDate ? new Date(manufactureDate).toISOString() : undefined,
+          expiry_date: expiryDate ? new Date(expiryDate).toISOString() : undefined,
           status: "active"
         });
         
@@ -104,6 +118,8 @@ export default function ProducerBatches() {
         
         setBatchId("");
         setCodeQuantity("1000");
+        setManufactureDate(getTodayString());
+        setExpiryDate(getTwoYearsString());
         setIsCreateModalOpen(false);
       } catch (err: any) {
         alert(err.message || "Failed to create batch.");
@@ -359,6 +375,30 @@ export default function ProducerBatches() {
                     placeholder="e.g. B-AURA-LOT3"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Manufacture Date</label>
+                    <input
+                      type="date"
+                      value={manufactureDate}
+                      onChange={(e) => setManufactureDate(e.target.value)}
+                      required
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Expiry Date</label>
+                    <input
+                      type="date"
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
+                      required
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex gap-3 mt-4">

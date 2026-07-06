@@ -21,18 +21,30 @@ export function RoleGuard({
     if (!loading) {
       if (!user) {
         router.push(fallbackRoute);
-      } else if (!allowedRoles.includes(user.role)) {
-        // Redirect to appropriate dashboard based on role
-        if (user.role === "ADMIN" || user.role === "OPS") router.push("/ops/assignments");
-        else if (user.role === "TECHNICIAN") router.push("/tech/dashboard");
-        else router.push("/dashboard");
+      } else {
+        const userRoleUpper = (user.role || "").toUpperCase();
+        const allowedRolesUpper = allowedRoles.map(r => r.toUpperCase());
+        
+        if (!allowedRolesUpper.includes(userRoleUpper)) {
+          // Redirect to appropriate dashboard based on role
+          if (userRoleUpper === "ADMIN" || userRoleUpper === "OPS") {
+            router.push("/admin/dashboard");
+          } else if (userRoleUpper === "PRODUCER") {
+            router.push("/producer/dashboard");
+          } else {
+            router.push("/login");
+          }
+        }
       }
     }
   }, [user, loading, allowedRoles, router, fallbackRoute]);
 
   if (loading) return <AhnaraLoader fullScreen size="lg" />;
 
-  if (!user || !allowedRoles.includes(user.role)) {
+  const userRoleUpper = (user?.role || "").toUpperCase();
+  const allowedRolesUpper = allowedRoles.map(r => r.toUpperCase());
+
+  if (!user || !allowedRolesUpper.includes(userRoleUpper)) {
     return null; // Will redirect in useEffect
   }
 

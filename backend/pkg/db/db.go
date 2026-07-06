@@ -289,6 +289,8 @@ func createTables(driver string) {
 	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN id_card_url VARCHAR(512) NULL`)
 	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN selfie_url VARCHAR(512) NULL`)
 	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN utility_bill_url VARCHAR(512) NULL`)
+	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN api_key VARCHAR(255) NULL`)
+	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN api_secret VARCHAR(255) NULL`)
 
 	log.Println("Database migration completed successfully.")
 }

@@ -84,7 +84,7 @@ export const AhnaraInput = React.forwardRef<HTMLInputElement, AhnaraInputProps>(
                   y: isFloating ? -24 : 0,
                   scale: isFloating ? 0.85 : 1,
                   color: isFocused ? "var(--ahnara-brand)" : "var(--ahnara-text-muted)",
-                  backgroundColor: isFloating ? "var(--ahnara-bg-surface)" : "transparent",
+                  backgroundColor: isFloating ? "var(--ahnara-bg-surface)" : "rgba(255, 255, 255, 0)",
                   paddingLeft: isFloating ? "4px" : "0px",
                   paddingRight: isFloating ? "4px" : "0px",
                 }}

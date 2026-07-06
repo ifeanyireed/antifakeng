@@ -10,19 +10,23 @@ import {
   IconCheck,
   IconDeviceFloppy,
   IconUser,
-  IconSettings
+  IconSettings,
+  IconKey
 } from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { AhnaraLoader } from "@/components/ahnara/AhnaraLoader";
 
 export default function ProducerProfile() {
-  const [activeTab, setActiveTab] = useState<"company" | "security" | "subscription">("company");
+  const [activeTab, setActiveTab] = useState<"company" | "security" | "subscription" | "api">("company");
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [planTier, setPlanTier] = useState("Growth");
   const [summary, setSummary] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [apiKey, setApiKey] = useState("");
+  const [apiSecret, setApiSecret] = useState("");
 
   const [formData, setFormData] = useState({
     name: "Aura Labs Inc",
@@ -46,6 +50,8 @@ export default function ProducerProfile() {
         if (profile) {
           const tier = profile.plan_tier ? profile.plan_tier.charAt(0).toUpperCase() + profile.plan_tier.slice(1).toLowerCase() : "Growth";
           setPlanTier(tier);
+          setApiKey(profile.api_key || "Not provisioned");
+          setApiSecret(profile.api_secret || "Not provisioned");
           setFormData((prev) => ({
             ...prev,
             name: profile.name,
@@ -200,6 +206,17 @@ export default function ProducerProfile() {
           >
             <IconCreditCard className="w-5 h-5 text-slate-500" />
             Billing & Usage
+          </button>
+          <button
+            onClick={() => { setActiveTab("api"); setErrorMsg(""); }}
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
+              activeTab === "api"
+                ? "bg-slate-100 text-slate-900"
+                : "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50"
+            }`}
+          >
+            <IconKey className="w-5 h-5 text-slate-500" />
+            API Keys
           </button>
         </aside>
 
@@ -428,6 +445,77 @@ export default function ProducerProfile() {
                 </div>
               </div>
 
+            </div>
+          )}
+
+          {activeTab === "api" && (
+            <div className="flex flex-col gap-5 text-left">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Developer API Provisioning</h3>
+                <p className="text-slate-400 text-xs mt-0.5">Integrate AntiFakeNG with your ERP, printing conveyor lines, or labeling machinery.</p>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col gap-4 font-semibold text-slate-600 text-xs mt-2">
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase tracking-wider">Client API ID</span>
+                  <input
+                    type="text"
+                    value={apiKey}
+                    readOnly
+                    className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-xs font-mono font-bold text-slate-800 mt-1 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase tracking-wider">Private Client Secret</span>
+                  <input
+                    type="text"
+                    value={apiSecret}
+                    readOnly
+                    className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-xs font-mono font-bold text-slate-800 mt-1 focus:outline-none"
+                  />
+                  <p className="text-[9px] text-slate-400 font-medium mt-1">
+                    These API credentials allow secure machine-to-machine transactions. Keep your secret key safe and do not share it.
+                  </p>
+                </div>
+              </div>
+
+              {apiKey === "Not provisioned" && (
+                <button
+                  onClick={async () => {
+                    try {
+                      setIsSubmitting(true);
+                      setErrorMsg("");
+                      setSuccessMsg("");
+                      
+                      const newKey = "ak_live_" + Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+                      const newSecret = "sk_live_" + Math.random().toString(36).substring(2, 12) + Math.random().toString(36).substring(2, 12);
+                      
+                      await api.put("/producer/profile", {
+                        name: formData.name,
+                        contact_email: formData.contactEmail,
+                        brand_logo_url: formData.logoUrl,
+                        plan_tier: planTier.toLowerCase(),
+                        api_key: newKey,
+                        api_secret: newSecret
+                      });
+                      
+                      setApiKey(newKey);
+                      setApiSecret(newSecret);
+                      setSuccessMsg("API Keys generated and saved successfully!");
+                      setTimeout(() => setSuccessMsg(""), 3000);
+                    } catch (err: any) {
+                      setErrorMsg(err.message || "Failed to generate API Keys.");
+                    } finally {
+                      setIsSubmitting(false);
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  className="self-start px-5 py-3 bg-[#1E293B] hover:bg-slate-800 text-white rounded-xl text-sm font-bold shadow-xs transition-all mt-2 disabled:opacity-50"
+                >
+                  {isSubmitting ? "Generating..." : "Generate New Keys"}
+                </button>
+              )}
             </div>
           )}
 

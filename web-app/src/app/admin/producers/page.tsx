@@ -72,10 +72,12 @@ export default function AdminProducers() {
     }
   };
 
-  const filteredProducers = producers.filter((p: any) =>
-    (p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.slug || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.contact_email || "").toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducers = (producers || []).filter((p: any) =>
+    p && (
+      (p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.slug || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.contact_email || "").toLowerCase().includes(searchQuery.toLowerCase())
+    )
   );
 
   return (
@@ -132,11 +134,18 @@ export default function AdminProducers() {
                     const codeLimit = p.plan_tier === "starter" ? 25000 : p.plan_tier === "growth" ? 250000 : 1000000;
                     const codesUsed = p.plan_tier === "starter" ? 24812 : p.plan_tier === "growth" ? 12010 : 742190;
                     const percentUsed = Math.round((codesUsed / codeLimit) * 100);
-                    const formattedDate = p.created_at ? new Date(p.created_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric"
-                    }) : "N/A";
+                    
+                    let formattedDate = "N/A";
+                    if (p.created_at) {
+                      const d = new Date(p.created_at);
+                      if (!isNaN(d.getTime())) {
+                        formattedDate = d.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric"
+                        });
+                      }
+                    }
 
                     const statusStr = p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1).toLowerCase() : "Active";
 

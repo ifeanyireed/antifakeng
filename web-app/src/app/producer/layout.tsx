@@ -99,15 +99,13 @@ export default function ProducerLayout({ children }: { children: React.ReactNode
 
           {/* Notifications and Profile */}
           <div className="flex items-center gap-4">
-            <span className="hidden md:flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-              Plan: {planTier}
-            </span>
 
-            <Link href="/producer/notifications">
-              <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all relative bg-white shadow-xs">
-                <IconBell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-              </button>
+            <Link 
+              href="/producer/notifications"
+              className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all relative bg-white shadow-xs"
+            >
+              <IconBell className="w-5 h-5" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
             </Link>
             
             <div className="h-8 w-px bg-slate-200" />

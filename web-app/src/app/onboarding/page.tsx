@@ -33,7 +33,7 @@ const PaystackButton = dynamic(
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
 
   useEffect(() => {
@@ -132,12 +132,29 @@ export default function OnboardingPage() {
   const [apiSecret, setApiSecret] = useState("");
   const [isGenerated, setIsGenerated] = useState(false);
 
-  // Generate mock default details on mount
+  // Fetch brand details and skip to step 3 if KYC is already uploaded
   useEffect(() => {
-    setBrandName("Aura Labs Inc");
-    setWebsite("auralabs.com");
-    setHqAddress("Lekki phase 1, Lagos, Nigeria");
-  }, []);
+    const fetchProfile = async () => {
+      try {
+        const profile = await api.get("/producer/profile");
+        if (profile) {
+          if (profile.name) setBrandName(profile.name);
+          if (profile.id_card_url) setIdCardUrl(profile.id_card_url);
+          if (profile.selfie_url) setSelfieUrl(profile.selfie_url);
+          if (profile.utility_bill_url) setUtilityBillUrl(profile.utility_bill_url);
+          
+          if (profile.id_card_url && profile.selfie_url && profile.utility_bill_url) {
+            setCurrentStep(3);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load existing profile:", err);
+      }
+    };
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
 
   const generateCredentials = () => {
     setIsGenerated(true);
@@ -165,6 +182,45 @@ export default function OnboardingPage() {
     setCurrentStep(prev => prev - 1);
   };
 
+  const handleSubmitKyc = async () => {
+    if (!idCardUrl || !selfieUrl || !utilityBillUrl) {
+      alert("Please upload NIN/License, captured Selfie, and Utility Bill to proceed.");
+      return;
+    }
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const res = await fetch(`${API_BASE}/api/producer/profile`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: brandName,
+          contact_email: user?.email || "admin@brand.com",
+          brand_logo_url: "/logo.png",
+          plan_tier: "growth",
+          id_card_url: idCardUrl,
+          selfie_url: selfieUrl,
+          utility_bill_url: utilityBillUrl,
+          status: "pending_approval"
+        })
+      });
+
+      if (res.ok) {
+        alert("KYC documents submitted successfully! Your account is now under review. You will be redirected to the login page.");
+        logout();
+      } else {
+        const errData = await res.json();
+        alert(errData.error || "Failed to submit KYC.");
+      }
+    } catch (err) {
+      console.error("KYC submission error:", err);
+      alert("KYC submission service offline.");
+    }
+  };
+
   const handleComplete = async () => {
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
@@ -177,12 +233,15 @@ export default function OnboardingPage() {
         },
         body: JSON.stringify({
           name: brandName,
-          contact_email: typeof window !== "undefined" ? (JSON.parse(localStorage.getItem("producer_brand_data") || "{}").email || "admin@brand.com") : "admin@brand.com",
+          contact_email: user?.email || "admin@brand.com",
           brand_logo_url: "/logo.png",
           plan_tier: selectedPlan.toLowerCase(),
           id_card_url: idCardUrl,
           selfie_url: selfieUrl,
-          utility_bill_url: utilityBillUrl
+          utility_bill_url: utilityBillUrl,
+          api_key: apiKey,
+          api_secret: apiSecret,
+          status: "active"
         })
       });
 
@@ -370,7 +429,7 @@ export default function OnboardingPage() {
                       className="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 cursor-pointer"
                     />
                     {uploadingIdCard && <p className="text-[10px] text-slate-400 italic animate-pulse">Uploading document...</p>}
-                    {idCardUrl && <p className="text-[9px] text-slate-400 font-mono truncate">{idCardUrl}</p>}
+                    {idCardUrl && <p className="text-[10px] text-emerald-600 font-semibold">✓ Document uploaded successfully.</p>}
                   </div>
 
                   {/* Document 2: Camera Selfie Capture */}
@@ -430,7 +489,7 @@ export default function OnboardingPage() {
                     {selfieUrl && (
                       <div className="flex items-center gap-3">
                         <img src={selfieUrl} alt="Captured Selfie Preview" className="w-12 h-12 rounded-lg object-cover border border-slate-200" />
-                        <p className="text-[9px] text-slate-400 font-mono truncate flex-1">{selfieUrl}</p>
+                        <span className="text-[10px] text-emerald-600 font-semibold">✓ Verification Selfie captured successfully.</span>
                       </div>
                     )}
                   </div>
@@ -455,7 +514,7 @@ export default function OnboardingPage() {
                       className="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 cursor-pointer"
                     />
                     {uploadingUtilityBill && <p className="text-[10px] text-slate-400 italic animate-pulse">Uploading utility bill...</p>}
-                    {utilityBillUrl && <p className="text-[9px] text-slate-400 font-mono truncate">{utilityBillUrl}</p>}
+                    {utilityBillUrl && <p className="text-[10px] text-emerald-600 font-semibold">✓ Utility Bill uploaded successfully.</p>}
                   </div>
                 </div>
               </motion.div>
@@ -662,6 +721,14 @@ export default function OnboardingPage() {
                 className="bg-[#1E293B] text-white hover:bg-slate-800 font-bold px-6 py-2.5 rounded-full text-xs shadow-md"
               />
             )
+          ) : currentStep === 2 ? (
+            <button
+              onClick={handleSubmitKyc}
+              className="bg-[#8BB436] text-white hover:bg-[#729c25] font-bold px-6 py-2.5 rounded-full text-xs transition-all flex items-center gap-1.5 shadow-sm"
+            >
+              Submit KYC for Approval
+              <IconCheck className="w-4 h-4" />
+            </button>
           ) : currentStep < 4 ? (
             <button
               onClick={handleNext}
