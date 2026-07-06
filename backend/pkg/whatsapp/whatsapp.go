@@ -11,7 +11,9 @@ import (
 	"github.com/ahnara/antifake/backend/pkg/email"
 	_ "github.com/mattn/go-sqlite3"
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/proto/waCompanionReg"
 	"go.mau.fi/whatsmeow/proto/waE2E"
+	"go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
 	waLog "go.mau.fi/whatsmeow/util/log"
@@ -22,6 +24,13 @@ var Client *whatsmeow.Client
 
 // InitWhatsApp initializes the WhatsApp client and handles pairing if not logged in
 func InitWhatsApp() {
+	// Request 0 days of history and set quota to 0MB to disable history sync completely
+	store.DeviceProps.HistorySyncConfig = &waCompanionReg.DeviceProps_HistorySyncConfig{
+		FullSyncDaysLimit:   proto.Uint32(0),
+		FullSyncSizeMbLimit: proto.Uint32(0),
+		StorageQuotaMb:      proto.Uint32(0),
+	}
+
 	dbLog := waLog.Stdout("Database", "WARN", true)
 	container, err := sqlstore.New(context.Background(), "sqlite3", "file:wameow_session.db?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000", dbLog)
 	if err != nil {
