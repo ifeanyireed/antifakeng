@@ -221,16 +221,17 @@ export default function HomePage() {
             />
           </motion.div>
 
-          {/* Right Shape (Teal Cylinder) */}
+          {/* Right Shape (3D Pill Bottle Mockup 2) */}
           <motion.div
             animate={{ y: [0, 12, 0], rotate: [0, -4, 0] }}
             transition={{ duration: 6, delay: 0.5, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute right-[-4%] top-[22%] w-64 h-64 hidden xl:block pointer-events-none z-10"
+            className="absolute right-[-2%] top-[20%] w-72 h-72 hidden xl:block pointer-events-none z-10"
           >
-            <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-2xl">
-              <path d="M 40,90 L 40,120 A 60,30 0 0,0 160,120 L 160,90 Z" fill="#3D5C5B" />
-              <ellipse cx="100" cy="90" rx="60" ry="30" fill="#5F8D8C" />
-            </svg>
+            <img 
+              src="/pill_bottle_mockup2.png" 
+              alt="Secure Pill Container 3D Mockup Right" 
+              className="w-full h-full object-contain drop-shadow-2xl rounded-3xl"
+            />
           </motion.div>
 
           {/* Version Badge */}
@@ -863,8 +864,8 @@ export default function HomePage() {
               <div className="bg-[#1E293B] px-5 py-4 flex items-center justify-between text-white font-sans">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-[#0089C1] flex items-center justify-center text-white">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.813 15.904L9 21m4.188-5.096L15 21M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+                      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
                     </svg>
                   </div>
                   <div>
@@ -940,8 +941,10 @@ export default function HomePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+              <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5z" />
+              <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z" />
             </svg>
           )}
         </button>
