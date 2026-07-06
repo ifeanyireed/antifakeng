@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/ahnara/antifake/backend/pkg/email"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waCompanionReg"
 	"go.mau.fi/whatsmeow/proto/waE2E"
@@ -31,10 +33,40 @@ func InitWhatsApp() {
 		StorageQuotaMb:      proto.Uint32(0),
 	}
 
+	var driverName string
+	var dsn string
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Println("Skipping WhatsApp client initialization: DATABASE_URL environment variable is not configured.")
+		return
+	}
+
+	if strings.HasPrefix(dbURL, "mysql://") {
+		driverName = "mysql"
+		u, err := url.Parse(dbURL)
+		if err != nil {
+			log.Printf("Failed to parse DATABASE_URL for MySQL: %v", err)
+			return
+		}
+		pass, _ := u.User.Password()
+		dsn = fmt.Sprintf("%s:%s@tcp(%s)%s", u.User.Username(), pass, u.Host, u.Path)
+		if !strings.Contains(dsn, "parseTime=") {
+			if strings.Contains(dsn, "?") {
+				dsn += "&parseTime=true"
+			} else {
+				dsn += "?parseTime=true"
+			}
+		}
+	} else {
+		driverName = "postgres"
+		dsn = dbURL
+	}
+
 	dbLog := waLog.Stdout("Database", "WARN", true)
-	container, err := sqlstore.New(context.Background(), "sqlite3", "file:wameow_session.db?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000", dbLog)
+	container, err := sqlstore.New(context.Background(), driverName, dsn, dbLog)
 	if err != nil {
-		log.Printf("Failed to initialize SQLite for whatsmeow: %v", err)
+		log.Printf("Failed to initialize database store for whatsmeow: %v", err)
 		return
 	}
 	deviceStore, err := container.GetFirstDevice(context.Background())
