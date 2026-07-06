@@ -11,12 +11,15 @@ import {
   IconAlertTriangle,
   IconFileText,
   IconBell,
-  IconSettings
+  IconSettings,
+  IconLogout
 } from "@tabler/icons-react";
 import { RoleGuard } from "@/components/ahnara/RoleGuard";
+import { useAuth } from "@/components/ahnara/AuthContext";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { logout } = useAuth();
 
   const menuItems = [
     { name: "SaaS Dashboard", href: "/admin/dashboard", icon: IconLayoutDashboard, activeIcon: IconLayoutDashboardFilled },
@@ -93,6 +96,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </span>
               </div>
             </div>
+
+            <button
+              onClick={logout}
+              className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-all bg-white shadow-xs"
+              title="Logout"
+            >
+              <IconLogout className="w-5 h-5" />
+            </button>
           </div>
         </header>
 

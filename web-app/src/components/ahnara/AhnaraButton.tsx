@@ -3,7 +3,7 @@
 import React from "react";
 import { motion, HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { IconLoader2 } from "@tabler/icons-react";
 
 interface AhnaraButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "ghost" | "danger" | "outline" | "success";
@@ -47,7 +47,7 @@ export const AhnaraButton = React.forwardRef<HTMLButtonElement, AhnaraButtonProp
         disabled={isLoading}
         {...(props as any)}
       >
-        {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+        {isLoading && <IconLoader2 className="w-4 h-4 animate-spin" />}
         {!isLoading && leftIcon}
         <span className={cn(isLoading && "opacity-0")}>{children}</span>
         {!isLoading && rightIcon}

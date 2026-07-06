@@ -3,6 +3,31 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { IconHeadphones, IconX } from "@tabler/icons-react";
+
+const renderMarkdown = (content: string) => {
+  const parts = content.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\))/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index} className="font-extrabold">{part.slice(2, -2)}</strong>;
+    }
+    const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
+    if (linkMatch) {
+      return (
+        <a 
+          key={index} 
+          href={linkMatch[2]} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-[#0089C1] hover:underline font-bold"
+        >
+          {linkMatch[1]}
+        </a>
+      );
+    }
+    return part;
+  });
+};
 
 interface FAQItem {
   question: string;
@@ -522,13 +547,13 @@ export default function SupportPage() {
                 {chatMessages.map((msg, idx) => (
                   <div 
                     key={idx} 
-                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                    className={`whitespace-pre-line max-w-[85%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
                       msg.role === "user" 
                         ? "bg-[#0089C1] text-white self-end rounded-tr-none" 
                         : "bg-white text-slate-700 border border-slate-100 self-start rounded-tl-none shadow-sm"
                     }`}
                   >
-                    {msg.content}
+                    {renderMarkdown(msg.content)}
                   </div>
                 ))}
                 {chatLoading && (
@@ -568,15 +593,9 @@ export default function SupportPage() {
           className="bg-[#0089C1] hover:bg-sky-600 text-white rounded-full p-4 shadow-xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 focus:outline-none"
         >
           {chatOpen ? (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <IconX className="w-6 h-6" />
           ) : (
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-              <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5z" />
-              <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z" />
-            </svg>
+            <IconHeadphones className="w-6 h-6" />
           )}
         </button>
       </div>

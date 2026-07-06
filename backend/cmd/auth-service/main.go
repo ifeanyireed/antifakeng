@@ -126,7 +126,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		// Postgres driver Exec doesn't support LastInsertId on Exec, let's use QueryRow if Postgres
 		// But Exec works on MySQL. Let's do a backup query if producerID is 0
 		var id int
-		err = db.DB.QueryRow(`SELECT id FROM producers WHERE slug = ?`, req.ProducerSlug).Scan(&id)
+		err = tx.QueryRow(`SELECT id FROM producers WHERE slug = ?`, req.ProducerSlug).Scan(&id)
 		if err != nil {
 			http.Error(w, fmt.Sprintf(`{"error": "Failed to fetch producer: %v"}`, err), http.StatusInternalServerError)
 			return

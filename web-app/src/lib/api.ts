@@ -1,4 +1,12 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+const getApiBaseUrl = () => {
+  let baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+  if (!baseUrl.endsWith("/api")) {
+    baseUrl = baseUrl.replace(/\/$/, "") + "/api";
+  }
+  return baseUrl;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export const getAuthToken = () => {
   if (typeof window !== "undefined") {

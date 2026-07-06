@@ -6,6 +6,31 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/ahnara/AuthContext";
 import { AhnaraLoader } from "@/components/ahnara/AhnaraLoader";
+import { IconPill, IconPlant, IconSparkles, IconCpu, IconGlass, IconHeadphones, IconX } from "@tabler/icons-react";
+
+const renderMarkdown = (content: string) => {
+  const parts = content.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\))/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index} className="font-extrabold">{part.slice(2, -2)}</strong>;
+    }
+    const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
+    if (linkMatch) {
+      return (
+        <a 
+          key={index} 
+          href={linkMatch[2]} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-[#0089C1] hover:underline font-bold"
+        >
+          {linkMatch[1]}
+        </a>
+      );
+    }
+    return part;
+  });
+};
 
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -100,17 +125,7 @@ export default function HomePage() {
     }
   };
 
-  useEffect(() => {
-    if (!loading && user) {
-      if (user.role === "ADMIN") {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/producer/dashboard");
-      }
-    }
-  }, [user, loading, router]);
-
-  if (loading || user) {
+  if (loading) {
     return (
       <AhnaraLoader fullScreen label="Syncing Session..." />
     );
@@ -142,16 +157,26 @@ export default function HomePage() {
               Verify Product
             </button>
           </Link>
-          <Link href="/login">
-            <button className="bg-white border border-slate-200 text-slate-800 font-bold px-5 py-2.5 rounded-full text-sm hover:bg-slate-50 transition-all shadow-sm">
-              Sign In
-            </button>
-          </Link>
-          <Link href="/register">
-            <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-5 py-2.5 rounded-full text-sm shadow-sm">
-              Register
-            </button>
-          </Link>
+          {!user ? (
+            <>
+              <Link href="/login">
+                <button className="bg-white border border-slate-200 text-slate-800 font-bold px-5 py-2.5 rounded-full text-sm hover:bg-slate-50 transition-all shadow-sm">
+                  Sign In
+                </button>
+              </Link>
+              <Link href="/register">
+                <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-5 py-2.5 rounded-full text-sm shadow-sm">
+                  Register
+                </button>
+              </Link>
+            </>
+          ) : (
+            <Link href={user.role === "ADMIN" ? "/admin/dashboard" : "/producer/dashboard"}>
+              <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-5 py-2.5 rounded-full text-sm shadow-sm">
+                Dashboard
+              </button>
+            </Link>
+          )}
         </div>
 
         {/* Burger Button (Mobile Only) */}
@@ -184,92 +209,70 @@ export default function HomePage() {
                   Verify Product
                 </button>
               </Link>
-              <div className="flex gap-2">
-                <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex-1">
-                  <button className="w-full bg-white border border-slate-200 text-slate-800 font-bold py-2.5 rounded-full text-sm hover:bg-slate-50 transition-all shadow-sm text-center">
-                    Sign In
-                  </button>
-                </Link>
-                <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="flex-1">
+              {!user ? (
+                <div className="flex gap-2">
+                  <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex-1">
+                    <button className="w-full bg-white border border-slate-200 text-slate-800 font-bold py-2.5 rounded-full text-sm hover:bg-slate-50 transition-all shadow-sm text-center">
+                      Sign In
+                    </button>
+                  </Link>
+                  <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="flex-1">
+                    <button className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-2.5 rounded-full text-sm shadow-sm text-center">
+                      Register
+                    </button>
+                  </Link>
+                </div>
+              ) : (
+                <Link href={user.role === "ADMIN" ? "/admin/dashboard" : "/producer/dashboard"} onClick={() => setMobileMenuOpen(false)}>
                   <button className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-2.5 rounded-full text-sm shadow-sm text-center">
-                    Register
+                    Dashboard
                   </button>
                 </Link>
-              </div>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* HERO CONTAINER */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 mb-6 mt-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 mb-6 mt-2">
         
         {/* Large Rounded Hero Card */}
-        <div className="w-full bg-[#E9F2F5] rounded-[48px] pt-16 px-6 md:px-12 flex flex-col items-center text-center relative overflow-hidden border border-slate-200/20">
+        <div className="w-full bg-[#E9F2F5] rounded-[48px] pt-10 px-6 md:px-12 flex flex-col items-center text-center relative overflow-hidden border border-slate-200/20">
           
-          {/* Floating 3D Shapes */}
-          {/* Left Shape (3D Pill Bottle Mockup) */}
-          <motion.div
-            animate={{ y: [0, -15, 0], rotate: [0, 5, 0] }}
-            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute left-[-2%] top-[20%] w-72 h-72 hidden xl:block pointer-events-none z-10"
-          >
-            <img 
-              src="/pill_bottle_mockup.png" 
-              alt="Secure Pill Container 3D Mockup" 
-              className="w-full h-full object-contain drop-shadow-2xl rounded-3xl"
-            />
-          </motion.div>
-
-          {/* Right Shape (3D Pill Bottle Mockup 2) */}
-          <motion.div
-            animate={{ y: [0, 12, 0], rotate: [0, -4, 0] }}
-            transition={{ duration: 6, delay: 0.5, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute right-[-2%] top-[20%] w-72 h-72 hidden xl:block pointer-events-none z-10"
-          >
-            <img 
-              src="/pill_bottle_mockup2.png" 
-              alt="Secure Pill Container 3D Mockup Right" 
-              className="w-full h-full object-contain drop-shadow-2xl rounded-3xl"
-            />
-          </motion.div>
-
-          {/* Version Badge */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full text-[10px] font-bold text-slate-500 shadow-sm border border-slate-100 uppercase tracking-wider mb-6 relative z-20">
-            Product Authenticity Platform
-          </div>
+          {/* 3D shapes are positioned inside the screenshot wrapper below */}
 
           {/* Headline */}
-          <h1 className="text-4xl md:text-6xl font-normal text-slate-900 tracking-tight text-display mb-6 leading-[1.1] max-w-4xl text-center relative z-20">
+          <h1 className="text-4xl md:text-6xl font-normal text-slate-900 tracking-tight text-display mb-3 leading-[1.1] max-w-4xl text-center relative z-20">
             Real products shouldn't need to argue with fakes.
           </h1>
 
           {/* Description */}
-          <p className="text-slate-600 font-semibold text-base md:text-lg mb-8 max-w-3xl text-center leading-relaxed relative z-20">
-            AntiFakeNG gives every unit you produce a verifiable identity. Customers confirm it's genuine from any phone browser in under a minute — no app, no guesswork — while you watch counterfeit activity surface in real time, by batch, by region, by retailer.
+          <p className="text-slate-600 font-semibold text-base md:text-lg mb-4 max-w-3xl text-center leading-relaxed relative z-20">
+            AntiFakeNG gives every unit you produce a verifiable identity.
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 mb-6 relative z-20">
+          <div className="flex flex-col sm:flex-row items-center gap-4 mb-4 relative z-20">
             <Link href="/consumer">
-              <button className="bg-[#0089C1] hover:bg-sky-600 text-white transition-all font-bold px-8 py-3.5 rounded-full shadow-lg whitespace-nowrap">
+              <button className="bg-[#0089C1] hover:bg-sky-600 text-white transition-all font-bold px-5 py-2.5 text-sm rounded-full shadow-md whitespace-nowrap">
                 Verify Product
               </button>
             </Link>
             <a href="#contact">
-              <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-8 py-3.5 rounded-full shadow-lg whitespace-nowrap">
+              <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-5 py-2.5 text-sm rounded-full shadow-md whitespace-nowrap">
                 Request a Demo
               </button>
             </a>
             <a href="#how-it-works">
-              <button className="bg-white text-slate-700 hover:bg-slate-50 border border-slate-200/80 transition-all font-bold px-8 py-3.5 rounded-full shadow-sm whitespace-nowrap">
+              <button className="bg-white text-slate-700 hover:bg-slate-50 border border-slate-200/80 transition-all font-bold px-5 py-2.5 text-sm rounded-full shadow-xs whitespace-nowrap">
                 See How Verification Works
               </button>
             </a>
           </div>
 
           {/* Social Proof */}
-          <div className="flex flex-col items-center gap-2 mb-10 relative z-20">
+          <div className="flex flex-col items-center gap-2 mb-1 relative z-20">
             <div className="flex items-center gap-1">
               {/* Avatar stack */}
               <div className="flex -space-x-2">
@@ -290,7 +293,33 @@ export default function HomePage() {
             <span className="text-xs font-semibold text-slate-500">Trusted by leading brand protection teams</span>
           </div>
 
+          {/* Dashboard Preview Screenshot with 3D Mockup Overlay */}
+          <div className="w-full max-w-6xl mt-1 mb-8 relative z-20 flex justify-center">
+            <div className="w-full relative">
+              <img 
+                src="/ui_screenshot.png" 
+                alt="AntiFakeNG Platform Dashboard" 
+                className="w-full h-auto object-contain relative z-20" 
+              />
+              {/* Left Shape (3D Pill Bottle Mockup) */}
+              <div className="absolute right-[12%] bottom-[15px] w-52 h-52 hidden xl:block pointer-events-none z-30">
+                <img 
+                  src="/pill_bottle_mockup.png" 
+                  alt="Secure Pill Container 3D Mockup" 
+                  className="w-full h-full object-contain drop-shadow-2xl rounded-3xl"
+                />
+              </div>
 
+              {/* Right Shape (3D Pill Bottle Mockup 2) */}
+              <div className="absolute right-[2%] bottom-[5px] w-52 h-52 hidden xl:block pointer-events-none z-30">
+                <img 
+                  src="/pill_bottle_mockup2.png" 
+                  alt="Secure Pill Container 3D Mockup Right" 
+                  className="w-full h-full object-contain drop-shadow-2xl rounded-3xl"
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Supported Sectors & standards */}
           <div className="w-full max-w-5xl py-8 px-6 bg-[#E8EFF4]/40 rounded-3xl border border-slate-200/80 flex flex-col items-center gap-6 relative z-20 mt-10 mb-20 shadow-xs">
@@ -299,45 +328,31 @@ export default function HomePage() {
               
               {/* Pharma */}
               <div className="flex items-center gap-2 text-slate-700 select-none pointer-events-none">
-                <svg className="w-5 h-5 text-[#0089C1]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M4.5 10.5a6 6 0 1 1 12 0 6 6 0 0 1-12 0z" />
-                  <path d="M12 2v6" />
-                  <path d="M9 5h6" />
-                </svg>
+                <IconPill className="w-5 h-5 text-[#0089C1]" />
                 <span className="font-sans font-bold text-xs tracking-wider uppercase text-slate-800">Pharmaceuticals</span>
               </div>
               
               {/* Agro */}
               <div className="flex items-center gap-2 text-slate-700 select-none pointer-events-none">
-                <svg className="w-5 h-5 text-[#608216]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                </svg>
+                <IconPlant className="w-5 h-5 text-[#608216]" />
                 <span className="font-sans font-bold text-xs tracking-wider uppercase text-slate-800">Agro-Chemicals</span>
               </div>
 
               {/* Cosmetics */}
               <div className="flex items-center gap-2 text-slate-700 select-none pointer-events-none">
-                <svg className="w-5 h-5 text-[#0089C1]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z" />
-                </svg>
+                <IconSparkles className="w-5 h-5 text-[#0089C1]" />
                 <span className="font-sans font-bold text-xs tracking-wider uppercase text-slate-800">Cosmetics</span>
               </div>
 
               {/* Electronics */}
               <div className="flex items-center gap-2 text-slate-700 select-none pointer-events-none">
-                <svg className="w-5 h-5 text-[#608216]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="2" y="2" width="20" height="20" rx="4" />
-                  <path d="M6 12h12" />
-                  <path d="M12 6v12" />
-                </svg>
+                <IconCpu className="w-5 h-5 text-[#608216]" />
                 <span className="font-sans font-bold text-xs tracking-wider uppercase text-slate-800">Electronics</span>
               </div>
 
               {/* Beverages */}
               <div className="flex items-center gap-2 text-slate-700 select-none pointer-events-none">
-                <svg className="w-5 h-5 text-[#0089C1]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2v20M5 5h14M8 10h8M6 15h12" />
-                </svg>
+                <IconGlass className="w-5 h-5 text-[#0089C1]" />
                 <span className="font-sans font-bold text-xs tracking-wider uppercase text-slate-800">Beverages &amp; FMCG</span>
               </div>
 
@@ -452,7 +467,7 @@ export default function HomePage() {
           
           {/* Card 1: Photo (Consumer verification) */}
           <div className="aspect-square rounded-3xl overflow-hidden shadow-md group relative">
-            <img src="/antifake-scan.jpg" alt="Consumer scan" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <img src="/browser-verification.png" alt="Browser-First Verification Scan" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-slate-950/10" />
           </div>
 
@@ -509,7 +524,7 @@ export default function HomePage() {
 
           {/* Card 6: Photo (Analytics dashboard) */}
           <div className="aspect-square rounded-3xl overflow-hidden shadow-md group relative">
-            <img src="/antifake-analytics.jpg" alt="Analytics dashboard" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <img src="/fraud-detection-dashboard.jpg" alt="Fraud Detection Engine Dashboard" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-slate-950/10" />
           </div>
 
@@ -530,7 +545,7 @@ export default function HomePage() {
 
           {/* Card 8: Photo (Retail store shelf) */}
           <div className="aspect-square rounded-3xl overflow-hidden shadow-md group relative">
-            <img src="/antifake-shelf.jpg" alt="Verified products on retail shelf" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <img src="/label.png" alt="AntiFake Security Label" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-slate-950/10" />
           </div>
 
@@ -891,13 +906,13 @@ export default function HomePage() {
                 {chatMessages.map((msg, idx) => (
                   <div 
                     key={idx} 
-                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                    className={`whitespace-pre-line max-w-[85%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
                       msg.role === "user" 
                         ? "bg-[#0089C1] text-white self-end rounded-tr-none" 
                         : "bg-white text-slate-700 border border-slate-100 self-start rounded-tl-none shadow-sm"
                     }`}
                   >
-                    {msg.content}
+                    {renderMarkdown(msg.content)}
                   </div>
                 ))}
                 {chatLoading && (
@@ -937,15 +952,9 @@ export default function HomePage() {
           className="bg-[#0089C1] hover:bg-sky-600 text-white rounded-full p-4 shadow-xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 focus:outline-none"
         >
           {chatOpen ? (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <IconX className="w-6 h-6" />
           ) : (
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-              <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5z" />
-              <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z" />
-            </svg>
+            <IconHeadphones className="w-6 h-6" />
           )}
         </button>
       </div>

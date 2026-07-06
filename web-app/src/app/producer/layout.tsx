@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -15,12 +15,38 @@ import {
   IconClock,
   IconFileText,
   IconBell,
-  IconSettings
+  IconSettings,
+  IconLogout
 } from "@tabler/icons-react";
 import { RoleGuard } from "@/components/ahnara/RoleGuard";
+import { useAuth } from "@/components/ahnara/AuthContext";
+import { api } from "@/lib/api";
 
 export default function ProducerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { logout } = useAuth();
+  const [planTier, setPlanTier] = useState("Standard");
+  const [brandName, setBrandName] = useState("Aura Labs Inc");
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = await api.get("/producer/profile");
+        if (profile) {
+          if (profile.plan_tier) {
+            const tier = profile.plan_tier.charAt(0).toUpperCase() + profile.plan_tier.slice(1).toLowerCase();
+            setPlanTier(tier);
+          }
+          if (profile.name) {
+            setBrandName(profile.name);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch producer profile in layout:", err);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const menuItems = [
     { name: "Dashboard", href: "/producer/dashboard", icon: IconLayoutDashboard, activeIcon: IconLayoutDashboardFilled },
@@ -74,7 +100,7 @@ export default function ProducerLayout({ children }: { children: React.ReactNode
           {/* Notifications and Profile */}
           <div className="flex items-center gap-4">
             <span className="hidden md:flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-              Plan: Standard
+              Plan: {planTier}
             </span>
 
             <Link href="/producer/notifications">
@@ -93,12 +119,20 @@ export default function ProducerLayout({ children }: { children: React.ReactNode
                 className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-xs"
               />
               <div className="text-left hidden sm:block">
-                <p className="font-bold text-sm text-slate-900 leading-none">Aura Labs Inc</p>
+                <p className="font-bold text-sm text-slate-900 leading-none">{brandName}</p>
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 block">
                   Producer Account
                 </span>
               </div>
             </Link>
+
+            <button
+              onClick={logout}
+              className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-all bg-white shadow-xs"
+              title="Logout"
+            >
+              <IconLogout className="w-5 h-5" />
+            </button>
           </div>
         </header>
 
