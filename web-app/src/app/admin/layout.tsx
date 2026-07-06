@@ -70,10 +70,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {/* Notifications and Profile */}
           <div className="flex items-center gap-4">
-            <span className="hidden md:flex items-center gap-1 bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider animate-pulse">
-              System Live: 100% OK
-            </span>
-
             <Link 
               href="/admin/notifications"
               className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all relative bg-white shadow-xs"
