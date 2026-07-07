@@ -6,16 +6,30 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
+func sanitizeFilename(name string) string {
+	name = filepath.Base(name)
+	name = strings.ReplaceAll(name, " ", "_")
+	var result strings.Builder
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '.' || r == '-' || r == '_' {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
+}
+
 // UploadImage handles uploading a file via Hostinger SFTP or local fallback
 func UploadImage(file multipart.File, header *multipart.FileHeader) (string, error) {
 	// Clean filename and add timestamp prefix
-	filename := fmt.Sprintf("%d-%s", time.Now().Unix(), filepath.Base(header.Filename))
+	safeName := sanitizeFilename(header.Filename)
+	filename := fmt.Sprintf("%d-%s", time.Now().Unix(), safeName)
 
 	host := os.Getenv("SFTP_HOST")
 	port := os.Getenv("SFTP_PORT")

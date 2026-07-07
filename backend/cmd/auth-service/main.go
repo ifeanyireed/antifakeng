@@ -488,12 +488,8 @@ func handleMe(w http.ResponseWriter, r *http.Request) {
 
 func handleWhatsAppStatus(w http.ResponseWriter, r *http.Request) {
 	status := "disconnected"
-	if whatsapp.Client != nil {
-		if whatsapp.Client.Store.ID == nil {
-			status = "unpaired"
-		} else if whatsapp.Client.IsConnected() {
-			status = "connected"
-		}
+	if whatsapp.IsConfigured() {
+		status = "connected"
 	}
 
 	w.Header().Set("Content-Type", "application/json")

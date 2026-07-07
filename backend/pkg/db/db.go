@@ -116,6 +116,9 @@ func createTables(driver string) {
 				expiry_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				status VARCHAR(50) NOT NULL DEFAULT 'draft',
 				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				label_image_url VARCHAR(512) NULL,
+				label_rotation INT NOT NULL DEFAULT 0,
+				qr_position VARCHAR(50) NOT NULL DEFAULT 'bottom-right',
 				FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 			);`,
 			`CREATE TABLE IF NOT EXISTS qr_codes (
@@ -221,6 +224,9 @@ func createTables(driver string) {
 				expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
 				status VARCHAR(50) NOT NULL DEFAULT 'draft',
 				created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+				label_image_url VARCHAR(512) NULL,
+				label_rotation INTEGER NOT NULL DEFAULT 0,
+				qr_position VARCHAR(50) NOT NULL DEFAULT 'bottom-right',
 				FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 			);`,
 			`CREATE TABLE IF NOT EXISTS qr_codes (
@@ -291,6 +297,11 @@ func createTables(driver string) {
 	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN utility_bill_url VARCHAR(512) NULL`)
 	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN api_key VARCHAR(255) NULL`)
 	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN api_secret VARCHAR(255) NULL`)
+
+	// Migrations for batches table to support custom label background embedding
+	_, _ = DB.Exec(`ALTER TABLE batches ADD COLUMN label_image_url VARCHAR(512) NULL`)
+	_, _ = DB.Exec(`ALTER TABLE batches ADD COLUMN label_rotation INT NOT NULL DEFAULT 0`)
+	_, _ = DB.Exec(`ALTER TABLE batches ADD COLUMN qr_position VARCHAR(50) NOT NULL DEFAULT 'bottom-right'`)
 
 	log.Println("Database migration completed successfully.")
 }

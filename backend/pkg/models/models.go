@@ -70,6 +70,9 @@ type Batch struct {
 	ExpiryDate      time.Time `json:"expiry_date" db:"expiry_date"`
 	Status          string    `json:"status" db:"status"` // draft, active, recalled
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+	LabelImageURL   string    `json:"label_image_url" db:"label_image_url"`
+	LabelRotation   int       `json:"label_rotation" db:"label_rotation"`
+	QRPosition      string    `json:"qr_position" db:"qr_position"`
 }
 
 // QRCode represents an individual product's verification token

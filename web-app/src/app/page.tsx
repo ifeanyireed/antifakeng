@@ -454,7 +454,7 @@ export default function HomePage() {
           
           {/* Card 1: Photo (Consumer verification) */}
           <div className="aspect-square rounded-3xl overflow-hidden shadow-md group relative">
-            <img src="/browser-verification.png" alt="Browser-First Verification Scan" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <img src="/geniune-product.png" alt="Browser-First Verification Scan" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-slate-950/10" />
           </div>
 
@@ -475,7 +475,7 @@ export default function HomePage() {
 
           {/* Card 3: Photo (Production line) */}
           <div className="aspect-square rounded-3xl overflow-hidden shadow-md group relative">
-            <img src="/antifake-factory.jpg" alt="Production line" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <img src="/random-codes.png" alt="Production line" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-slate-950/10" />
           </div>
 
@@ -511,7 +511,7 @@ export default function HomePage() {
 
           {/* Card 6: Photo (Analytics dashboard) */}
           <div className="aspect-square rounded-3xl overflow-hidden shadow-md group relative">
-            <img src="/fraud-detection-dashboard.jpg" alt="Fraud Detection Engine Dashboard" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <img src="/browser-verification.png" alt="Fraud Detection Engine Dashboard" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-slate-950/10" />
           </div>
 

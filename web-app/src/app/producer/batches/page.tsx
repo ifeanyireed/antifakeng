@@ -56,6 +56,31 @@ export default function ProducerBatches() {
   const [batchId, setBatchId] = useState("");
   const [manufactureDate, setManufactureDate] = useState(getTodayString());
   const [expiryDate, setExpiryDate] = useState(getTwoYearsString());
+  
+  // Custom label background states
+  const [labelImage, setLabelImage] = useState("");
+  const [labelRotation, setLabelRotation] = useState(0); // 0, 90, 180, 270
+  const [qrPosition, setQrPosition] = useState("bottom-right"); // top-left, top-right, bottom-left, bottom-right
+  const [isUploadingLabel, setIsUploadingLabel] = useState(false);
+
+  const handleLabelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append("image", file);
+      
+      try {
+        setIsUploadingLabel(true);
+        const data = await api.upload("/producer/upload", formData);
+        setLabelImage(data.url);
+      } catch (err: any) {
+        console.error("Failed to upload label image:", err);
+        alert(err.message || "Failed to upload label image.");
+      } finally {
+        setIsUploadingLabel(false);
+      }
+    }
+  };
 
   // Print Layout states
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -99,13 +124,16 @@ export default function ProducerBatches() {
         const qty = parseInt(codeQuantity);
         const code = batchId || `B-${Math.floor(Math.random() * 90000 + 10000)}`;
         
-        // Create batch record
+        // Create batch record with custom label parameters
         const createdBatch = await api.post("/producer/batches", {
           product_id: parseInt(selectedProduct),
           batch_code: code,
           quantity: qty,
           manufacture_date: manufactureDate ? new Date(manufactureDate).toISOString() : undefined,
           expiry_date: expiryDate ? new Date(expiryDate).toISOString() : undefined,
+          label_image_url: labelImage || undefined,
+          label_rotation: labelRotation,
+          qr_position: qrPosition,
           status: "active"
         });
         
@@ -120,6 +148,9 @@ export default function ProducerBatches() {
         setCodeQuantity("1000");
         setManufactureDate(getTodayString());
         setExpiryDate(getTwoYearsString());
+        setLabelImage("");
+        setLabelRotation(0);
+        setQrPosition("bottom-right");
         setIsCreateModalOpen(false);
       } catch (err: any) {
         alert(err.message || "Failed to create batch.");
@@ -398,6 +429,68 @@ export default function ProducerBatches() {
                       required
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
                     />
+                  </div>
+                </div>
+
+                {/* Custom Print Label Configuration */}
+                <div className="border-t border-slate-100 pt-4 flex flex-col gap-3">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Custom Print Label (Optional)</span>
+                  
+                  <div className="flex flex-col gap-2 bg-slate-50 border border-slate-200/60 rounded-2xl p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Upload Label Graphic</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLabelUpload}
+                          className="text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300"
+                        />
+                      </div>
+                      {labelImage && (
+                        <div className="relative w-12 h-12 rounded-lg border border-slate-200 overflow-hidden bg-white flex items-center justify-center">
+                          <img
+                            src={labelImage}
+                            alt="Label Preview"
+                            style={{ transform: `rotate(${labelRotation}deg)` }}
+                            className="w-full h-full object-contain transition-transform duration-200"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {isUploadingLabel && <div className="text-[10px] text-slate-500 italic mt-1">Uploading label graphic...</div>}
+
+                    {labelImage && (
+                      <div className="grid grid-cols-2 gap-3 mt-2 border-t border-slate-200/50 pt-2">
+                        <div>
+                          <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Rotation</label>
+                          <select
+                            value={labelRotation}
+                            onChange={(e) => setLabelRotation(parseInt(e.target.value))}
+                            className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-2 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-[#0089C1]"
+                          >
+                            <option value="0">0° (Normal)</option>
+                            <option value="90">90° Right</option>
+                            <option value="180">180° Upside Down</option>
+                            <option value="270">270° Left</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">QR Corner Position</label>
+                          <select
+                            value={qrPosition}
+                            onChange={(e) => setQrPosition(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-2 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-[#0089C1]"
+                          >
+                            <option value="top-left">Top-Left</option>
+                            <option value="top-right">Top-Right</option>
+                            <option value="bottom-left">Bottom-Left</option>
+                            <option value="bottom-right">Bottom-Right</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

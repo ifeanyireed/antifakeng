@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -22,13 +23,16 @@ func fileExists(filename string) bool {
 
 // PrintConfig holds parameters for the PDF layout sheet
 type PrintConfig struct {
-	BatchCode    string
-	ProductName  string
-	Message      string
-	WidthOption  string // 4ft, 6ft, 10ft, or custom
-	WidthVal     float64 // in mm
-	Format       string // pdf, png_zip, csv
-	Columns      int
+	BatchCode     string
+	ProductName   string
+	Message       string
+	WidthOption   string // 4ft, 6ft, 10ft, or custom
+	WidthVal      float64 // in mm
+	Format        string // pdf, png_zip, csv
+	Columns       int
+	LabelImage    string
+	LabelRotation int
+	QRPosition    string
 }
 
 // ParseWidth parses a width option string (e.g. "4ft", "120cm", "48inch") into millimeters
@@ -76,6 +80,27 @@ func ParseWidth(widthStr string) float64 {
 
 // GenerateVectorPDF generates a custom-width roll PDF containing vector QR codes and serial metadata labels
 func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
+	localImage := config.LabelImage
+	isTempFile := false
+	if config.LabelImage != "" && (strings.HasPrefix(config.LabelImage, "http://") || strings.HasPrefix(config.LabelImage, "https://")) {
+		resp, err := http.Get(config.LabelImage)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			defer resp.Body.Close()
+			tempFile, err := os.CreateTemp("", "label-*.png")
+			if err == nil {
+				_, err = io.Copy(tempFile, resp.Body)
+				tempFile.Close()
+				if err == nil {
+					localImage = tempFile.Name()
+					isTempFile = true
+				}
+			}
+		}
+	}
+	if isTempFile {
+		defer os.Remove(localImage)
+	}
+
 	rollWidth := config.WidthVal
 	if rollWidth <= 0 {
 		rollWidth = ParseWidth(config.WidthOption)
@@ -217,15 +242,51 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 		pdf.SetDrawColor(180, 180, 180)
 		pdf.Rect(x, y, labelWidth, labelHeight, "D")
 
+		// Draw background label image if provided
+		if localImage != "" && fileExists(localImage) {
+			pdf.TransformBegin()
+			if config.LabelRotation != 0 {
+				centerX := x + labelWidth/2.0
+				centerY := y + labelHeight/2.0
+				pdf.TransformRotate(float64(config.LabelRotation), centerX, centerY)
+			}
+			pdf.Image(localImage, x, y, labelWidth, labelHeight, false, "", 0, "")
+			pdf.TransformEnd()
+		}
+
 		// 1. Generate QR Code Matrix for the token
 		// Verification URL: https://antifake.ng/verify?token=XXXX-XXXX
 		verificationURL := fmt.Sprintf("https://antifake.ng/verify?token=%s", token)
 		qrCode, err := qr.Encode(verificationURL, qr.M, qr.Auto)
 		if err == nil {
-			// Scale QR code to fit 85% of label height
-			qrSize := labelHeight * 0.85
-			qrX := x + (labelHeight-qrSize)/2.0
-			qrY := y + (labelHeight-qrSize)/2.0
+			var qrSize float64
+			var qrX, qrY float64
+
+			if config.LabelImage != "" {
+				qrSize = 12.0 // standard overlay size
+				paddingQR := 2.0
+				switch strings.ToLower(config.QRPosition) {
+				case "top-left":
+					qrX = x + paddingQR
+					qrY = y + paddingQR
+				case "top-right":
+					qrX = x + labelWidth - qrSize - paddingQR
+					qrY = y + paddingQR
+				case "bottom-left":
+					qrX = x + paddingQR
+					qrY = y + labelHeight - qrSize - paddingQR
+				case "bottom-right", "":
+					qrX = x + labelWidth - qrSize - paddingQR
+					qrY = y + labelHeight - qrSize - paddingQR
+				default:
+					qrX = x + labelWidth - qrSize - paddingQR
+					qrY = y + labelHeight - qrSize - paddingQR
+				}
+			} else {
+				qrSize = labelHeight * 0.85
+				qrX = x + (labelHeight-qrSize)/2.0
+				qrY = y + (labelHeight-qrSize)/2.0
+			}
 
 			// Render QR code modules as raw vector rectangles
 			pdf.SetFillColor(0, 0, 0)
@@ -247,59 +308,73 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 					}
 				}
 			}
+
+			// If custom label background, draw tiny serial text overlay
+			if config.LabelImage != "" {
+				textY := qrY + qrSize + 1.2
+				pdf.SetFillColor(255, 255, 255)
+				pdf.Rect(qrX, textY-1.2, qrSize, 2.0, "F")
+				
+				pdf.SetFont(fontFamily, "B", 4)
+				pdf.SetTextColor(0, 0, 0)
+				pdf.Text(qrX+0.5, textY, token)
+			}
 		}
 
-		// 2. Draw Metadata & Serial details on the right side of the label
-		textX := x + labelHeight + 2.0
-		textWidth := labelWidth - labelHeight - 4.0
+		// Only render default metadata if no background image is uploaded
+		if config.LabelImage == "" {
+			// 2. Draw Metadata & Serial details on the right side of the label
+			textX := x + labelHeight + 2.0
+			textWidth := labelWidth - labelHeight - 4.0
 
-		// Label title / Brand name (e.g. Serial details)
-		pdf.SetFont(fontFamily, "B", 6)
-		pdf.SetTextColor(120, 120, 120)
-		pdf.Text(textX, y+6.0, fmt.Sprintf("SERIAL: %s", token))
+			// Label title / Brand name (e.g. Serial details)
+			pdf.SetFont(fontFamily, "B", 6)
+			pdf.SetTextColor(120, 120, 120)
+			pdf.Text(textX, y+6.0, fmt.Sprintf("SERIAL: %s", token))
 
-		// Instruction message (wrapped text)
-		pdf.SetFont(fontFamily, "", 4.5)
-		pdf.SetTextColor(60, 60, 60)
-		pdf.SetXY(textX, y+8.5)
-		pdf.MultiCell(textWidth, 2.2, config.Message, "", "", false)
+			// Instruction message (wrapped text)
+			pdf.SetFont(fontFamily, "", 4.5)
+			pdf.SetTextColor(60, 60, 60)
+			pdf.SetXY(textX, y+8.5)
+			pdf.MultiCell(textWidth, 2.2, config.Message, "", "", false)
 
-		// 3. Draw Site Logo and Name ("AntiFakeNG") in the empty space
-		logoY := y + 20.0
-		logoX := textX + 2.0
+			// 3. Draw Site Logo and Name ("AntiFakeNG") in the empty space
+			logoY := y + 20.0
+			logoX := textX + 2.0
 
-		if foundLogo != "" {
-			logoSize := 8.0 // 8mm
-			centerY := logoY + (logoSize / 2.0)
-			pdf.Image(foundLogo, logoX, logoY, logoSize, logoSize, false, "PNG", 0, "")
+			if foundLogo != "" {
+				logoSize := 8.0 // 8mm
+				centerY := logoY + (logoSize / 2.0)
+				pdf.Image(foundLogo, logoX, logoY, logoSize, logoSize, false, "PNG", 0, "")
 
-			// Draw Site Name "AntiFakeNG" next to the logo
-			pdf.SetFont(fontFamily, "B", 9.0)
-			pdf.SetTextColor(18, 33, 59) // #12213B (Navy)
-			pdf.Text(logoX+logoSize+2.0, centerY+1.5, "AntiFakeNG")
-		} else {
-			// Fallback: Draw green circular seal vector if logo file not found
-			logoRadius := 4.0
-			centerYVector := logoY + logoRadius
-			pdf.SetFillColor(47, 228, 141) // #2FE48D
-			pdf.Circle(logoX+logoRadius, centerYVector, logoRadius, "F")
+				// Draw Site Name "AntiFakeNG" next to the logo
+				pdf.SetFont(fontFamily, "B", 9.0)
+				pdf.SetTextColor(18, 33, 59) // #12213B (Navy)
+				pdf.Text(logoX+logoSize+2.0, centerY+1.5, "AntiFakeNG")
+			} else {
+				// Fallback: Draw green circular seal vector if logo file not found
+				logoRadius := 4.0
+				centerYVector := logoY + logoRadius
+				pdf.SetFillColor(47, 228, 141) // #2FE48D
+				pdf.Circle(logoX+logoRadius, centerYVector, logoRadius, "F")
 
-			// Draw white checkmark inside the seal
-			pdf.SetLineWidth(0.6)
-			pdf.SetDrawColor(255, 255, 255)
-			pdf.Line(logoX+logoRadius-1.6, centerYVector, logoX+logoRadius-0.4, centerYVector+1.2)
-			pdf.Line(logoX+logoRadius-0.4, centerYVector+1.2, logoX+logoRadius+1.8, centerYVector-1.2)
+				// Draw white checkmark inside the seal
+				pdf.SetLineWidth(0.6)
+				pdf.SetDrawColor(255, 255, 255)
+				pdf.Line(logoX+logoRadius-1.6, centerYVector, logoX+logoRadius-0.4, centerYVector+1.2)
+				pdf.Line(logoX+logoRadius-0.4, centerYVector+1.2, logoX+logoRadius+1.8, centerYVector-1.2)
 
-			// Draw Site Name "AntiFakeNG" next to the seal
-			pdf.SetFont(fontFamily, "B", 9.0)
-			pdf.SetTextColor(18, 33, 59) // #12213B
-			pdf.Text(logoX+logoRadius*2.0+2.0, centerYVector+1.5, "AntiFakeNG")
+				// Draw Site Name "AntiFakeNG" next to the seal
+				pdf.SetFont(fontFamily, "B", 9.0)
+				pdf.SetTextColor(18, 33, 59) // #12213B
+				pdf.Text(logoX+logoRadius*2.0+2.0, centerYVector+1.5, "AntiFakeNG")
+			}
+
+			// Verification endpoint footer
+			pdf.SetFont(fontFamily, "B", 4.5)
+			pdf.SetTextColor(0, 137, 193) // brand blue
+			pdf.Text(textX, y+labelHeight-3.0, "SECURE VERIFICATION PORTAL")
 		}
-
-		// Verification endpoint footer
-		pdf.SetFont(fontFamily, "B", 4.5)
-		pdf.SetTextColor(0, 137, 193) // brand blue
-		pdf.Text(textX, y+labelHeight-3.0, "SECURE VERIFICATION PORTAL")
 
 		// Advance to next row when column resets
 		if colIndex == columns-1 {

@@ -127,7 +127,7 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		rows, err := db.DB.Query(`SELECT b.id, b.product_id, b.batch_code, b.quantity, b.manufacture_date, b.expiry_date, b.status, b.created_at 
+		rows, err := db.DB.Query(`SELECT b.id, b.product_id, b.batch_code, b.quantity, b.manufacture_date, b.expiry_date, b.status, b.created_at, b.label_image_url, b.label_rotation, b.qr_position 
 			FROM batches b
 			JOIN products p ON b.product_id = p.id
 			WHERE p.producer_id = ?`, prodID)
@@ -140,7 +140,7 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 		var batches []models.Batch
 		for rows.Next() {
 			var b models.Batch
-			if err := rows.Scan(&b.ID, &b.ProductID, &b.BatchCode, &b.Quantity, &b.ManufactureDate, &b.ExpiryDate, &b.Status, &b.CreatedAt); err != nil {
+			if err := rows.Scan(&b.ID, &b.ProductID, &b.BatchCode, &b.Quantity, &b.ManufactureDate, &b.ExpiryDate, &b.Status, &b.CreatedAt, &b.LabelImageURL, &b.LabelRotation, &b.QRPosition); err != nil {
 				http.Error(w, `{"error": "Failed to scan batches"}`, http.StatusInternalServerError)
 				return
 			}
@@ -179,18 +179,18 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 			eDate = mDate.AddDate(2, 0, 0) // default 2 years expiry
 		}
 
-		_, err = db.DB.Exec(`INSERT INTO batches (product_id, batch_code, quantity, manufacture_date, expiry_date, status, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			b.ProductID, b.BatchCode, b.Quantity, mDate, eDate, models.StatusActive, time.Now())
+		_, err = db.DB.Exec(`INSERT INTO batches (product_id, batch_code, quantity, manufacture_date, expiry_date, status, created_at, label_image_url, label_rotation, qr_position)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			b.ProductID, b.BatchCode, b.Quantity, mDate, eDate, models.StatusActive, time.Now(), b.LabelImageURL, b.LabelRotation, b.QRPosition)
 		if err != nil {
 			http.Error(w, fmt.Sprintf(`{"error": "Batch creation failed (batch_code may exist): %v"}`, err), http.StatusBadRequest)
 			return
 		}
 
 		var created models.Batch
-		err = db.DB.QueryRow(`SELECT id, product_id, batch_code, quantity, manufacture_date, expiry_date, status, created_at 
+		err = db.DB.QueryRow(`SELECT id, product_id, batch_code, quantity, manufacture_date, expiry_date, status, created_at, label_image_url, label_rotation, qr_position 
 			FROM batches WHERE batch_code = ?`, b.BatchCode).Scan(
-			&created.ID, &created.ProductID, &created.BatchCode, &created.Quantity, &created.ManufactureDate, &created.ExpiryDate, &created.Status, &created.CreatedAt)
+			&created.ID, &created.ProductID, &created.BatchCode, &created.Quantity, &created.ManufactureDate, &created.ExpiryDate, &created.Status, &created.CreatedAt, &created.LabelImageURL, &created.LabelRotation, &created.QRPosition)
 		if err != nil {
 			http.Error(w, `{"error": "Created but failed to retrieve batch"}`, http.StatusInternalServerError)
 			return
@@ -234,9 +234,12 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 	// Verify batch ownership
 	var ownerProdID int
 	var batchQty int
-	err = db.DB.QueryRow(`SELECT p.producer_id, b.quantity FROM batches b 
+	var labelImageURL string
+	var labelRotation int
+	var qrPosition string
+	err = db.DB.QueryRow(`SELECT p.producer_id, b.quantity, COALESCE(b.label_image_url, ''), b.label_rotation, COALESCE(b.qr_position, '') FROM batches b 
 		JOIN products p ON b.product_id = p.id 
-		WHERE b.id = ?`, batchID).Scan(&ownerProdID, &batchQty)
+		WHERE b.id = ?`, batchID).Scan(&ownerProdID, &batchQty, &labelImageURL, &labelRotation, &qrPosition)
 	if err == sql.ErrNoRows || ownerProdID != prodID {
 		http.Error(w, `{"error": "Forbidden: invalid batch ID"}`, http.StatusForbidden)
 		return
@@ -477,11 +480,14 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 		}
 
 		printConfig := printer.PrintConfig{
-			BatchCode:   batchIDStr,
-			Message:     msg,
-			WidthOption: widthOpt,
-			Format:      "pdf",
-			Columns:     cols,
+			BatchCode:     batchIDStr,
+			Message:       msg,
+			WidthOption:   widthOpt,
+			Format:        "pdf",
+			Columns:       cols,
+			LabelImage:    labelImageURL,
+			LabelRotation: labelRotation,
+			QRPosition:    qrPosition,
 		}
 
 		// Determine if download or inline preview is requested
