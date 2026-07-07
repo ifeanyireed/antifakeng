@@ -71,6 +71,9 @@ export default function LoginPage() {
           const status = data.producer_status;
           if (status === "pending_approval") {
             setError("Your account is pending administrator approval.");
+          } else if (status === "pending_verification") {
+            localStorage.setItem("verify_email_address", email);
+            router.push("/verify-email");
           } else if (status === "pending_payment" || status === "kyc_approved") {
             router.push("/onboarding");
           } else {
@@ -139,7 +142,15 @@ export default function LoginPage() {
             role: "PRODUCER",
           });
           localStorage.setItem("ahnara_token", loginData.token);
-          router.push("/onboarding");
+          const status = loginData.producer_status;
+          if (status === "pending_verification") {
+            localStorage.setItem("verify_email_address", email);
+            router.push("/verify-email");
+          } else if (status === "pending_payment" || status === "kyc_approved") {
+            router.push("/onboarding");
+          } else {
+            router.push("/producer/dashboard");
+          }
         } else {
           setView("login");
           setSuccessMessage("Registration successful! Please log in.");

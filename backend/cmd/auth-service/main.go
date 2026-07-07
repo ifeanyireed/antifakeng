@@ -52,6 +52,9 @@ type OTPVerifyReq struct {
 var (
 	otpStore = make(map[string]string) // phone -> code
 	otpMutex sync.RWMutex
+
+	emailOtpStore = make(map[string]string) // email -> code
+	emailOtpMutex sync.RWMutex
 )
 
 func main() {
@@ -74,6 +77,8 @@ func main() {
 	mux.HandleFunc("/api/auth/otp/request", handleOTPRequest)
 	mux.HandleFunc("/api/auth/otp/verify", handleOTPVerify)
 	mux.HandleFunc("/api/auth/whatsapp/webhook", handleWhatsAppWebhook)
+	mux.HandleFunc("/api/auth/email/verify", handleVerifyEmail)
+	mux.HandleFunc("/api/auth/email/resend", handleResendEmailVerify)
 	mux.Handle("/api/auth/me", middleware.RequireAuth(http.HandlerFunc(handleMe)))
 
 	// Admin route to seed default data if DB is empty
@@ -102,6 +107,10 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.ContactEmail == "" {
+		req.ContactEmail = req.Email
+	}
+
 	tx, err := db.DB.Begin()
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
@@ -119,7 +128,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		VALUES (?, ?, ?, ?, ?, ?)`
 
 	// MySQL returns last insert row ID differently than Postgres, so we check driver style
-	res, err := tx.Exec(producerQuery, req.ProducerName, req.ProducerSlug, planTier, req.ContactEmail, "pending_payment", time.Now())
+	res, err := tx.Exec(producerQuery, req.ProducerName, req.ProducerSlug, planTier, req.ContactEmail, "pending_verification", time.Now())
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error": "Failed to create producer (slug might be taken): %v"}`, err), http.StatusBadRequest)
 		return
@@ -157,18 +166,33 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate 6-digit email verification code
+	code := fmt.Sprintf("%06d", rand.Intn(1000000))
+
+	emailOtpMutex.Lock()
+	emailOtpStore[req.Email] = code
+	emailOtpMutex.Unlock()
+
+	// Send verification email to client in background
+	go func() {
+		err := email.SendEmailVerificationCode(req.Email, code)
+		if err != nil {
+			log.Printf("[Email Verification Error] Failed to send verification code to %s: %v", req.Email, err)
+		}
+	}()
+
 	// Send registration notification email to platform administrator in background
 	go func() {
 		err := email.SendProducerSignupNotification(req.ProducerName, req.Email, planTier)
 		if err != nil {
-			log.Printf("[Notification Error] Failed to send admin email alert: %v", err)
+			log.Printf("[Notification Error] Failed to send admin email alert: %v", req.Email)
 		}
 	}()
 
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":     "Producer and user registered successfully",
+		"message":     "Producer and user registered successfully. Verification email sent.",
 		"producer_id": producerID,
 		"email":       req.Email,
 	})
@@ -682,5 +706,109 @@ func handleWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusMethodNotAllowed)
+}
+
+func handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Email string `json:"email"`
+		Code  string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+	if req.Email == "" || req.Code == "" {
+		http.Error(w, `{"error": "Missing email or code"}`, http.StatusBadRequest)
+		return
+	}
+
+	emailOtpMutex.RLock()
+	cachedCode, exists := emailOtpStore[req.Email]
+	emailOtpMutex.RUnlock()
+
+	if !exists || cachedCode != req.Code {
+		http.Error(w, `{"error": "Invalid or expired verification code"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Code matches, update status in DB
+	tx, err := db.DB.Begin()
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// Find the user's producer ID
+	var producerID int
+	err = tx.QueryRow(`SELECT producer_id FROM users WHERE email = ?`, req.Email).Scan(&producerID)
+	if err != nil {
+		http.Error(w, `{"error": "User account not found"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Update status to pending_payment
+	_, err = tx.Exec(`UPDATE producers SET status = 'pending_payment' WHERE id = ?`, producerID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error": "Failed to update brand status: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, `{"error": "Transaction commit failed"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Delete from store
+	emailOtpMutex.Lock()
+	delete(emailOtpStore, req.Email)
+	emailOtpMutex.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Email verified successfully",
+	})
+}
+
+func handleResendEmailVerify(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+	if req.Email == "" {
+		http.Error(w, `{"error": "Missing email"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Generate new code
+	code := fmt.Sprintf("%06d", rand.Intn(1000000))
+
+	emailOtpMutex.Lock()
+	emailOtpStore[req.Email] = code
+	emailOtpMutex.Unlock()
+
+	// Send in background
+	go func() {
+		err := email.SendEmailVerificationCode(req.Email, code)
+		if err != nil {
+			log.Printf("[Email Verification Error] Failed to resend verification code to %s: %v", req.Email, err)
+		}
+	}()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Verification email sent successfully",
+	})
 }
 

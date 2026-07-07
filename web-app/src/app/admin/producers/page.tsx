@@ -154,8 +154,8 @@ export default function AdminProducers() {
                   filteredProducers.map((p) => {
                     const planName = p.plan_tier ? p.plan_tier.charAt(0).toUpperCase() + p.plan_tier.slice(1).toLowerCase() : "Free";
                     const planTier = p.plan_tier?.toLowerCase() || "";
-                    const codeLimit = planTier === "free" ? 500 : planTier === "starter" ? 25000 : planTier === "growth" ? 250000 : 1000000;
-                    const codesUsed = planTier === "free" ? 124 : planTier === "starter" ? 24812 : planTier === "growth" ? 12010 : 742190;
+                    const codeLimit = planTier === "free" ? 0 : planTier === "starter" ? 25000 : planTier === "growth" ? 250000 : 1000000;
+                    const codesUsed = planTier === "free" ? 0 : planTier === "starter" ? 24812 : planTier === "growth" ? 12010 : 742190;
                     const percentUsed = Math.round((codesUsed / codeLimit) * 100);
                     
                     let formattedDate = "N/A";
@@ -279,7 +279,7 @@ export default function AdminProducers() {
                     onChange={(e) => setEditPlan(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
                   >
-                    <option value="free">Free (500 codes limit)</option>
+                    <option value="free">Free (0 codes limit/Inactive)</option>
                     <option value="starter">Starter (25k codes limit)</option>
                     <option value="growth">Growth (250k codes limit)</option>
                     <option value="enterprise">Enterprise (Unlimited codes limit)</option>
