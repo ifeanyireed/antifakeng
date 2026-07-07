@@ -15,6 +15,12 @@ import {
 } from "@tabler/icons-react";
 import { api } from "@/lib/api";
 import { AhnaraLoader } from "@/components/ahnara/AhnaraLoader";
+import dynamic from "next/dynamic";
+
+const PaystackButton = dynamic(
+  () => import("@/components/ahnara/PaystackButton"),
+  { ssr: false }
+);
 
 export default function ProducerProfile() {
   const [activeTab, setActiveTab] = useState<"company" | "security" | "subscription" | "api">("company");
@@ -27,6 +33,10 @@ export default function ProducerProfile() {
 
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
+
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [selectedNewPlan, setSelectedNewPlan] = useState("");
+  const [isChangingPlan, setIsChangingPlan] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "Aura Labs Inc",
@@ -94,20 +104,90 @@ export default function ProducerProfile() {
     }
   };
 
-  const handleSaveSecurity = (e: React.FormEvent) => {
+  const handleSaveSecurity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.newPassword !== formData.confirmPassword) {
       setErrorMsg("New passwords do not match.");
       return;
     }
-    setIsSubmitting(true);
-    // Mimic secure password hashing handshake locally since backend auth handles sessions
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      setIsSubmitting(true);
+      setErrorMsg("");
+      setSuccessMsg("");
+      
+      await api.post("/auth/change-password", {
+        current_password: formData.currentPassword,
+        new_password: formData.newPassword
+      });
+
       setSuccessMsg("Security credentials updated successfully!");
       setFormData((prev) => ({ ...prev, currentPassword: "", newPassword: "", confirmPassword: "" }));
       setTimeout(() => setSuccessMsg(""), 3000);
-    }, 1000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to update password credentials.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const plans = [
+    {
+      name: "Starter",
+      price: "₦150,000",
+      period: "month",
+      limit: "25,000 codes / mo",
+      desc: "For small production lines getting verification codes into the market.",
+      badge: "Popular"
+    },
+    {
+      name: "Growth",
+      price: "₦450,000",
+      period: "month",
+      limit: "250,000 codes / mo",
+      desc: "For growing brands needing high volume batch processing and detailed analytics.",
+      badge: "Professional"
+    },
+    {
+      name: "Enterprise",
+      price: "Custom Pricing",
+      period: "contract",
+      limit: "Unlimited codes",
+      desc: "For multi-brand operations, custom ERP integrations, and high-volume printers.",
+      badge: "Corporate"
+    }
+  ];
+
+  const handlePlanUpgrade = async (newPlan: string) => {
+    try {
+      setIsChangingPlan(true);
+      setErrorMsg("");
+      setSuccessMsg("");
+      const isEnterprise = newPlan.toLowerCase() === "enterprise";
+      
+      await api.put("/producer/profile", {
+        name: formData.name,
+        contact_email: formData.contactEmail,
+        brand_logo_url: formData.logoUrl,
+        plan_tier: newPlan.toLowerCase(),
+        status: isEnterprise ? "pending_approval" : "active"
+      });
+
+      const updatedTier = newPlan.charAt(0).toUpperCase() + newPlan.slice(1).toLowerCase();
+      setPlanTier(updatedTier);
+      
+      if (isEnterprise) {
+        alert("Enterprise upgrade request submitted successfully! Your account plan change is pending administrator approval.");
+      } else {
+        setSuccessMsg(`Plan successfully updated to ${updatedTier}!`);
+        setTimeout(() => setSuccessMsg(""), 4000);
+      }
+      setShowPlanModal(false);
+      setSelectedNewPlan("");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to update subscription plan.");
+    } finally {
+      setIsChangingPlan(false);
+    }
   };
 
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -403,7 +483,10 @@ export default function ProducerProfile() {
                     {!["Starter", "Growth", "Enterprise", "Free", "free"].includes(planTier) && "Billed monthly subscription. Renewal date: Aug 04, 2026."}
                   </p>
                 </div>
-                <button className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-xs transition-all">
+                <button 
+                  onClick={() => setShowPlanModal(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-xs transition-all"
+                >
                   Change Plan
                 </button>
               </div>
@@ -438,18 +521,6 @@ export default function ProducerProfile() {
                   Calculated from 1st of the calendar month. Limits refresh on August 1st.
                 </p>
               </div>
-
-              {/* Subscription limits global management notice */}
-              <div className="p-4 bg-blue-50/50 border border-blue-200/50 text-blue-800 rounded-xl text-xs font-medium leading-normal flex items-start gap-3">
-                <span className="text-base select-none">ℹ️</span>
-                <div>
-                  <p className="font-bold">Gemini Added Memory Active</p>
-                  <p className="mt-0.5 opacity-90">
-                    Subscription limits are centrally managed in SubscriptionHelper.ts and enforced/displayed via SubscriptionService and middleware.
-                  </p>
-                </div>
-              </div>
-
             </div>
           )}
 
@@ -526,6 +597,123 @@ export default function ProducerProfile() {
 
         </main>
       </div>
+
+      {showPlanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 select-none">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-2xl bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 md:p-8 flex flex-col gap-6 relative text-left font-sans"
+          >
+            {/* Close Button */}
+            <button 
+              onClick={() => {
+                setShowPlanModal(false);
+                setSelectedNewPlan("");
+              }}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 font-black text-lg transition-colors p-1"
+            >
+              ✕
+            </button>
+
+            <div>
+              <h3 className="text-2xl font-black text-slate-800 tracking-tight">Select Subscription Plan</h3>
+              <p className="text-slate-400 text-xs mt-1">Upgrade or scale down your active plan tier. Upgrades apply instantly.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {plans.map((plan) => {
+                const isCurrent = planTier.toLowerCase() === plan.name.toLowerCase();
+                const isSelected = selectedNewPlan.toLowerCase() === plan.name.toLowerCase();
+                return (
+                  <div
+                    key={plan.name}
+                    onClick={() => {
+                      if (!isCurrent) {
+                        setSelectedNewPlan(plan.name);
+                      }
+                    }}
+                    className={`border rounded-2xl p-4 flex flex-col gap-3 cursor-pointer transition-all ${
+                      isCurrent 
+                        ? "border-[#245C44] bg-[#245C44]/5 cursor-not-allowed text-slate-500" 
+                        : isSelected 
+                        ? "border-[#1E293B] bg-slate-50 ring-2 ring-slate-800/20 shadow-xs" 
+                        : "border-slate-200 hover:border-slate-400 hover:bg-slate-50/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{plan.badge}</span>
+                      {isCurrent && (
+                        <span className="bg-[#245C44] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">Active</span>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-slate-800 text-sm">{plan.name}</h4>
+                      <p className="text-xs text-slate-400 font-bold mt-0.5">{plan.limit}</p>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-medium leading-relaxed flex-1 mt-1">{plan.desc}</p>
+                    <div className="pt-2 border-t border-slate-100 mt-2">
+                      <span className="text-sm font-black text-slate-800">{plan.price}</span>
+                      <span className="text-[9px] text-slate-400 font-bold lowercase">/{plan.period}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action buttons / Paystack */}
+            <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
+              {selectedNewPlan ? (
+                selectedNewPlan.toLowerCase() === "enterprise" ? (
+                  <button
+                    onClick={() => handlePlanUpgrade("Enterprise")}
+                    disabled={isChangingPlan}
+                    className="w-full bg-[#1E293B] hover:bg-slate-800 text-white font-bold py-3 rounded-full text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
+                  >
+                    {isChangingPlan ? "Submitting Request..." : "Request Enterprise Custom License"}
+                  </button>
+                ) : (
+                  <PaystackButton
+                    config={{
+                      reference: "upgrade_" + Math.random().toString(36).substring(2, 12),
+                      email: formData.contactEmail || "billing@brand.com",
+                      amount: selectedNewPlan === "Starter" ? 15000000 : 45000000,
+                      publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "",
+                    }}
+                    onSuccess={(ref) => {
+                      alert(`Payment Confirmed. Ref: ${ref.reference}. Updating plan...`);
+                      handlePlanUpgrade(selectedNewPlan);
+                    }}
+                    onClose={() => {
+                      alert("Subscription update checkout flow canceled.");
+                    }}
+                    text={`Pay ₦${selectedNewPlan === "Starter" ? "150,000" : "450,000"} & Activate ${selectedNewPlan}`}
+                    className="w-full bg-[#1E293B] text-white hover:bg-slate-800 py-3 rounded-full text-xs font-bold shadow-md text-center"
+                  />
+                )
+              ) : (
+                <button
+                  disabled
+                  className="w-full bg-slate-100 text-slate-400 font-bold py-3 rounded-full text-xs cursor-not-allowed border border-slate-200/50"
+                >
+                  Choose a Plan Above to Continue
+                </button>
+              )}
+              
+              <button
+                onClick={() => {
+                  setShowPlanModal(false);
+                  setSelectedNewPlan("");
+                }}
+                className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold py-2.5 rounded-full text-xs transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+
+          </motion.div>
+        </div>
+      )}
 
     </div>
   );

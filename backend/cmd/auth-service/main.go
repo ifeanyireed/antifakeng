@@ -80,6 +80,7 @@ func main() {
 	mux.HandleFunc("/api/auth/email/verify", handleVerifyEmail)
 	mux.HandleFunc("/api/auth/email/resend", handleResendEmailVerify)
 	mux.Handle("/api/auth/me", middleware.RequireAuth(http.HandlerFunc(handleMe)))
+	mux.Handle("/api/auth/change-password", middleware.RequireAuth(http.HandlerFunc(handleChangePassword)))
 
 	// Admin route to seed default data if DB is empty
 	mux.HandleFunc("/api/auth/seed", handleSeedData)
@@ -810,5 +811,76 @@ func handleResendEmailVerify(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Verification email sent successfully",
 	})
+}
+
+func handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error": "Unauthorized: no user ID found"}`, http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+
+	if req.CurrentPassword == "" || req.NewPassword == "" {
+		http.Error(w, `{"error": "Current and new passwords are required"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Fetch user from DB
+	var emailStr, pwdHash string
+	err := db.DB.QueryRow(`SELECT email, password_hash FROM users WHERE id = ?`, userID).Scan(&emailStr, &pwdHash)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, `{"error": "User not found"}`, http.StatusNotFound)
+		} else {
+			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Verify current password
+	if !crypto.CheckPasswordHash(req.CurrentPassword, pwdHash) {
+		http.Error(w, `{"error": "Invalid current password"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Hash new password
+	newHash, err := crypto.HashPassword(req.NewPassword)
+	if err != nil {
+		http.Error(w, `{"error": "Failed to hash new password"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Update DB
+	_, err = db.DB.Exec(`UPDATE users SET password_hash = ? WHERE id = ?`, newHash, userID)
+	if err != nil {
+		http.Error(w, `{"error": "Database error updating password"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Send email notification alert
+	go func() {
+		err := email.SendPasswordChangedNotification(emailStr)
+		if err != nil {
+			log.Printf("[Email Alert Error] Failed to send password change notification to %s: %v", emailStr, err)
+		}
+	}()
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message": "Password changed successfully"}`))
 }
 

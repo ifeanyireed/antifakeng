@@ -467,3 +467,22 @@ func SendSupportNotification(formType, name, email, phone, subject, token, store
 	bodyHTML := wrapInTemplate(title, content)
 	return sendSMTP(recipient, subjectHeader, bodyHTML)
 }
+
+// SendPasswordChangedNotification notifies a user that their password was changed
+func SendPasswordChangedNotification(recipient string) error {
+	subject := "🔒 Security Alert: AntiFakeNG Password Changed"
+	content := `
+		<p class="text">Your AntiFakeNG account password has been changed successfully.</p>
+		<p class="text">If you performed this action, no further steps are required.</p>
+		
+		<div style="background-color: #FFF1F2; border: 1px solid #FECDD3; border-radius: 12px; padding: 16px; margin: 24px 0; color: #9F1239;">
+			<p class="text" style="color: #9F1239; margin: 0; font-weight: 700;">⚠️ Did not request this change?</p>
+			<p class="text" style="color: #BE123C; margin: 4px 0 0 0; font-size: 13px;">
+				If you did not change your password, please contact system administration immediately to lock your account.
+			</p>
+		</div>
+	`
+
+	bodyHTML := wrapInTemplate("Password Changed Notification", content)
+	return sendSMTP(recipient, subject, bodyHTML)
+}
