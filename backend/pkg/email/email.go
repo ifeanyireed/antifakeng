@@ -124,23 +124,25 @@ func wrapInTemplate(title, contentHTML string) string {
 			border-bottom: 3px solid #245C44;
 		}
 		.logo-container {
-			display: inline-flex;
-			flex-direction: column;
-			align-items: center;
-			gap: 12px;
+			display: block;
+			text-align: center;
 			text-decoration: none;
 		}
 		.logo-img {
+			display: block;
+			margin: 0 auto 10px auto;
 			height: 48px;
 			width: 48px;
 			object-fit: contain;
 		}
 		.logo-text {
+			display: block;
 			font-size: 22px;
 			font-weight: 800;
 			color: #0D090C;
 			letter-spacing: -0.04em;
 			font-family: 'DM Sans', sans-serif;
+			margin-top: 8px;
 		}
 		.body {
 			padding: 40px 32px 32px 32px;
@@ -273,7 +275,7 @@ func wrapInTemplate(title, contentHTML string) string {
 		<div class="header">
 			<a href="https://antifake.ng" class="logo-container">
 				<img src="https://antifake.ng/logo.png" alt="AntiFakeNG Logo" class="logo-img">
-				<span class="logo-text">AntiFake<span style="color: #245C44;">NG</span></span>
+				<div class="logo-text">AntiFake<span style="color: #245C44;">NG</span></div>
 			</a>
 		</div>
 		<div class="body">
