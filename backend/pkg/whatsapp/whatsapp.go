@@ -2,24 +2,24 @@ package whatsapp
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"log"
-	"net/url"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/ahnara/antifake/backend/pkg/db"
 	"github.com/ahnara/antifake/backend/pkg/email"
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
-	whatsmeow "github.com/pbribeiro/whatsmeow-mysql"
-	"github.com/pbribeiro/whatsmeow-mysql/proto/waCompanionReg"
-	"github.com/pbribeiro/whatsmeow-mysql/proto/waE2E"
-	"github.com/pbribeiro/whatsmeow-mysql/store"
-	"github.com/pbribeiro/whatsmeow-mysql/store/sqlstore"
-	"github.com/pbribeiro/whatsmeow-mysql/types"
-	waLog "github.com/pbribeiro/whatsmeow-mysql/util/log"
+	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/proto/waCompanionReg"
+	"go.mau.fi/whatsmeow/proto/waE2E"
+	"go.mau.fi/whatsmeow/store"
+	"go.mau.fi/whatsmeow/store/sqlstore"
+	"go.mau.fi/whatsmeow/types"
+	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -27,7 +27,43 @@ var Client *whatsmeow.Client
 
 // InitWhatsApp initializes the WhatsApp client and handles pairing if not logged in
 func InitWhatsApp() {
-	// Request 0 days of history and set quota to 0MB to disable history sync completely
+	if db.DB == nil {
+		log.Println("[WhatsApp] Database connection is not initialized. Skipping WhatsApp setup.")
+		return
+	}
+
+	// Auto-migrate the session persistence table
+	_, err := db.DB.Exec(`CREATE TABLE IF NOT EXISTS whatsapp_sessions (
+		id INT PRIMARY KEY,
+		data LONGBLOB,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+	)`)
+	if err != nil {
+		// Fallback for Postgres compatibility if database is PostgreSQL
+		_, err = db.DB.Exec(`CREATE TABLE IF NOT EXISTS whatsapp_sessions (
+			id INT PRIMARY KEY,
+			data BYTEA,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+		)`)
+	}
+	if err != nil {
+		log.Printf("[WhatsApp] Failed to create session persistence table: %v", err)
+	}
+
+	// Restore the SQLite session database from MySQL/Postgres if it exists
+	var fileData []byte
+	row := db.DB.QueryRow("SELECT data FROM whatsapp_sessions WHERE id = 1")
+	err = row.Scan(&fileData)
+	if err == nil && len(fileData) > 0 {
+		err = os.WriteFile("wameow_session.db", fileData, 0644)
+		if err != nil {
+			log.Printf("[WhatsApp] Failed to write restored session to disk: %v", err)
+		} else {
+			log.Println("[WhatsApp] Successfully restored WhatsApp session file from database.")
+		}
+	}
+
+	// Set history sync config to 0 (no history backlog)
 	store.DeviceProps.HistorySyncConfig = &waCompanionReg.DeviceProps_HistorySyncConfig{
 		FullSyncDaysLimit:   proto.Uint32(0),
 		FullSyncSizeMbLimit: proto.Uint32(0),
@@ -35,7 +71,7 @@ func InitWhatsApp() {
 	}
 
 	// Fetch the latest version from WhatsApp servers dynamically to prevent outdated version (405) errors
-	latestVer, err := whatsmeow.GetLatestVersion(nil)
+	latestVer, err := whatsmeow.GetLatestVersion(context.Background(), nil)
 	if err == nil {
 		store.SetWAVersion(*latestVer)
 		log.Printf("[WhatsApp] Dynamically configured client version to: %s", latestVer.String())
@@ -43,66 +79,25 @@ func InitWhatsApp() {
 		log.Printf("[WhatsApp] Failed to fetch latest WhatsApp version dynamically: %v", err)
 	}
 
-	var driverName string
-	var dsn string
-
-	// Try dedicated WHATSAPP_DATABASE_URL first, fall back to main DATABASE_URL
-	dbURL := os.Getenv("WHATSAPP_DATABASE_URL")
-	if dbURL == "" {
-		dbURL = os.Getenv("DATABASE_URL")
-	}
-
-	if dbURL != "" {
-		if strings.HasPrefix(dbURL, "mysql://") {
-			driverName = "mysql"
-			u, err := url.Parse(dbURL)
-			if err == nil {
-				pass, _ := u.User.Password()
-				dsn = fmt.Sprintf("%s:%s@tcp(%s)%s", u.User.Username(), pass, u.Host, u.Path)
-				if !strings.Contains(dsn, "parseTime=") {
-					if strings.Contains(dsn, "?") {
-						dsn += "&parseTime=true"
-					} else {
-						dsn += "?parseTime=true"
-					}
-				}
-			} else {
-				log.Printf("Failed to parse DATABASE_URL for MySQL: %v", err)
-				return
-			}
-		} else if strings.HasPrefix(dbURL, "postgres://") || strings.HasPrefix(dbURL, "postgresql://") {
-			driverName = "postgres"
-			dsn = dbURL
-		} else {
-			driverName = "sqlite3"
-			dbPath := os.Getenv("WAMEOW_DB_PATH")
-			if dbPath == "" {
-				dbPath = "wameow_session.db"
-			}
-			dsn = fmt.Sprintf("file:%s?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000", dbPath)
-		}
-	} else {
-		driverName = "sqlite3"
-		dbPath := os.Getenv("WAMEOW_DB_PATH")
-		if dbPath == "" {
-			dbPath = "wameow_session.db"
-		}
-		dsn = fmt.Sprintf("file:%s?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000", dbPath)
-	}
-
 	dbLog := waLog.Stdout("Database", "WARN", true)
-	container, err := sqlstore.New(driverName, dsn, dbLog)
+	// Open the local SQLite database file (using journal_mode=truncate so we sync a single self-contained file with no -wal or -shm files)
+	container, err := sqlstore.New(context.Background(), "sqlite3", "file:wameow_session.db?_foreign_keys=on&_journal_mode=truncate", dbLog)
 	if err != nil {
-		log.Printf("Failed to initialize database store for whatsmeow: %v", err)
+		log.Printf("[WhatsApp] Failed to initialize sqlstore: %v", err)
 		return
 	}
-	deviceStore, err := container.GetFirstDevice()
+	deviceStore, err := container.GetFirstDevice(context.Background())
 	if err != nil {
-		log.Printf("Failed to get device store for whatsmeow: %v", err)
+		log.Printf("[WhatsApp] Failed to get device store: %v", err)
 		return
 	}
+
 	clientLog := waLog.Stdout("Client", "WARN", true)
 	Client = whatsmeow.NewClient(deviceStore, clientLog)
+	Client.ManualHistorySyncDownload = true
+
+	// Start the database backup worker to persist session updates in the background
+	startBackupWorker()
 
 	if Client.Store.ID == nil {
 		err = Client.Connect()
@@ -130,7 +125,7 @@ func InitWhatsApp() {
 		phoneNum := os.Getenv("WHATSAPP_PHONE")
 		if phoneNum != "" {
 			// Generate 8-character pairing code
-			code, err := Client.PairPhone(phoneNum, true, whatsmeow.PairClientChrome, "Chrome (Linux)")
+			code, err := Client.PairPhone(context.Background(), phoneNum, true, whatsmeow.PairClientChrome, "Chrome (Linux)")
 			if err != nil {
 				log.Printf("Failed to generate WhatsApp phone pairing code: %v", err)
 			} else {
@@ -175,6 +170,49 @@ func InitWhatsApp() {
 		}
 		log.Println("WhatsApp client connected successfully.")
 	}
+}
+
+func startBackupWorker() {
+	var lastHash string
+	ticker := time.NewTicker(3 * time.Second)
+	go func() {
+		for range ticker.C {
+			if db.DB == nil {
+				continue
+			}
+
+			// In truncate journal mode, changes are written to the main file, keeping wameow_session.db self-contained
+			data, err := os.ReadFile("wameow_session.db")
+			if err != nil {
+				continue
+			}
+
+			// Compute MD5 hash to detect actual changes
+			hasher := md5.New()
+			hasher.Write(data)
+			hash := hex.EncodeToString(hasher.Sum(nil))
+
+			if hash == lastHash {
+				continue // No changes
+			}
+
+			// Database-agnostic upsert: UPDATE first, then INSERT if rows affected is 0
+			res, err := db.DB.Exec("UPDATE whatsapp_sessions SET data = ? WHERE id = 1", data)
+			if err == nil {
+				rows, _ := res.RowsAffected()
+				if rows == 0 {
+					_, err = db.DB.Exec("INSERT INTO whatsapp_sessions (id, data) VALUES (1, ?)", data)
+				}
+			}
+
+			if err != nil {
+				log.Printf("[WhatsApp] Failed to backup session to database: %v", err)
+			} else {
+				lastHash = hash
+				log.Println("[WhatsApp] Successfully backed up WhatsApp session file to database.")
+			}
+		}
+	}()
 }
 
 // SendOTP sends verification details to the consumer via WhatsApp
