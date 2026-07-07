@@ -31,6 +31,7 @@ type VerificationResponse struct {
 	Batch       models.Batch   `json:"batch,omitempty"`
 	BrandName   string         `json:"brand_name,omitempty"`
 	BrandLogo   string         `json:"brand_logo_url,omitempty"`
+	BrandPlan   string         `json:"brand_plan,omitempty"`
 }
 
 func main() {
@@ -76,11 +77,12 @@ func fetchTokenMetadata(w http.ResponseWriter, token string) {
 	var brandName string
 	var brandLogo sql.NullString
 	var desc, img sql.NullString
+	var brandPlan string
 
 	query := `SELECT q.id, q.batch_id, q.token, q.signature, q.status, 
 	                 b.id, b.product_id, b.batch_code, b.quantity, b.manufacture_date, b.expiry_date, b.status,
 	                 p.id, p.producer_id, p.name, p.sku, p.category, p.description, p.image_url,
-	                 pr.name, pr.brand_logo_url
+	                 pr.name, pr.brand_logo_url, COALESCE(pr.plan_tier, '')
 			  FROM qr_codes q
 			  JOIN batches b ON q.batch_id = b.id
 			  JOIN products p ON b.product_id = p.id
@@ -91,7 +93,7 @@ func fetchTokenMetadata(w http.ResponseWriter, token string) {
 		&q.ID, &q.BatchID, &q.Token, &q.Signature, &q.Status,
 		&b.ID, &b.ProductID, &b.BatchCode, &b.Quantity, &b.ManufactureDate, &b.ExpiryDate, &b.Status,
 		&p.ID, &p.ProducerID, &p.Name, &p.SKU, &p.Category, &desc, &img,
-		&brandName, &brandLogo,
+		&brandName, &brandLogo, &brandPlan,
 	)
 
 	p.Description = desc.String
@@ -122,6 +124,7 @@ func fetchTokenMetadata(w http.ResponseWriter, token string) {
 			Batch:     b,
 			BrandName: brandName,
 			BrandLogo: brandLogo.String,
+			BrandPlan: brandPlan,
 		})
 		return
 	}
@@ -137,6 +140,7 @@ func fetchTokenMetadata(w http.ResponseWriter, token string) {
 			Batch:     b,
 			BrandName: brandName,
 			BrandLogo: brandLogo.String,
+			BrandPlan: brandPlan,
 		})
 		return
 	}
@@ -150,6 +154,7 @@ func fetchTokenMetadata(w http.ResponseWriter, token string) {
 		Batch:     b,
 		BrandName: brandName,
 		BrandLogo: brandLogo.String,
+		BrandPlan: brandPlan,
 	})
 }
 

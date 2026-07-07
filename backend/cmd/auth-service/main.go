@@ -245,6 +245,21 @@ func handleOTPRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// SMS channel plan enforcement check
+	if strings.ToLower(req.Channel) == "sms" {
+		var planTier string
+		err := db.DB.QueryRow(`
+			SELECT COALESCE(pr.plan_tier, '') FROM qr_codes q
+			JOIN batches b ON q.batch_id = b.id
+			JOIN products p ON b.product_id = p.id
+			JOIN producers pr ON p.producer_id = pr.id
+			WHERE q.token = ?`, req.Token).Scan(&planTier)
+		if err == nil && strings.ToLower(planTier) != "starter" {
+			http.Error(w, `{"error": "SMS verification is only available on the Starter plan. Please request verification code via WhatsApp."}`, http.StatusBadRequest)
+			return
+		}
+	}
+
 	// In production, we'd send via SMS. For demo, we'll generate a code and log it.
 	// Allow 123456 as a default shortcut for testing.
 	code := fmt.Sprintf("%06d", rand.Intn(900000)+100000)

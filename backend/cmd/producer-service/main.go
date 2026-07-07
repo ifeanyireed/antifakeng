@@ -2,11 +2,14 @@ package main
 
 import (
 	"crypto/rand"
+	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -23,10 +26,14 @@ func main() {
 	db.InitDB()
 	defer db.DB.Close()
 
+	// Start scheduled background task to cleanup uploaded images older than 90 days
+	storage.StartCleanupScheduler(24 * time.Hour)
+
 	mux := http.NewServeMux()
 
 	// Endpoints wrapped with CORS + RequireAuth middleware
 	mux.Handle("/api/producer/products", middleware.RequireAuth(http.HandlerFunc(handleProducts)))
+	mux.Handle("/api/producer/products/", middleware.RequireAuth(http.HandlerFunc(handleSingleProductOperations)))
 	mux.Handle("/api/producer/batches", middleware.RequireAuth(http.HandlerFunc(handleBatches)))
 	mux.Handle("/api/producer/batches/", middleware.RequireAuth(http.HandlerFunc(handleSingleBatchOperations)))
 	mux.Handle("/api/producer/upload", middleware.RequireAuth(http.HandlerFunc(handleUpload)))
@@ -34,8 +41,12 @@ func main() {
 	mux.Handle("/api/producer/admin/producers", middleware.RequireAuth(http.HandlerFunc(handleAdminProducers)))
 	mux.Handle("/api/producer/admin/producers/", middleware.RequireAuth(http.HandlerFunc(handleAdminSingleProducer)))
 
-	// Serve static uploads
-	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+	// Serve static uploads (local filesystem or remote SFTP proxy cache)
+	if os.Getenv("SFTP_HOST") != "" {
+		mux.HandleFunc("/uploads/", handleRemoteUploadsProxy)
+	} else {
+		mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+	}
 
 	log.Println("Producer Service starting on port 8082...")
 	log.Fatal(http.ListenAndServe(":8082", middleware.CORS(mux)))
@@ -127,7 +138,7 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		rows, err := db.DB.Query(`SELECT b.id, b.product_id, b.batch_code, b.quantity, b.manufacture_date, b.expiry_date, b.status, b.created_at, b.label_image_url, b.label_rotation, b.qr_position 
+		rows, err := db.DB.Query(`SELECT b.id, b.product_id, b.batch_code, b.quantity, b.manufacture_date, b.expiry_date, b.status, b.created_at, COALESCE(b.label_image_url, ''), b.label_rotation, COALESCE(b.qr_position, 'bottom-right') 
 			FROM batches b
 			JOIN products p ON b.product_id = p.id
 			WHERE p.producer_id = ?`, prodID)
@@ -188,7 +199,7 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var created models.Batch
-		err = db.DB.QueryRow(`SELECT id, product_id, batch_code, quantity, manufacture_date, expiry_date, status, created_at, label_image_url, label_rotation, qr_position 
+		err = db.DB.QueryRow(`SELECT id, product_id, batch_code, quantity, manufacture_date, expiry_date, status, created_at, COALESCE(label_image_url, ''), label_rotation, COALESCE(qr_position, 'bottom-right') 
 			FROM batches WHERE batch_code = ?`, b.BatchCode).Scan(
 			&created.ID, &created.ProductID, &created.BatchCode, &created.Quantity, &created.ManufactureDate, &created.ExpiryDate, &created.Status, &created.CreatedAt, &created.LabelImageURL, &created.LabelRotation, &created.QRPosition)
 		if err != nil {
@@ -237,9 +248,10 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 	var labelImageURL string
 	var labelRotation int
 	var qrPosition string
-	err = db.DB.QueryRow(`SELECT p.producer_id, b.quantity, COALESCE(b.label_image_url, ''), b.label_rotation, COALESCE(b.qr_position, '') FROM batches b 
+	var productImageURL string
+	err = db.DB.QueryRow(`SELECT p.producer_id, b.quantity, COALESCE(b.label_image_url, ''), b.label_rotation, COALESCE(b.qr_position, ''), COALESCE(p.image_url, '') FROM batches b 
 		JOIN products p ON b.product_id = p.id 
-		WHERE b.id = ?`, batchID).Scan(&ownerProdID, &batchQty, &labelImageURL, &labelRotation, &qrPosition)
+		WHERE b.id = ?`, batchID).Scan(&ownerProdID, &batchQty, &labelImageURL, &labelRotation, &qrPosition, &productImageURL)
 	if err == sql.ErrNoRows || ownerProdID != prodID {
 		http.Error(w, `{"error": "Forbidden: invalid batch ID"}`, http.StatusForbidden)
 		return
@@ -488,6 +500,7 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 			LabelImage:    labelImageURL,
 			LabelRotation: labelRotation,
 			QRPosition:    qrPosition,
+			ProductImage:  productImageURL,
 		}
 
 		// Determine if download or inline preview is requested
@@ -540,6 +553,33 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 			"message": "Batch recalled successfully.",
 			"status":  models.StatusRecalled,
 		})
+		return
+	}
+	if action == "" && r.Method == http.MethodPut {
+		var req struct {
+			LabelImageURL string `json:"label_image_url"`
+			LabelRotation int    `json:"label_rotation"`
+			QRPosition    string `json:"qr_position"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+			return
+		}
+
+		_, err = db.DB.Exec(`UPDATE batches SET label_image_url = ?, label_rotation = ?, qr_position = ? WHERE id = ?`,
+			req.LabelImageURL, req.LabelRotation, req.QRPosition, batchID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to update batch: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		// Log audit trail
+		userID, _ := middleware.GetUserID(r.Context())
+		db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
+			VALUES (?, 'UPDATE_BATCH_LABEL', 'batch', ?, ?)`, userID, batchID, time.Now())
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"message": "Batch label settings successfully updated."})
 		return
 	}
 
@@ -839,4 +879,146 @@ func handleAdminSingleProducer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+}
+
+func handleRemoteUploadsProxy(w http.ResponseWriter, r *http.Request) {
+	filename := strings.TrimPrefix(r.URL.Path, "/uploads/")
+	if filename == "" {
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+
+	sftpHost := os.Getenv("SFTP_HOST")
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			ServerName:         "antifake.ng",
+			InsecureSkipVerify: true,
+		},
+	}
+	client := &http.Client{Transport: tr}
+
+	remoteURL := fmt.Sprintf("https://%s/uploads/%s", sftpHost, filename)
+	req, err := http.NewRequest("GET", remoteURL, nil)
+	if err != nil {
+		http.Error(w, "Proxy error", http.StatusInternalServerError)
+		return
+	}
+	req.Host = "antifake.ng"
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[Proxy] SFTP proxy fetch failed for %s: %v", filename, err)
+		http.Error(w, "File host unreachable", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+		return
+	}
+
+	// Forward response headers and body
+	for k, vv := range resp.Header {
+		for _, v := range vv {
+			w.Header().Add(k, v)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
+func handleSingleProductOperations(w http.ResponseWriter, r *http.Request) {
+	prodID, ok := middleware.GetProducerID(r.Context())
+	if !ok {
+		http.Error(w, `{"error": "Unauthorized: no producer ID associated with user"}`, http.StatusForbidden)
+		return
+	}
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 5 {
+		http.Error(w, `{"error": "Invalid path"}`, http.StatusBadRequest)
+		return
+	}
+
+	productIDStr := parts[4]
+	productID, err := strconv.Atoi(productIDStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid product ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Verify product ownership
+	var ownerProdID int
+	err = db.DB.QueryRow(`SELECT producer_id FROM products WHERE id = ?`, productID).Scan(&ownerProdID)
+	if err == sql.ErrNoRows {
+		http.Error(w, `{"error": "Product not found"}`, http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if ownerProdID != prodID {
+		http.Error(w, `{"error": "Forbidden: you do not own this product"}`, http.StatusForbidden)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		var p models.Product
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+			return
+		}
+
+		if p.Name == "" || p.SKU == "" || p.Category == "" {
+			http.Error(w, `{"error": "Missing required fields (name, sku, category)"}`, http.StatusBadRequest)
+			return
+		}
+
+		_, err = db.DB.Exec(`UPDATE products SET name = ?, sku = ?, category = ?, description = ?, image_url = ? WHERE id = ?`,
+			p.Name, p.SKU, p.Category, p.Description, p.ImageURL, productID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to update product (SKU may exist): %v"}`, err), http.StatusBadRequest)
+			return
+		}
+
+		// Log audit trail
+		userID, _ := middleware.GetUserID(r.Context())
+		db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
+			VALUES (?, ?, 'product', ?, ?)`, userID, "UPDATE_PRODUCT", productID, time.Now())
+
+		// Fetch and return the updated product
+		var updated models.Product
+		err = db.DB.QueryRow(`SELECT id, producer_id, name, sku, category, description, image_url, created_at 
+			FROM products WHERE id = ?`, productID).Scan(
+			&updated.ID, &updated.ProducerID, &updated.Name, &updated.SKU, &updated.Category, &updated.Description, &updated.ImageURL, &updated.CreatedAt)
+		if err == nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(updated)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+
+	case http.MethodDelete:
+		// Delete product (cascades to batches and qr_codes)
+		_, err = db.DB.Exec(`DELETE FROM products WHERE id = ?`, productID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to delete product: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		// Log audit trail
+		userID, _ := middleware.GetUserID(r.Context())
+		db.DB.Exec(`INSERT INTO audit_logs (actor_user_id, action, target_entity, target_id, created_at)
+			VALUES (?, ?, 'product', ?, ?)`, userID, "DELETE_PRODUCT", productID, time.Now())
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"message": "Product SKU and all associated batch/tag data successfully deleted."})
+
+	default:
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+	}
 }

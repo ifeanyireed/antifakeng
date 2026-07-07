@@ -396,33 +396,43 @@ export default function ConsumerPortal() {
                   </div>
 
                   {/* Channel Toggle */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery Channel</label>
-                    <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200/50">
-                      <button
-                        type="button"
-                        onClick={() => setChannel("whatsapp")}
-                        className={`py-2 rounded-lg text-xs font-bold transition-all ${
-                          channel === "whatsapp"
-                            ? "bg-white text-slate-800 shadow-xs"
-                            : "text-slate-500 hover:text-slate-800"
-                        }`}
-                      >
-                        WhatsApp
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setChannel("sms")}
-                        className={`py-2 rounded-lg text-xs font-bold transition-all ${
-                          channel === "sms"
-                            ? "bg-white text-slate-800 shadow-xs"
-                            : "text-slate-500 hover:text-slate-800"
-                        }`}
-                      >
-                        SMS Message
-                      </button>
+                  {(!verificationData?.brand_plan || verificationData?.brand_plan.toLowerCase() === "starter") ? (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery Channel</label>
+                      <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200/50">
+                        <button
+                          type="button"
+                          onClick={() => setChannel("whatsapp")}
+                          className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                            channel === "whatsapp"
+                              ? "bg-white text-slate-800 shadow-xs"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          WhatsApp
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setChannel("sms")}
+                          className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                            channel === "sms"
+                              ? "bg-white text-slate-800 shadow-xs"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          SMS Message
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery Channel</label>
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60 text-xs font-bold text-slate-800 flex items-center justify-between">
+                        <span>WhatsApp Only</span>
+                        <span className="text-[10px] text-emerald-600 font-extrabold uppercase bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 animate-pulse">Active</span>
+                      </div>
+                    </div>
+                  )}
 
                   {apiError && (
                     <p className="text-[10px] text-red-500 font-bold leading-normal text-center">{apiError}</p>

@@ -137,7 +137,9 @@ func UploadImage(file multipart.File, header *multipart.FileHeader) (string, err
 	_ = sftpClient.Chmod(remotePath, 0644)
 
 	if baseURL == "" {
-		baseURL = "https://antifake.ng/uploads"
+		baseURL = "https://cdn.antifake.ng/uploads"
+	} else if strings.Contains(baseURL, "antifake.ng/uploads") && !strings.Contains(baseURL, "cdn.antifake.ng/uploads") {
+		baseURL = strings.Replace(baseURL, "antifake.ng/uploads", "cdn.antifake.ng/uploads", 1)
 	}
 	return fmt.Sprintf("%s/%s", baseURL, filename), nil
 }
