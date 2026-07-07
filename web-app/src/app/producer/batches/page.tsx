@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
+import { AhnaraLoader } from "@/components/ahnara/AhnaraLoader";
 import {
   IconPlus,
   IconSearch,
@@ -657,8 +658,8 @@ export default function ProducerBatches() {
                                     SERIAL: <span className="font-mono text-slate-800 font-extrabold">B-XXXX</span>
                                   </div>
                                   <p 
-                                    style={{ fontSize: `${9 * (qrScale / 100)}px`, marginTop: `${1 * (qrScale / 100) * 3.5}px` }}
-                                    className="text-slate-600 font-medium leading-tight line-clamp-2"
+                                    style={{ fontSize: `${9 * (qrScale / 100)}px`, marginTop: `${1 * (qrScale / 100) * 3.5}px`, lineHeight: 1.1, paddingTop: `${0.5 * (qrScale / 100) * 3.5}px` }}
+                                    className="text-slate-600 font-medium line-clamp-3"
                                   >
                                     {printMessage || "Scan QR code or visit antifake.ng/verify..."}
                                   </p>
@@ -801,9 +802,7 @@ export default function ProducerBatches() {
               {isGenerating ? (
                 /* Generation Status */
                 <div className="py-12 flex flex-col items-center justify-center text-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center animate-spin">
-                    <IconPrinter className="w-8 h-8 text-[#0089C1]" />
-                  </div>
+                  <AhnaraLoader size="lg" />
                   <div>
                     <h4 className="text-lg font-black text-slate-800">Generating Print Package...</h4>
                     <p className="text-slate-400 text-sm mt-0.5">Structuring high-resolution codes and formatting grid pages.</p>
@@ -1051,19 +1050,18 @@ export default function ProducerBatches() {
                           return (
                             <div
                               key={idx}
-                              className="w-[80mm] h-[40mm] border border-slate-200 rounded-none relative overflow-hidden select-none shadow-xs mx-auto bg-white flex items-center justify-center"
+                              className="relative inline-block select-none w-[80mm] h-auto bg-white animate-fade-in"
                             >
-                              <div className="relative max-w-full max-h-full flex items-center justify-center animate-fade-in">
-                                {/* Background Image Layer */}
-                                <img
-                                  src={activePrintBatch.label_image_url}
-                                  alt="Label Background"
-                                  style={{
-                                    transform: `rotate(${activePrintBatch.label_rotation || 0}deg)`,
-                                    transformOrigin: "center"
-                                  }}
-                                  className="max-w-full max-h-full w-auto h-auto object-contain pointer-events-none block"
-                                />
+                              {/* Background Image Layer */}
+                              <img
+                                src={activePrintBatch.label_image_url}
+                                alt="Label Background"
+                                style={{
+                                  transform: `rotate(${activePrintBatch.label_rotation || 0}deg)`,
+                                  transformOrigin: "center"
+                                }}
+                                className="w-full h-auto block pointer-events-none"
+                              />
 
                                 {/* Embedded Original QR Label Card */}
                                 <div
@@ -1107,8 +1105,8 @@ export default function ProducerBatches() {
                                       SERIAL: <span className="font-mono text-slate-800 font-extrabold">{tokenObj.token}</span>
                                     </div>
                                     <p 
-                                      style={{ fontSize: `${11 * scale}px`, marginTop: `${1 * scale}mm` }}
-                                      className="text-slate-600 font-medium leading-tight line-clamp-2"
+                                      style={{ fontSize: `${11 * scale}px`, marginTop: `${1 * scale}mm`, lineHeight: 1.1, paddingTop: `${0.5 * scale}mm` }}
+                                      className="text-slate-600 font-medium line-clamp-3"
                                     >
                                       {printMessage || "Scan QR code or visit antifake.ng/verify, input serial to check authenticity."}
                                     </p>
@@ -1131,8 +1129,7 @@ export default function ProducerBatches() {
                                 </div>
                               </div>
                             </div>
-                          </div>
-                          );
+                            );
                         }
 
                         return (
@@ -1272,19 +1269,18 @@ export default function ProducerBatches() {
                 return (
                   <div
                     key={idx}
-                    className="print-card w-[80mm] h-[40mm] border border-slate-300 rounded-none relative overflow-hidden select-none bg-white flex items-center justify-center"
+                    className="print-card relative inline-block select-none w-[80mm] h-auto bg-white"
                   >
-                    <div className="relative max-w-full max-h-full flex items-center justify-center">
-                      {/* Background Image Layer */}
-                      <img
-                        src={activePrintBatch.label_image_url}
-                        alt="Label Background"
-                        style={{
-                          transform: `rotate(${activePrintBatch.label_rotation || 0}deg)`,
-                          transformOrigin: "center"
-                        }}
-                        className="max-w-full max-h-full w-auto h-auto object-contain pointer-events-none block"
-                      />
+                    {/* Background Image Layer */}
+                    <img
+                      src={activePrintBatch.label_image_url}
+                      alt="Label Background"
+                      style={{
+                        transform: `rotate(${activePrintBatch.label_rotation || 0}deg)`,
+                        transformOrigin: "center"
+                      }}
+                      className="w-full h-auto block pointer-events-none"
+                    />
 
                       {/* Centered Embedded Original QR Label Card */}
                       <div
@@ -1328,8 +1324,8 @@ export default function ProducerBatches() {
                             SERIAL: <span className="font-mono text-slate-800 font-extrabold">{tokenObj.token}</span>
                           </div>
                           <p 
-                            style={{ fontSize: `${11 * scale}px`, marginTop: `${1 * scale}mm` }}
-                            className="text-slate-600 font-medium leading-tight line-clamp-2"
+                            style={{ fontSize: `${11 * scale}px`, marginTop: `${1 * scale}mm`, lineHeight: 1.1, paddingTop: `${0.5 * scale}mm` }}
+                            className="text-slate-600 font-medium line-clamp-3"
                           >
                             {printMessage || "Scan QR code or visit antifake.ng/verify, input serial to check authenticity."}
                           </p>
@@ -1352,8 +1348,7 @@ export default function ProducerBatches() {
                       </div>
                     </div>
                   </div>
-                </div>
-                );
+                  );
               }
 
               return (
@@ -1531,8 +1526,8 @@ export default function ProducerBatches() {
                                     SERIAL: <span className="font-mono text-slate-800 font-extrabold">B-XXXX</span>
                                   </div>
                                   <p 
-                                    style={{ fontSize: `${9 * (editQrScale / 100)}px`, marginTop: `${1 * (editQrScale / 100) * 3.5}px` }}
-                                    className="text-slate-600 font-medium leading-tight line-clamp-2"
+                                    style={{ fontSize: `${9 * (editQrScale / 100)}px`, marginTop: `${1 * (editQrScale / 100) * 3.5}px`, lineHeight: 1.1, paddingTop: `${0.5 * (editQrScale / 100) * 3.5}px` }}
+                                    className="text-slate-600 font-medium line-clamp-3"
                                   >
                                     {printMessage || "Scan QR code or visit antifake.ng/verify..."}
                                   </p>
