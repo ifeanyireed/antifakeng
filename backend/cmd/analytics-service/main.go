@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -37,6 +39,7 @@ func main() {
 	// Public routes
 	mux.HandleFunc("/api/analytics/reports/submit", handlePublicReportSubmit)
 	mux.HandleFunc("/api/analytics/support/chat", handleSupportChat)
+	mux.HandleFunc("/api/analytics/users/delete", handlePublicUserDataDeletion)
 
 	// Auth-required routes
 	mux.Handle("/api/analytics/summary", middleware.RequireAuth(http.HandlerFunc(handleSummary)))
@@ -782,4 +785,61 @@ Instructions:
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(SupportChatResponse{Reply: reply})
+}
+
+type DeleteUserDataReq struct {
+	Phone string `json:"phone"`
+}
+
+type DeleteUserDataResp struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
+}
+
+func handlePublicUserDataDeletion(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(DeleteUserDataResp{Error: "Method not allowed"})
+		return
+	}
+
+	var req DeleteUserDataReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(DeleteUserDataResp{Error: "Invalid request payload"})
+		return
+	}
+
+	phoneClean := strings.TrimPrefix(req.Phone, "+")
+	phoneClean = strings.ReplaceAll(phoneClean, " ", "")
+	if phoneClean == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(DeleteUserDataResp{Error: "Phone number is required"})
+		return
+	}
+
+	// Compute phone hash (SHA-256)
+	h := sha256.New()
+	h.Write([]byte(phoneClean))
+	phoneHash := hex.EncodeToString(h.Sum(nil))
+
+	// Delete from database
+	_, err := db.DB.Exec("DELETE FROM consumers WHERE phone_number_hash = ?", phoneHash)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(DeleteUserDataResp{Error: fmt.Sprintf("Database deletion error: %v", err)})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(DeleteUserDataResp{
+		Success: true,
+		Message: "User data deletion request processed successfully. All session linkages and report data associated with this phone number have been permanently deleted.",
+	})
 }

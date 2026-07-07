@@ -708,7 +708,7 @@ export default function OnboardingPage() {
                   reference: "pay_" + Math.random().toString(36).substring(2, 12),
                   email: "billing@brand.com",
                   amount: selectedPlan === "Starter" ? 15000000 : 45000000,
-                  publicKey: "pk_test_1573581f39d4a4aa7486dc09a13d91856f085063",
+                  publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "",
                 }}
                 onSuccess={(ref) => {
                   alert(`Payment Confirmed. Tx Ref: ${ref.reference}. Activating plan...`);

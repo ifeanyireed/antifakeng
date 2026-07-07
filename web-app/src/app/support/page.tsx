@@ -500,8 +500,8 @@ export default function SupportPage() {
       <footer className="w-full max-w-7xl mx-auto px-6 py-8 border-t border-slate-300/20 text-center text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-4 mt-auto">
         <p>© 2026 AntiFakeNG Authenticity Platform. All rights reserved.</p>
         <div className="flex gap-4">
-          <Link href="/terms" className="hover:text-slate-800 cursor-pointer transition-colors">Terms of Service</Link>
-          <Link href="/privacy" className="hover:text-slate-800 cursor-pointer transition-colors">Privacy Policy</Link>
+          <Link href="/terms-of-service" className="hover:text-slate-800 cursor-pointer transition-colors">Terms of Service</Link>
+          <Link href="/privacy-policy" className="hover:text-slate-800 cursor-pointer transition-colors">Privacy Policy</Link>
           <Link href="/compliance" className="hover:text-slate-800 cursor-pointer transition-colors">Compliance Posture</Link>
         </div>
       </footer>

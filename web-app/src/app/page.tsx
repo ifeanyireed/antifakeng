@@ -858,8 +858,8 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-slate-300/30 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           <span>&copy; {new Date().getFullYear()} AntiFakeNG. All rights reserved.</span>
           <div className="flex gap-6">
-            <Link href="/terms" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
-            <Link href="/privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
+            <Link href="/terms-of-service" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
+            <Link href="/privacy-policy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
             <Link href="/compliance" className="hover:text-slate-600 transition-colors">Compliance Posture</Link>
           </div>
         </div>
