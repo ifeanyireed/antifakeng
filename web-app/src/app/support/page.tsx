@@ -3,7 +3,15 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { IconHeadphones, IconX } from "@tabler/icons-react";
+import { 
+  IconHeadphones, 
+  IconX, 
+  IconSearch, 
+  IconHelp, 
+  IconMail, 
+  IconAlertTriangle,
+  IconSend
+} from "@tabler/icons-react";
 
 const renderMarkdown = (content: string) => {
   const parts = content.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\))/g);
@@ -218,8 +226,8 @@ export default function SupportPage() {
           </p>
 
           {/* Search bar */}
-          <div className="w-full max-w-md bg-white rounded-full p-1.5 shadow-md flex items-center border border-slate-200/80">
-            <span className="pl-4 pr-2 text-slate-400">🔍</span>
+          <div className="w-full max-w-md bg-white rounded-full p-1.5 shadow-md flex items-center border border-slate-200/80 pl-4">
+            <IconSearch className="w-4 h-4 text-slate-400 mr-2 flex-shrink-0" />
             <input 
               id="faq-search-input"
               type="text" 
@@ -247,7 +255,7 @@ export default function SupportPage() {
         <div className="lg:col-span-2 flex flex-col gap-6">
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/30">
             <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <span>❓</span> Frequently Asked Questions
+              <IconHelp className="w-5 h-5 text-[#0089C1]" /> Frequently Asked Questions
             </h2>
 
             {/* Category Selectors */}
@@ -335,13 +343,13 @@ export default function SupportPage() {
                   setFormType("contact");
                   setFormSubmitted(false);
                 }}
-                className={`flex-1 pb-3 text-xs font-bold text-center border-b-2 transition-all ${
+                className={`flex-1 pb-3 text-xs font-bold text-center border-b-2 transition-all flex items-center justify-center gap-1.5 ${
                   formType === "contact" 
                     ? "border-[#0089C1] text-slate-900" 
                     : "border-transparent text-slate-400 hover:text-slate-600"
                 }`}
               >
-                ✉️ Support
+                <IconMail className="w-4 h-4" /> Support
               </button>
               <button
                 id="tab-btn-report"
@@ -349,13 +357,13 @@ export default function SupportPage() {
                   setFormType("report");
                   setFormSubmitted(false);
                 }}
-                className={`flex-1 pb-3 text-xs font-bold text-center border-b-2 transition-all ${
+                className={`flex-1 pb-3 text-xs font-bold text-center border-b-2 transition-all flex items-center justify-center gap-1.5 ${
                   formType === "report" 
                     ? "border-red-500 text-slate-900" 
                     : "border-transparent text-slate-400 hover:text-slate-600"
                 }`}
               >
-                ⚠️ Report Fake
+                <IconAlertTriangle className="w-4 h-4 text-red-500" /> Report Fake
               </button>
             </div>
 
@@ -365,8 +373,12 @@ export default function SupportPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-center py-8"
               >
-                <div className="text-4xl mb-4">
-                  {formType === "contact" ? "🚀" : "🚨"}
+                <div className="flex justify-center mb-4">
+                  {formType === "contact" ? (
+                    <IconSend className="w-10 h-10 text-[#0089C1]" />
+                  ) : (
+                    <IconAlertTriangle className="w-10 h-10 text-red-500 animate-pulse" />
+                  )}
                 </div>
                 <h3 className="text-base font-bold text-slate-900 mb-2">
                   {formType === "contact" ? "Message Received" : "Report Filed Successfully"}

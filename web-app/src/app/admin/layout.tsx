@@ -12,7 +12,8 @@ import {
   IconFileText,
   IconBell,
   IconSettings,
-  IconLogout
+  IconLogout,
+  IconInbox
 } from "@tabler/icons-react";
 import { RoleGuard } from "@/components/ahnara/RoleGuard";
 import { useAuth } from "@/components/ahnara/AuthContext";
@@ -25,6 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "SaaS Dashboard", href: "/admin/dashboard", icon: IconLayoutDashboard, activeIcon: IconLayoutDashboardFilled },
     { name: "Producers & Tenants", href: "/admin/producers", icon: IconBuildingStore, activeIcon: IconBuildingStore },
     { name: "Global Fraud Center", href: "/admin/fraud", icon: IconAlertTriangle, activeIcon: IconAlertTriangle },
+    { name: "Inbound Requests", href: "/admin/submissions", icon: IconInbox, activeIcon: IconInbox },
     { name: "System Audit Logs", href: "/admin/logs", icon: IconFileText, activeIcon: IconFileText },
   ];
 

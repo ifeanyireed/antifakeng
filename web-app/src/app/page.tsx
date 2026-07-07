@@ -55,10 +55,13 @@ export default function HomePage() {
   const [demoEmail, setDemoEmail] = useState("");
   const [demoMessage, setDemoMessage] = useState("");
   const [demoSubmitted, setDemoSubmitted] = useState(false);
+  const [isSubmittingDemo, setIsSubmittingDemo] = useState(false);
 
   const handleDemoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingDemo) return;
     try {
+      setIsSubmittingDemo(true);
       const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
       const res = await fetch(`${API_BASE}/api/auth/support/submit`, {
         method: "POST",
@@ -89,6 +92,8 @@ export default function HomePage() {
       }
     } catch (err) {
       alert("Demo request service is currently offline.");
+    } finally {
+      setIsSubmittingDemo(false);
     }
   };
 
@@ -796,8 +801,20 @@ export default function HomePage() {
                   className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1] resize-none" 
                   required 
                 />
-                <button type="submit" className="bg-[#8BB436] hover:bg-[#729c25] text-white transition-all font-bold py-3 rounded-full text-xs shadow-md">
-                  Send Request
+                <button 
+                  type="submit" 
+                  disabled={isSubmittingDemo}
+                  className="bg-[#8BB436] hover:bg-[#729c25] disabled:bg-slate-500 text-white transition-all font-bold py-3 rounded-full text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed w-full"
+                >
+                  {isSubmittingDemo ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Sending...
+                    </>
+                  ) : "Send Request"}
                 </button>
               </form>
             )}

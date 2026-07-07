@@ -181,6 +181,19 @@ func createTables(driver string) {
 				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 				FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
 			);`,
+			`CREATE TABLE IF NOT EXISTS support_submissions (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				form_type VARCHAR(50) NOT NULL,
+				name VARCHAR(255) NULL,
+				email VARCHAR(255) NULL,
+				phone VARCHAR(50) NULL,
+				subject VARCHAR(255) NULL,
+				token VARCHAR(100) NULL,
+				store_name VARCHAR(255) NULL,
+				message TEXT NULL,
+				status VARCHAR(50) NOT NULL DEFAULT 'pending',
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);`,
 		}
 	} else {
 		// PostgreSQL schema
@@ -280,6 +293,19 @@ func createTables(driver string) {
 				action VARCHAR(255) NOT NULL,
 				target_entity VARCHAR(100) NOT NULL,
 				target_id INTEGER NOT NULL,
+				created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+			);`,
+			`CREATE TABLE IF NOT EXISTS support_submissions (
+				id SERIAL PRIMARY KEY,
+				form_type VARCHAR(50) NOT NULL,
+				name VARCHAR(255) NULL,
+				email VARCHAR(255) NULL,
+				phone VARCHAR(50) NULL,
+				subject VARCHAR(255) NULL,
+				token VARCHAR(100) NULL,
+				store_name VARCHAR(255) NULL,
+				message TEXT NULL,
+				status VARCHAR(50) NOT NULL DEFAULT 'pending',
 				created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 			);`,
 		}

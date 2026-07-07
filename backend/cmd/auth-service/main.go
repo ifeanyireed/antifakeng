@@ -81,6 +81,7 @@ func main() {
 	mux.HandleFunc("/api/auth/email/resend", handleResendEmailVerify)
 	mux.Handle("/api/auth/me", middleware.RequireAuth(http.HandlerFunc(handleMe)))
 	mux.Handle("/api/auth/change-password", middleware.RequireAuth(http.HandlerFunc(handleChangePassword)))
+	mux.Handle("/api/auth/admin/support-submissions", middleware.RequireAuth(http.HandlerFunc(handleAdminSupportSubmissions)))
 
 	// Admin route to seed default data if DB is empty
 	mux.HandleFunc("/api/auth/seed", handleSeedData)
@@ -594,6 +595,16 @@ func handleSupportSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Insert into support_submissions table
+	_, dbErr := db.DB.Exec(`
+		INSERT INTO support_submissions (form_type, name, email, phone, subject, token, store_name, message, status)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+		req.FormType, req.Name, req.Email, req.Phone, req.Subject, req.Token, req.StoreName, req.Message,
+	)
+	if dbErr != nil {
+		log.Printf("Failed to store support submission in database: %v", dbErr)
+	}
+
 	// Dispatch notification email to administrator (ifeanyireed@gmail.com)
 	err := email.SendSupportNotification(req.FormType, req.Name, req.Email, req.Phone, req.Subject, req.Token, req.StoreName, req.Message)
 	if err != nil {
@@ -882,5 +893,75 @@ func handleChangePassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"message": "Password changed successfully"}`))
+}
+
+func handleAdminSupportSubmissions(w http.ResponseWriter, r *http.Request) {
+	roleVal := r.Context().Value(middleware.ClaimsRole)
+	if roleVal == nil || roleVal.(string) != "admin" {
+		http.Error(w, `{"error": "Forbidden: admin access required"}`, http.StatusForbidden)
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		rows, err := db.DB.Query(`
+			SELECT id, form_type, COALESCE(name, ''), COALESCE(email, ''), COALESCE(phone, ''), COALESCE(subject, ''), COALESCE(token, ''), COALESCE(store_name, ''), COALESCE(message, ''), status, created_at
+			FROM support_submissions
+			ORDER BY created_at DESC
+		`)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		type Submission struct {
+			ID        int    `json:"id"`
+			FormType  string `json:"form_type"`
+			Name      string `json:"name"`
+			Email     string `json:"email"`
+			Phone     string `json:"phone"`
+			Subject   string `json:"subject"`
+			Token     string `json:"token"`
+			StoreName string `json:"store_name"`
+			Message   string `json:"message"`
+			Status    string `json:"status"`
+			CreatedAt string `json:"created_at"`
+		}
+
+		var subs []Submission
+		for rows.Next() {
+			var s Submission
+			err := rows.Scan(&s.ID, &s.FormType, &s.Name, &s.Email, &s.Phone, &s.Subject, &s.Token, &s.StoreName, &s.Message, &s.Status, &s.CreatedAt)
+			if err == nil {
+				subs = append(subs, s)
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(subs)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		id := r.URL.Query().Get("id")
+		status := r.URL.Query().Get("status")
+		if id == "" || status == "" {
+			http.Error(w, `{"error": "Missing id or status query parameters"}`, http.StatusBadRequest)
+			return
+		}
+
+		_, err := db.DB.Exec(`UPDATE support_submissions SET status = ? WHERE id = ?`, status, id)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"message": "Submission status updated successfully"}`))
+		return
+	}
+
+	http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
 }
 
