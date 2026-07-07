@@ -196,11 +196,13 @@ func startBackupWorker() {
 				continue // No changes
 			}
 
-			// Database-agnostic upsert: UPDATE first, then INSERT if rows affected is 0
-			res, err := db.DB.Exec("UPDATE whatsapp_sessions SET data = ? WHERE id = 1", data)
+			// Database-agnostic upsert: query first to determine INSERT or UPDATE
+			var count int
+			err = db.DB.QueryRow("SELECT COUNT(*) FROM whatsapp_sessions WHERE id = 1").Scan(&count)
 			if err == nil {
-				rows, _ := res.RowsAffected()
-				if rows == 0 {
+				if count > 0 {
+					_, err = db.DB.Exec("UPDATE whatsapp_sessions SET data = ? WHERE id = 1", data)
+				} else {
 					_, err = db.DB.Exec("INSERT INTO whatsapp_sessions (id, data) VALUES (1, ?)", data)
 				}
 			}
