@@ -116,7 +116,7 @@ export default function LoginPage() {
           producer_name: name,
           producer_slug: slug,
           contact_email: email,
-          plan_tier: "growth",
+          plan_tier: "free",
           email: email,
           password: password
         })

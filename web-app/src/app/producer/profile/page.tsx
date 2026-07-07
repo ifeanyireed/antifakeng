@@ -392,13 +392,15 @@ export default function ProducerProfile() {
                     {planTier === "Starter" && "Starter Plan (Monthly Subscription)"}
                     {planTier === "Growth" && "Growth Plan (Monthly Subscription)"}
                     {planTier === "Enterprise" && "Enterprise Plan (Custom License)"}
-                    {!["Starter", "Growth", "Enterprise"].includes(planTier) && `${planTier} Plan (Active)`}
+                    {(planTier === "Free" || planTier === "free") && "Free Plan (Inactive)"}
+                    {!["Starter", "Growth", "Enterprise", "Free", "free"].includes(planTier) && `${planTier} Plan (Active)`}
                   </h4>
                   <p className="text-xs text-slate-500 font-medium">
                     {planTier === "Starter" && "Billed ₦150,000 monthly. Renewal date: Aug 04, 2026."}
                     {planTier === "Growth" && "Billed ₦450,000 monthly. Renewal date: Aug 04, 2026."}
                     {planTier === "Enterprise" && "Billed Custom rate monthly. Renewal date: Aug 04, 2026."}
-                    {!["Starter", "Growth", "Enterprise"].includes(planTier) && "Billed monthly subscription. Renewal date: Aug 04, 2026."}
+                    {(planTier === "Free" || planTier === "free") && "Billed ₦0 monthly. Please select a subscription plan to begin issuing codes."}
+                    {!["Starter", "Growth", "Enterprise", "Free", "free"].includes(planTier) && "Billed monthly subscription. Renewal date: Aug 04, 2026."}
                   </p>
                 </div>
                 <button className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-xs transition-all">
@@ -414,7 +416,8 @@ export default function ProducerProfile() {
                     {planTier === "Starter" && `${scansCount.toLocaleString()} / 25,000 codes`}
                     {planTier === "Growth" && `${scansCount.toLocaleString()} / 250,000 codes`}
                     {planTier === "Enterprise" && `${scansCount.toLocaleString()} / Unlimited codes`}
-                    {!["Starter", "Growth", "Enterprise"].includes(planTier) && `${scansCount.toLocaleString()} / 250,000 codes`}
+                    {(planTier === "Free" || planTier === "free") && `${scansCount.toLocaleString()} / 0 codes`}
+                    {!["Starter", "Growth", "Enterprise", "Free", "free"].includes(planTier) && `${scansCount.toLocaleString()} / 250,000 codes`}
                   </span>
                 </div>
                 {/* Progress bar container */}
@@ -425,7 +428,9 @@ export default function ProducerProfile() {
                       width: 
                         planTier === "Starter" ? `${Math.min((scansCount / 25000) * 100, 100)}%` : 
                         planTier === "Growth" ? `${Math.min((scansCount / 250000) * 100, 100)}%` : 
-                        planTier === "Enterprise" ? "0.1%" : `${Math.min((scansCount / 250000) * 100, 100)}%`
+                        planTier === "Enterprise" ? "0.1%" :
+                        (planTier === "Free" || planTier === "free") ? "0%" :
+                        `${Math.min((scansCount / 250000) * 100, 100)}%`
                     }} 
                   />
                 </div>

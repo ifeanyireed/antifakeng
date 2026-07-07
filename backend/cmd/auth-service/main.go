@@ -112,7 +112,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	// 1. Create Producer
 	planTier := req.PlanTier
 	if planTier == "" {
-		planTier = "starter"
+		planTier = "free"
 	}
 	var producerID int64
 	producerQuery := `INSERT INTO producers (name, slug, plan_tier, contact_email, status, created_at) 

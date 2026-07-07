@@ -56,6 +56,7 @@ export default function OnboardingPage() {
   const [uploadingIdCard, setUploadingIdCard] = useState(false);
   const [uploadingSelfie, setUploadingSelfie] = useState(false);
   const [uploadingUtilityBill, setUploadingUtilityBill] = useState(false);
+  const [isSubmittingKyc, setIsSubmittingKyc] = useState(false);
 
   const [cameraActive, setCameraActive] = useState(false);
 
@@ -187,6 +188,7 @@ export default function OnboardingPage() {
       alert("Please upload NIN/License, captured Selfie, and Utility Bill to proceed.");
       return;
     }
+    setIsSubmittingKyc(true);
     try {
       await api.put("/producer/profile", {
         name: brandName,
@@ -204,11 +206,14 @@ export default function OnboardingPage() {
     } catch (err: any) {
       console.error("KYC submission error:", err);
       alert(err.message || "Failed to submit KYC.");
+    } finally {
+      setIsSubmittingKyc(false);
     }
   };
 
   const handleComplete = async () => {
     try {
+      const isEnterprise = selectedPlan.toLowerCase() === "enterprise";
       await api.put("/producer/profile", {
         name: brandName,
         contact_email: user?.email || "admin@brand.com",
@@ -219,7 +224,7 @@ export default function OnboardingPage() {
         utility_bill_url: utilityBillUrl,
         api_key: apiKey,
         api_secret: apiSecret,
-        status: "active"
+        status: isEnterprise ? "pending_approval" : "active"
       });
 
       const onboardingData = {
@@ -237,7 +242,13 @@ export default function OnboardingPage() {
         timestamp: new Date().toISOString()
       };
       localStorage.setItem("producer_brand_data", JSON.stringify(onboardingData));
-      router.push("/producer/dashboard");
+
+      if (isEnterprise) {
+        alert("Enterprise plan activation request submitted successfully! Your account is now under review. You will be redirected to the login page.");
+        logout();
+      } else {
+        router.push("/producer/dashboard");
+      }
     } catch (err: any) {
       console.error("Onboarding submit error:", err);
       alert(err.message || "Failed to save onboarding details.");
@@ -696,10 +707,15 @@ export default function OnboardingPage() {
           ) : currentStep === 2 ? (
             <button
               onClick={handleSubmitKyc}
-              className="bg-[#8BB436] text-white hover:bg-[#729c25] font-bold px-6 py-2.5 rounded-full text-xs transition-all flex items-center gap-1.5 shadow-sm"
+              disabled={isSubmittingKyc}
+              className="bg-[#8BB436] text-white hover:bg-[#729c25] disabled:opacity-50 disabled:cursor-not-allowed font-bold px-6 py-2.5 rounded-full text-xs transition-all flex items-center gap-1.5 shadow-sm"
             >
-              Submit KYC for Approval
-              <IconCheck className="w-4 h-4" />
+              {isSubmittingKyc ? "Submitting..." : "Submit KYC for Approval"}
+              {isSubmittingKyc ? (
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <IconCheck className="w-4 h-4" />
+              )}
             </button>
           ) : currentStep < 4 ? (
             <button
