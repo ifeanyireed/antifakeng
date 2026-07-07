@@ -34,6 +34,15 @@ func InitWhatsApp() {
 		StorageQuotaMb:      proto.Uint32(0),
 	}
 
+	// Fetch the latest version from WhatsApp servers dynamically to prevent outdated version (405) errors
+	latestVer, err := whatsmeow.GetLatestVersion(nil)
+	if err == nil {
+		store.SetWAVersion(*latestVer)
+		log.Printf("[WhatsApp] Dynamically configured client version to: %s", latestVer.String())
+	} else {
+		log.Printf("[WhatsApp] Failed to fetch latest WhatsApp version dynamically: %v", err)
+	}
+
 	var driverName string
 	var dsn string
 
