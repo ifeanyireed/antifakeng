@@ -43,25 +43,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Navigation Tab Menu - Admin specific */}
             <nav className="flex items-center gap-1 bg-[#DDEEF3] p-1 rounded-2xl border border-slate-300/30">
               {menuItems.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors duration-200 z-10 ${
+                    className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors duration-200 ${
                       isActive ? "text-white" : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
                     {isActive && (
                       <motion.div
                         layoutId="adminActiveTabBackground"
-                        className="absolute inset-0 bg-[#1E293B] rounded-xl -z-10"
+                        className="absolute inset-0 bg-[#1E293B] rounded-xl"
+                        style={{ zIndex: 0 }}
                         transition={{ type: "spring", stiffness: 380, damping: 30 }}
                       />
                     )}
-                    <Icon className="w-5 h-5" />
-                    <span className="hidden xl:inline">{item.name}</span>
+                    <span className="relative z-10 flex items-center gap-2">
+                      <Icon className="w-5 h-5" />
+                      <span className="hidden xl:inline">{item.name}</span>
+                    </span>
                   </Link>
                 );
               })}
