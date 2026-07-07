@@ -188,87 +188,59 @@ export default function OnboardingPage() {
       return;
     }
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const res = await fetch(`${API_BASE}/api/producer/profile`, {
-        method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: brandName,
-          contact_email: user?.email || "admin@brand.com",
-          brand_logo_url: "/logo.png",
-          plan_tier: "growth",
-          id_card_url: idCardUrl,
-          selfie_url: selfieUrl,
-          utility_bill_url: utilityBillUrl,
-          status: "pending_approval"
-        })
+      await api.put("/producer/profile", {
+        name: brandName,
+        contact_email: user?.email || "admin@brand.com",
+        brand_logo_url: "/logo.png",
+        plan_tier: "growth",
+        id_card_url: idCardUrl,
+        selfie_url: selfieUrl,
+        utility_bill_url: utilityBillUrl,
+        status: "pending_approval"
       });
 
-      if (res.ok) {
-        alert("KYC documents submitted successfully! Your account is now under review. You will be redirected to the login page.");
-        logout();
-      } else {
-        const errData = await res.json();
-        alert(errData.error || "Failed to submit KYC.");
-      }
-    } catch (err) {
+      alert("KYC documents submitted successfully! Your account is now under review. You will be redirected to the login page.");
+      logout();
+    } catch (err: any) {
       console.error("KYC submission error:", err);
-      alert("KYC submission service offline.");
+      alert(err.message || "Failed to submit KYC.");
     }
   };
 
   const handleComplete = async () => {
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const res = await fetch(`${API_BASE}/api/producer/profile`, {
-        method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: brandName,
-          contact_email: user?.email || "admin@brand.com",
-          brand_logo_url: "/logo.png",
-          plan_tier: selectedPlan.toLowerCase(),
-          id_card_url: idCardUrl,
-          selfie_url: selfieUrl,
-          utility_bill_url: utilityBillUrl,
-          api_key: apiKey,
-          api_secret: apiSecret,
-          status: "active"
-        })
+      await api.put("/producer/profile", {
+        name: brandName,
+        contact_email: user?.email || "admin@brand.com",
+        brand_logo_url: "/logo.png",
+        plan_tier: selectedPlan.toLowerCase(),
+        id_card_url: idCardUrl,
+        selfie_url: selfieUrl,
+        utility_bill_url: utilityBillUrl,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        status: "active"
       });
 
-      if (res.ok) {
-        const onboardingData = {
-          brandName,
-          industry,
-          website,
-          hqAddress,
-          selectedPlan,
-          apiKey,
-          apiSecret,
-          idCardUrl,
-          selfieUrl,
-          utilityBillUrl,
-          setupCompleted: true,
-          timestamp: new Date().toISOString()
-        };
-        localStorage.setItem("producer_brand_data", JSON.stringify(onboardingData));
-        router.push("/producer/dashboard");
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to save onboarding details.");
-      }
-    } catch (err) {
+      const onboardingData = {
+        brandName,
+        industry,
+        website,
+        hqAddress,
+        selectedPlan,
+        apiKey,
+        apiSecret,
+        idCardUrl,
+        selfieUrl,
+        utilityBillUrl,
+        setupCompleted: true,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem("producer_brand_data", JSON.stringify(onboardingData));
+      router.push("/producer/dashboard");
+    } catch (err: any) {
       console.error("Onboarding submit error:", err);
-      alert("Onboarding service is offline.");
+      alert(err.message || "Failed to save onboarding details.");
     }
   };
 

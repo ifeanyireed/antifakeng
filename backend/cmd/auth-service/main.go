@@ -119,7 +119,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		VALUES (?, ?, ?, ?, ?, ?)`
 
 	// MySQL returns last insert row ID differently than Postgres, so we check driver style
-	res, err := tx.Exec(producerQuery, req.ProducerName, req.ProducerSlug, planTier, req.ContactEmail, models.StatusActive, time.Now())
+	res, err := tx.Exec(producerQuery, req.ProducerName, req.ProducerSlug, planTier, req.ContactEmail, "pending_payment", time.Now())
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error": "Failed to create producer (slug might be taken): %v"}`, err), http.StatusBadRequest)
 		return
@@ -280,13 +280,18 @@ func handleOTPRequest(w http.ResponseWriter, r *http.Request) {
 	var dispatchError = ""
 
 	if strings.ToLower(req.Channel) == "sms" {
-		err := termii.SendSMS(req.Phone, code, req.Token)
+		// Use Termii's secure Send Token API instead of standard SMS
+		pinID, err := termii.SendToken(req.Phone, req.Token)
 		if err != nil {
-			log.Printf("[Termii SMS] Failed to send OTP to %s: %v", req.Phone, err)
+			log.Printf("[Termii SMS] Failed to send OTP token to %s: %v", req.Phone, err)
 			dispatchStatus = "failed"
 			dispatchError = err.Error()
 		} else {
 			dispatchStatus = "sms_sent"
+			otpMutex.Lock()
+			otpStore[req.Phone] = "termii_pin_id:" + pinID
+			otpMutex.Unlock()
+			log.Printf("[Termii SMS] Sent token to %s, PinID: %s", req.Phone, pinID)
 		}
 	} else {
 		err := whatsapp.SendOTP(req.Phone, code, req.Token)
@@ -329,13 +334,32 @@ func handleOTPVerify(w http.ResponseWriter, r *http.Request) {
 	cachedCode, ok := otpStore[req.Phone]
 	otpMutex.RUnlock()
 
-	// Let "123456" be a master bypass for convenience in demo
-	if (!ok || cachedCode != req.Code) && req.Code != "123456" {
+	var isVerified = false
+	if ok {
+		if strings.HasPrefix(cachedCode, "termii_pin_id:") {
+			pinID := strings.TrimPrefix(cachedCode, "termii_pin_id:")
+			verified, err := termii.VerifyToken(pinID, req.Code)
+			if err != nil {
+				log.Printf("[Termii SMS] Failed to verify OTP token for %s: %v", req.Phone, err)
+			} else {
+				isVerified = verified
+			}
+		} else {
+			isVerified = (cachedCode == req.Code)
+		}
+	}
+
+	// Always allow the master bypass "123456" for testing
+	if req.Code == "123456" {
+		isVerified = true
+	}
+
+	if !isVerified {
 		http.Error(w, `{"error": "Invalid OTP code"}`, http.StatusBadRequest)
 		return
 	}
 
-	// OTP confirmed. In a real system, we'd clear it.
+	// OTP confirmed. Clear it.
 	otpMutex.Lock()
 	delete(otpStore, req.Phone)
 	otpMutex.Unlock()
