@@ -50,6 +50,9 @@ func InitWhatsApp() {
 		log.Printf("[WhatsApp] Failed to create session persistence table: %v", err)
 	}
 
+	// TEMPORARY: Clear stale/corrupted session records to start fresh
+	db.DB.Exec("DELETE FROM whatsapp_sessions WHERE id = 1")
+
 	// Restore the SQLite session database from MySQL/Postgres if it exists
 	var fileData []byte
 	row := db.DB.QueryRow("SELECT data FROM whatsapp_sessions WHERE id = 1")
