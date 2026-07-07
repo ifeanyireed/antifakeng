@@ -111,6 +111,22 @@ func InitWhatsApp() {
 			return
 		}
 
+		// Wait for connection to be fully established and stabilized (up to 10s)
+		connected := false
+		for i := 0; i < 20; i++ {
+			if Client.IsConnected() {
+				connected = true
+				break
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+
+		if !connected {
+			log.Println("Failed to generate WhatsApp pairing code: connection handshake timed out.")
+			return
+		}
+		time.Sleep(1500 * time.Millisecond) // Let WebSocket handshake fully stabilize
+
 		phoneNum := os.Getenv("WHATSAPP_PHONE")
 		if phoneNum != "" {
 			// Generate 8-character pairing code
