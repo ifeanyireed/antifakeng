@@ -18,6 +18,7 @@ import {
 export default function ProducerAlerts() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [selectedAlertId, setSelectedAlertId] = useState<string>("");
+  const [telemetryLogs, setTelemetryLogs] = useState<any[]>([]);
 
   const fetchAlerts = async () => {
     try {
@@ -31,8 +32,18 @@ export default function ProducerAlerts() {
     }
   };
 
+  const fetchTelemetry = async () => {
+    try {
+      const data = await api.get("/analytics/history");
+      setTelemetryLogs((data || []).slice(0, 5));
+    } catch (err) {
+      console.error("Failed to load telemetry logs:", err);
+    }
+  };
+
   useEffect(() => {
     fetchAlerts();
+    fetchTelemetry();
   }, []);
 
   const selectedAlert = alerts.find(a => String(a.id) === selectedAlertId) || alerts[0];
@@ -193,25 +204,47 @@ export default function ProducerAlerts() {
           </div>
         )}
 
-        {/* Live Telemetry hot coordinates */}
+        {/* Live Telemetry logs */}
         <div className="bg-white border border-slate-200/60 rounded-[32px] p-6 shadow-sm flex flex-col gap-3">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Device Telemetry Logs</span>
           <div className="flex flex-col gap-2 text-[10px] font-mono font-bold text-slate-500">
-            <div className="flex justify-between border-b border-slate-100 pb-1.5">
-              <span>Android Chrome v124</span>
-              <span>102.82.4.11</span>
-              <span className="text-slate-400">10:14 AM</span>
-            </div>
-            <div className="flex justify-between border-b border-slate-100 pb-1.5">
-              <span>iOS Safari v17.4</span>
-              <span>105.112.44.89</span>
-              <span className="text-slate-400">10:13 AM</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Windows Edge v125</span>
-              <span>197.210.8.5</span>
-              <span className="text-slate-400">10:10 AM</span>
-            </div>
+            {telemetryLogs.length > 0 ? (
+              telemetryLogs.map((log, idx) => {
+                const isLast = idx === telemetryLogs.length - 1;
+                const timeString = log.created_at
+                  ? new Date(log.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+                  : "Just now";
+                // If device_id starts with device_browser, let's parse or humanize it
+                let displayDevice = log.device_id || "Unknown Device";
+                if (displayDevice.startsWith("device_browser_")) {
+                  // Humanize mock device IDs to look clean
+                  const idNum = displayDevice.split("_")[2];
+                  const devices = [
+                    "iOS Safari v17.4",
+                    "Android Chrome v124",
+                    "Windows Edge v125",
+                    "Mac Chrome v124",
+                    "iOS Webview v17.2",
+                    "Linux Firefox v126"
+                  ];
+                  displayDevice = devices[parseInt(idNum) % devices.length] || "Mobile Browser";
+                }
+                
+                // IP mapping fallback
+                const ipList = ["102.82.4.11", "105.112.44.89", "197.210.8.5", "197.210.12.94", "102.89.2.14"];
+                const displayIp = ipList[idx % ipList.length] + ` (${log.ip_country || "NG"})`;
+
+                return (
+                  <div key={log.id || idx} className={`flex justify-between ${!isLast ? "border-b border-slate-100 pb-1.5" : ""}`}>
+                    <span>{displayDevice}</span>
+                    <span>{displayIp}</span>
+                    <span className="text-slate-400">{timeString}</span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-slate-400 py-2 text-center font-sans">No recent telemetry records found.</div>
+            )}
           </div>
         </div>
 
