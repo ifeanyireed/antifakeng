@@ -104,6 +104,7 @@ func UploadImage(file multipart.File, header *multipart.FileHeader) (string, err
 
 	// Ensure remote upload path exists
 	_ = sftpClient.MkdirAll(remoteDir)
+	_ = sftpClient.Chmod(remoteDir, 0755) // Ensure directory is traversable
 
 	// Create remote file
 	remotePath := remoteDir + "/" + filename
@@ -117,6 +118,9 @@ func UploadImage(file multipart.File, header *multipart.FileHeader) (string, err
 	if _, err := io.Copy(dstFile, file); err != nil {
 		return "", fmt.Errorf("failed to upload file contents: %w", err)
 	}
+
+	// Change file permissions to public read so the web server can serve it
+	_ = sftpClient.Chmod(remotePath, 0644)
 
 	if baseURL == "" {
 		baseURL = "https://antifake.ng/uploads"

@@ -72,6 +72,28 @@ export default function AdminProducers() {
     }
   };
 
+  const handleDeleteProducer = async () => {
+    if (selectedProducerId === null) return;
+    
+    const confirmDelete = window.confirm(
+      `⚠️ WARNING: Are you sure you want to permanently delete this producer (${selectedProducer?.name})?\n\nThis will instantly delete ALL users, products, batches, QR codes, scan histories, and counterfeit reports associated with this brand. This action CANNOT be undone.`
+    );
+    
+    if (!confirmDelete) return;
+
+    try {
+      setIsSubmitting(true);
+      await api.delete(`/producer/admin/producers/${selectedProducerId}`);
+      setIsEditModalOpen(false);
+      await fetchProducers();
+    } catch (err) {
+      console.error("Failed to delete producer:", err);
+      alert("Failed to delete producer from the database. See console for details.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredProducers = (producers || []).filter((p: any) =>
     p && (
       (p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -319,6 +341,19 @@ export default function AdminProducers() {
                       No KYC compliance documents uploaded yet.
                     </div>
                   )}
+                </div>
+
+                {/* Danger Zone */}
+                <div className="border-t border-red-100 pt-4 mt-2 flex flex-col gap-2">
+                  <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Danger Zone</span>
+                  <button
+                    type="button"
+                    onClick={handleDeleteProducer}
+                    disabled={isSubmitting}
+                    className="w-full bg-red-50 border border-red-200 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    Delete Tenant Account
+                  </button>
                 </div>
 
                 <div className="flex gap-3 mt-2">

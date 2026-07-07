@@ -159,18 +159,11 @@ export default function HomePage() {
             </button>
           </Link>
           {!user ? (
-            <>
-              <Link href="/login">
-                <button className="bg-white border border-slate-200 text-slate-800 font-bold px-5 py-2.5 rounded-full text-sm hover:bg-slate-50 transition-all shadow-sm">
-                  Sign In
-                </button>
-              </Link>
-              <Link href="/register">
-                <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-5 py-2.5 rounded-full text-sm shadow-sm">
-                  Register
-                </button>
-              </Link>
-            </>
+            <Link href="/login">
+              <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-5 py-2.5 rounded-full text-sm shadow-sm">
+                Sign In
+              </button>
+            </Link>
           ) : (
             <Link href={user.role === "ADMIN" ? "/admin/dashboard" : "/producer/dashboard"}>
               <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-5 py-2.5 rounded-full text-sm shadow-sm">
@@ -211,18 +204,11 @@ export default function HomePage() {
                 </button>
               </Link>
               {!user ? (
-                <div className="flex gap-2">
-                  <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex-1">
-                    <button className="w-full bg-white border border-slate-200 text-slate-800 font-bold py-2.5 rounded-full text-sm hover:bg-slate-50 transition-all shadow-sm text-center">
-                      Sign In
-                    </button>
-                  </Link>
-                  <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="flex-1">
-                    <button className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-2.5 rounded-full text-sm shadow-sm text-center">
-                      Register
-                    </button>
-                  </Link>
-                </div>
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                  <button className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-2.5 rounded-full text-sm shadow-sm text-center">
+                    Sign In
+                  </button>
+                </Link>
               ) : (
                 <Link href={user.role === "ADMIN" ? "/admin/dashboard" : "/producer/dashboard"} onClick={() => setMobileMenuOpen(false)}>
                   <button className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-2.5 rounded-full text-sm shadow-sm text-center">

@@ -800,5 +800,37 @@ func handleAdminSingleProducer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method == http.MethodDelete {
+		tx, err := db.DB.Begin()
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to start transaction: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+
+		// Delete all users associated with this producer first
+		_, err = tx.Exec("DELETE FROM users WHERE producer_id = ?", prodID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to delete associated users: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		// Delete the producer (cascades to products, batches, qr_codes, sessions, reports)
+		_, err = tx.Exec("DELETE FROM producers WHERE id = ?", prodID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to delete producer: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		if err := tx.Commit(); err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to commit transaction: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"message": "Producer and all associated brand data successfully deleted."})
+		return
+	}
+
 	http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
 }
