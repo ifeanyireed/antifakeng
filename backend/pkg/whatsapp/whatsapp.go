@@ -12,13 +12,14 @@ import (
 	"github.com/ahnara/antifake/backend/pkg/email"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
-	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/proto/waCompanionReg"
-	"go.mau.fi/whatsmeow/proto/waE2E"
-	"go.mau.fi/whatsmeow/store"
-	"go.mau.fi/whatsmeow/store/sqlstore"
-	"go.mau.fi/whatsmeow/types"
-	waLog "go.mau.fi/whatsmeow/util/log"
+	_ "github.com/mattn/go-sqlite3"
+	whatsmeow "github.com/pbribeiro/whatsmeow-mysql"
+	"github.com/pbribeiro/whatsmeow-mysql/proto/waCompanionReg"
+	"github.com/pbribeiro/whatsmeow-mysql/proto/waE2E"
+	"github.com/pbribeiro/whatsmeow-mysql/store"
+	"github.com/pbribeiro/whatsmeow-mysql/store/sqlstore"
+	"github.com/pbribeiro/whatsmeow-mysql/types"
+	waLog "github.com/pbribeiro/whatsmeow-mysql/util/log"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -36,47 +37,63 @@ func InitWhatsApp() {
 	var driverName string
 	var dsn string
 
-	dbURL := os.Getenv("DATABASE_URL")
+	// Try dedicated WHATSAPP_DATABASE_URL first, fall back to main DATABASE_URL
+	dbURL := os.Getenv("WHATSAPP_DATABASE_URL")
 	if dbURL == "" {
-		log.Println("Skipping WhatsApp client initialization: DATABASE_URL environment variable is not configured.")
-		return
+		dbURL = os.Getenv("DATABASE_URL")
 	}
 
-	if strings.HasPrefix(dbURL, "mysql://") {
-		driverName = "mysql"
-		u, err := url.Parse(dbURL)
-		if err != nil {
-			log.Printf("Failed to parse DATABASE_URL for MySQL: %v", err)
-			return
-		}
-		pass, _ := u.User.Password()
-		dsn = fmt.Sprintf("%s:%s@tcp(%s)%s", u.User.Username(), pass, u.Host, u.Path)
-		if !strings.Contains(dsn, "parseTime=") {
-			if strings.Contains(dsn, "?") {
-				dsn += "&parseTime=true"
+	if dbURL != "" {
+		if strings.HasPrefix(dbURL, "mysql://") {
+			driverName = "mysql"
+			u, err := url.Parse(dbURL)
+			if err == nil {
+				pass, _ := u.User.Password()
+				dsn = fmt.Sprintf("%s:%s@tcp(%s)%s", u.User.Username(), pass, u.Host, u.Path)
+				if !strings.Contains(dsn, "parseTime=") {
+					if strings.Contains(dsn, "?") {
+						dsn += "&parseTime=true"
+					} else {
+						dsn += "?parseTime=true"
+					}
+				}
 			} else {
-				dsn += "?parseTime=true"
+				log.Printf("Failed to parse DATABASE_URL for MySQL: %v", err)
+				return
 			}
+		} else if strings.HasPrefix(dbURL, "postgres://") || strings.HasPrefix(dbURL, "postgresql://") {
+			driverName = "postgres"
+			dsn = dbURL
+		} else {
+			driverName = "sqlite3"
+			dbPath := os.Getenv("WAMEOW_DB_PATH")
+			if dbPath == "" {
+				dbPath = "wameow_session.db"
+			}
+			dsn = fmt.Sprintf("file:%s?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000", dbPath)
 		}
 	} else {
-		driverName = "postgres"
-		dsn = dbURL
+		driverName = "sqlite3"
+		dbPath := os.Getenv("WAMEOW_DB_PATH")
+		if dbPath == "" {
+			dbPath = "wameow_session.db"
+		}
+		dsn = fmt.Sprintf("file:%s?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000", dbPath)
 	}
 
 	dbLog := waLog.Stdout("Database", "WARN", true)
-	container, err := sqlstore.New(context.Background(), driverName, dsn, dbLog)
+	container, err := sqlstore.New(driverName, dsn, dbLog)
 	if err != nil {
 		log.Printf("Failed to initialize database store for whatsmeow: %v", err)
 		return
 	}
-	deviceStore, err := container.GetFirstDevice(context.Background())
+	deviceStore, err := container.GetFirstDevice()
 	if err != nil {
 		log.Printf("Failed to get device store for whatsmeow: %v", err)
 		return
 	}
 	clientLog := waLog.Stdout("Client", "WARN", true)
 	Client = whatsmeow.NewClient(deviceStore, clientLog)
-	Client.ManualHistorySyncDownload = true
 
 	if Client.Store.ID == nil {
 		err = Client.Connect()
@@ -88,7 +105,7 @@ func InitWhatsApp() {
 		phoneNum := os.Getenv("WHATSAPP_PHONE")
 		if phoneNum != "" {
 			// Generate 8-character pairing code
-			code, err := Client.PairPhone(context.Background(), phoneNum, true, whatsmeow.PairClientChrome, "Chrome (Linux)")
+			code, err := Client.PairPhone(phoneNum, true, whatsmeow.PairClientChrome, "Chrome (Linux)")
 			if err != nil {
 				log.Printf("Failed to generate WhatsApp phone pairing code: %v", err)
 			} else {
