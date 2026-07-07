@@ -71,7 +71,7 @@ export default function LoginPage() {
           const status = data.producer_status;
           if (status === "pending_approval") {
             setError("Your account is pending administrator approval.");
-          } else if (status === "pending_payment") {
+          } else if (status === "pending_payment" || status === "kyc_approved") {
             router.push("/onboarding");
           } else {
             router.push("/producer/dashboard");

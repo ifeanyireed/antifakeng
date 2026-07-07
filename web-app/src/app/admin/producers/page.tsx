@@ -170,7 +170,12 @@ export default function AdminProducers() {
                       }
                     }
 
-                    const statusStr = p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1).toLowerCase() : "Active";
+                    let statusStr = "Active";
+                    if (p.status === "kyc_approved") {
+                      statusStr = "KYC Approved";
+                    } else if (p.status) {
+                      statusStr = p.status.charAt(0).toUpperCase() + p.status.slice(1).toLowerCase().replace("_", " ");
+                    }
 
                     return (
                       <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
@@ -207,6 +212,8 @@ export default function AdminProducers() {
                               ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                               : statusStr === "Suspended"
                               ? "bg-red-50 text-red-600 border-red-100"
+                              : statusStr === "KYC Approved"
+                              ? "bg-sky-50 text-sky-600 border-sky-100"
                               : "bg-yellow-50 text-yellow-600 border-yellow-100"
                           }`}>
                             {statusStr}
@@ -290,6 +297,7 @@ export default function AdminProducers() {
                     <option value="suspended">Suspended (Locks login &amp; alerts)</option>
                     <option value="pending_approval">Pending Approval</option>
                     <option value="pending_payment">Pending Payment</option>
+                    <option value="kyc_approved">KYC Approved</option>
                   </select>
                 </div>
 

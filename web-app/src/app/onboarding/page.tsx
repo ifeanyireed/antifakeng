@@ -144,7 +144,7 @@ export default function OnboardingPage() {
           if (profile.selfie_url) setSelfieUrl(profile.selfie_url);
           if (profile.utility_bill_url) setUtilityBillUrl(profile.utility_bill_url);
           
-          if (profile.id_card_url && profile.selfie_url && profile.utility_bill_url) {
+          if (profile.status === "kyc_approved" || (profile.id_card_url && profile.selfie_url && profile.utility_bill_url)) {
             setCurrentStep(3);
           }
         }
