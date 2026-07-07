@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -71,6 +73,7 @@ func main() {
 	mux.HandleFunc("/api/auth/login", handleLogin)
 	mux.HandleFunc("/api/auth/otp/request", handleOTPRequest)
 	mux.HandleFunc("/api/auth/otp/verify", handleOTPVerify)
+	mux.HandleFunc("/api/auth/whatsapp/webhook", handleWhatsAppWebhook)
 	mux.Handle("/api/auth/me", middleware.RequireAuth(http.HandlerFunc(handleMe)))
 
 	// Admin route to seed default data if DB is empty
@@ -544,5 +547,105 @@ func handleSupportSubmit(w http.ResponseWriter, r *http.Request) {
 		"status": "success",
 		"message": "Notification dispatched successfully",
 	})
+}
+
+func handleWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
+	// 1. Webhook Verification (GET request from Meta)
+	if r.Method == http.MethodGet {
+		mode := r.URL.Query().Get("hub.mode")
+		token := r.URL.Query().Get("hub.verify_token")
+		challenge := r.URL.Query().Get("hub.challenge")
+
+		if mode != "" && token != "" {
+			verifyToken := os.Getenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN")
+			if verifyToken == "" {
+				verifyToken = "antifakeng_secret_verify_token" // secure default fallback
+			}
+
+			if mode == "subscribe" && token == verifyToken {
+				log.Println("[WhatsApp Webhook] Verification successful!")
+				w.Header().Set("Content-Type", "text/plain")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(challenge))
+				return
+			}
+		}
+		
+		log.Println("[WhatsApp Webhook] Verification failed.")
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	// 2. Webhook Event Notifications (POST request from Meta)
+	if r.Method == http.MethodPost {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Printf("[WhatsApp Webhook] Error reading body: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		
+		// Log raw JSON event payload
+		log.Printf("[WhatsApp Webhook] Incoming event: %s", string(body))
+
+		var payload map[string]interface{}
+		if err := json.Unmarshal(body, &payload); err != nil {
+			log.Printf("[WhatsApp Webhook] Error parsing JSON: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// Traverse structure to log status/messaging events
+		if entries, ok := payload["entry"].([]interface{}); ok {
+			for _, entryItem := range entries {
+				if entry, ok := entryItem.(map[string]interface{}); ok {
+					if changes, ok := entry["changes"].([]interface{}); ok {
+						for _, changeItem := range changes {
+							if change, ok := changeItem.(map[string]interface{}); ok {
+								if val, ok := change["value"].(map[string]interface{}); ok {
+									// Status changes (delivered, read, failed, etc.)
+									if statuses, ok := val["statuses"].([]interface{}); ok {
+										for _, sItem := range statuses {
+											if s, ok := sItem.(map[string]interface{}); ok {
+												msgID := s["id"]
+												status := s["status"]
+												recipient := s["recipient_id"]
+												log.Printf("[WhatsApp Status Update] Msg ID: %v | Recipient: %v | Status: %v", msgID, recipient, status)
+											}
+										}
+									}
+									
+									// Incoming messages (consumer texts the business)
+									if messages, ok := val["messages"].([]interface{}); ok {
+										for _, mItem := range messages {
+											if m, ok := mItem.(map[string]interface{}); ok {
+												from := m["from"]
+												msgType := m["type"]
+												msgID := m["id"]
+												
+												if msgText, ok := m["text"].(map[string]interface{}); ok {
+													body := msgText["body"]
+													log.Printf("[WhatsApp Incoming Message] From: %v | ID: %v | Type: %v | Body: %v", from, msgID, msgType, body)
+												} else {
+													log.Printf("[WhatsApp Incoming Event] From: %v | ID: %v | Type: %v", from, msgID, msgType)
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status": "success"}`))
+		return
+	}
+
+	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 

@@ -848,6 +848,7 @@ export default function HomePage() {
           <div className="md:col-span-4 flex flex-col gap-3">
             <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Connect</h4>
             <a href="mailto:hello@antifakeng.com" className="text-xs font-semibold hover:text-[#0089C1] transition-colors">hello@antifakeng.com</a>
+            <a href="tel:+2348067028859" className="text-xs font-semibold hover:text-[#0089C1] transition-colors">+234 806 702 8859</a>
             <a href="#contact" className="text-xs font-semibold hover:text-[#0089C1] transition-colors">Request a Demo</a>
             <span className="text-xs font-semibold mt-2 block text-slate-400">Lagos, Nigeria</span>
           </div>
