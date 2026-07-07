@@ -72,23 +72,18 @@ export default function ProducerLayout({ children }: { children: React.ReactNode
             {/* Navigation Tab Menu - Matches Header Capsule Tab physics */}
             <nav className="flex items-center gap-1 bg-[#DDEEF3] p-1 rounded-2xl border border-slate-300/30">
               {menuItems.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors duration-200 z-10 ${
-                      isActive ? "text-white" : "text-slate-600 hover:text-slate-900"
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                      isActive
+                        ? "bg-[#1E293B] text-white shadow-sm"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-300/20"
                     }`}
                   >
-                    {isActive && (
-                      <motion.div
-                        layoutId="producerActiveTabBackground"
-                        className="absolute inset-0 bg-[#1E293B] rounded-xl -z-10"
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      />
-                    )}
                     <Icon className="w-5 h-5" />
                     <span className="hidden xl:inline">{item.name}</span>
                   </Link>

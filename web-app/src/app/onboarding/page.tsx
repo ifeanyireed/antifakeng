@@ -57,6 +57,7 @@ export default function OnboardingPage() {
   const [uploadingSelfie, setUploadingSelfie] = useState(false);
   const [uploadingUtilityBill, setUploadingUtilityBill] = useState(false);
   const [isSubmittingKyc, setIsSubmittingKyc] = useState(false);
+  const [isCompletingSetup, setIsCompletingSetup] = useState(false);
 
   const [cameraActive, setCameraActive] = useState(false);
 
@@ -212,6 +213,7 @@ export default function OnboardingPage() {
   };
 
   const handleComplete = async () => {
+    setIsCompletingSetup(true);
     try {
       const isEnterprise = selectedPlan.toLowerCase() === "enterprise";
       await api.put("/producer/profile", {
@@ -252,6 +254,8 @@ export default function OnboardingPage() {
     } catch (err: any) {
       console.error("Onboarding submit error:", err);
       alert(err.message || "Failed to save onboarding details.");
+    } finally {
+      setIsCompletingSetup(false);
     }
   };
 
@@ -728,11 +732,15 @@ export default function OnboardingPage() {
           ) : (
             <button
               onClick={handleComplete}
-              disabled={!isGenerated}
+              disabled={!isGenerated || isCompletingSetup}
               className="bg-[#8BB436] text-white hover:bg-[#729c25] disabled:opacity-50 disabled:cursor-not-allowed font-bold px-6 py-2.5 rounded-full text-xs transition-all flex items-center gap-1.5 shadow-sm"
             >
-              Complete Setup
-              <IconCheck className="w-4 h-4" />
+              {isCompletingSetup ? "Completing Setup..." : "Complete Setup"}
+              {isCompletingSetup ? (
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <IconCheck className="w-4 h-4" />
+              )}
             </button>
           )}
         </div>
