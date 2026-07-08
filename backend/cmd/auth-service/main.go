@@ -335,7 +335,11 @@ func handleOTPRequest(w http.ResponseWriter, r *http.Request) {
 		var err error
 		templateName := os.Getenv("WHATSAPP_TEMPLATE_NAME")
 		if templateName != "" {
-			err = whatsapp.SendOTPWithTemplate(req.Phone, code, req.Token, brandName, productName, templateName, "en_US")
+			langCode := os.Getenv("WHATSAPP_TEMPLATE_LANG")
+			if langCode == "" {
+				langCode = "en_US"
+			}
+			err = whatsapp.SendOTPWithTemplate(req.Phone, code, req.Token, brandName, productName, templateName, langCode)
 		} else {
 			err = whatsapp.SendOTP(req.Phone, code, req.Token)
 		}

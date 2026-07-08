@@ -107,12 +107,49 @@ func SendOTPWithTemplate(phone string, code string, token string, brandName stri
 		phoneClean = "234" + phoneClean[1:]
 	}
 
-	// Slice brandName to max 15 characters to satisfy Meta's length restriction
-	if len(brandName) > 15 {
-		brandName = brandName[:15]
+	// Build the template payload dynamically based on the template structure
+	var bodyParams []map[string]interface{}
+	var buttonParams []map[string]interface{}
+
+	if templateName == "verify_product" {
+		bodyParams = []map[string]interface{}{
+			{ "type": "text", "text": code },
+			{ "type": "text", "text": brandName },
+			{ "type": "text", "text": token },
+			{ "type": "text", "text": phoneClean },
+		}
+		buttonParams = []map[string]interface{}{
+			{ "type": "text", "text": code },
+		}
+	} else if templateName == "verify_product_v2" {
+		bodyParams = []map[string]interface{}{
+			{ "type": "text", "text": code },
+		}
+		buttonParams = []map[string]interface{}{
+			{ "type": "text", "text": code },
+		}
+	} else {
+		// Generic template fallback (no parameters)
+		bodyParams = []map[string]interface{}{}
+		buttonParams = []map[string]interface{}{}
 	}
 
-	// Build the template payload with body and button parameters
+	components := []map[string]interface{}{}
+	if len(bodyParams) > 0 {
+		components = append(components, map[string]interface{}{
+			"type":       "body",
+			"parameters": bodyParams,
+		})
+	}
+	if len(buttonParams) > 0 {
+		components = append(components, map[string]interface{}{
+			"type":       "button",
+			"sub_type":   "url",
+			"index":      "0",
+			"parameters": buttonParams,
+		})
+	}
+
 	payload := map[string]interface{}{
 		"messaging_product": "whatsapp",
 		"recipient_type":    "individual",
@@ -123,28 +160,7 @@ func SendOTPWithTemplate(phone string, code string, token string, brandName stri
 			"language": map[string]interface{}{
 				"code": langCode,
 			},
-			"components": []map[string]interface{}{
-				{
-					"type": "body",
-					"parameters": []map[string]interface{}{
-						{ "type": "text", "text": brandName },
-						{ "type": "text", "text": code },
-						{ "type": "text", "text": token },
-						{ "type": "text", "text": phoneClean },
-					},
-				},
-				{
-					"type": "button",
-					"sub_type": "url",
-					"index": "0",
-					"parameters": []map[string]interface{}{
-						{
-							"type": "text",
-							"text": code,
-						},
-					},
-				},
-			},
+			"components": components,
 		},
 	}
 
