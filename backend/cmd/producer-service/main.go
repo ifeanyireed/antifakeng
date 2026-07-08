@@ -40,6 +40,7 @@ func main() {
 	mux.Handle("/api/producer/profile", middleware.RequireAuth(http.HandlerFunc(handleProfile)))
 	mux.Handle("/api/producer/admin/producers", middleware.RequireAuth(http.HandlerFunc(handleAdminProducers)))
 	mux.Handle("/api/producer/admin/producers/", middleware.RequireAuth(http.HandlerFunc(handleAdminSingleProducer)))
+	mux.HandleFunc("/api/producer/public/upload", handleUpload)
 
 	// Serve static uploads (local filesystem or remote SFTP proxy cache)
 	if os.Getenv("SFTP_HOST") != "" {

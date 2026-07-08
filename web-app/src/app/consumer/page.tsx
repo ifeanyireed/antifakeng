@@ -32,6 +32,8 @@ export default function ConsumerPortal() {
   const [retailerLocation, setRetailerLocation] = useState("");
   const [retailerName, setRetailerName] = useState("");
   const [reportComment, setReportComment] = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   // Simulated verification logs
   const [verifyingLogStep, setVerifyingLogStep] = useState(0);
@@ -192,6 +194,40 @@ export default function ConsumerPortal() {
     }
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File size exceeds 10MB limit.");
+      return;
+    }
+
+    try {
+      setIsUploadingPhoto(true);
+      const uploadData = new FormData();
+      uploadData.append("image", file);
+
+      const res = await fetch(`${API_BASE}/api/producer/public/upload`, {
+        method: "POST",
+        body: uploadData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPhotoUrl(data.url);
+        alert("Photo uploaded successfully!");
+      } else {
+        throw new Error("Failed to upload image.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to upload photo. Please try again.");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
   const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -204,7 +240,7 @@ export default function ConsumerPortal() {
           description: reportComment,
           retailer_name: retailerName,
           retailer_location: retailerLocation,
-          photo_url: ""
+          photo_url: photoUrl
         })
       });
       if (res.ok) {
@@ -765,10 +801,37 @@ export default function ConsumerPortal() {
                     />
                   </div>
 
-                  {/* Photo upload mock */}
-                  <div className="border-2 border-dashed border-slate-200 hover:border-[#0089C1] rounded-2xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer text-slate-500 hover:text-[#0089C1] transition-all bg-slate-50">
-                    <IconUpload className="w-5 h-5" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Upload Product Photos (Optional)</span>
+                  {/* Photo upload input */}
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                      Product Photos (Optional)
+                    </label>
+                    <label className="border-2 border-dashed border-slate-200 hover:border-[#0089C1] rounded-2xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer text-slate-500 hover:text-[#0089C1] transition-all bg-slate-50">
+                      <IconUpload className="w-5 h-5" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">
+                        {isUploadingPhoto 
+                          ? "Uploading..." 
+                          : photoUrl 
+                          ? "Change Photo" 
+                          : "Upload Product Photos"}
+                      </span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handlePhotoUpload} 
+                        className="hidden" 
+                        disabled={isUploadingPhoto}
+                      />
+                    </label>
+                    {photoUrl && (
+                      <div className="mt-2 text-center">
+                        <img 
+                          src={photoUrl} 
+                          alt="Uploaded counterfeit preview" 
+                          className="max-h-24 rounded-lg object-contain mx-auto border border-slate-200 p-1" 
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-2 mt-2">
