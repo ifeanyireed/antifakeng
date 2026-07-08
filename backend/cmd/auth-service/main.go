@@ -323,10 +323,19 @@ func handleOTPRequest(w http.ResponseWriter, r *http.Request) {
 		otpMutex.Unlock()
 		log.Printf("[Termii SMS] Sent token to %s, PinID: %s", req.Phone, pinID)
 	} else {
+		var brandName, productName string
+		db.DB.QueryRow(`
+			SELECT COALESCE(pr.name, 'Brand'), COALESCE(p.name, 'Product')
+			FROM qr_codes q
+			JOIN batches b ON q.batch_id = b.id
+			JOIN products p ON b.product_id = p.id
+			JOIN producers pr ON p.producer_id = pr.id
+			WHERE q.token = ?`, req.Token).Scan(&brandName, &productName)
+
 		var err error
 		templateName := os.Getenv("WHATSAPP_TEMPLATE_NAME")
 		if templateName != "" {
-			err = whatsapp.SendOTPWithTemplate(req.Phone, code, templateName, "en_US")
+			err = whatsapp.SendOTPWithTemplate(req.Phone, code, req.Token, brandName, productName, templateName, "en_US")
 		} else {
 			err = whatsapp.SendOTP(req.Phone, code, req.Token)
 		}

@@ -93,7 +93,7 @@ func SendOTP(phone string, code string, token string) error {
 }
 
 // SendOTPWithTemplate sends verification details using a Meta approved WhatsApp Template
-func SendOTPWithTemplate(phone string, code string, templateName string, langCode string) error {
+func SendOTPWithTemplate(phone string, code string, token string, brandName string, productName string, templateName string, langCode string) error {
 	accessToken := os.Getenv("WHATSAPP_ACCESS_TOKEN")
 	phoneID := os.Getenv("WHATSAPP_PHONE_NUMBER_ID")
 
@@ -107,7 +107,12 @@ func SendOTPWithTemplate(phone string, code string, templateName string, langCod
 		phoneClean = "234" + phoneClean[1:]
 	}
 
-	// Build the template payload with code parameters
+	// Slice brandName to max 15 characters to satisfy Meta's length restriction
+	if len(brandName) > 15 {
+		brandName = brandName[:15]
+	}
+
+	// Build the template payload with body and button parameters
 	payload := map[string]interface{}{
 		"messaging_product": "whatsapp",
 		"recipient_type":    "individual",
@@ -122,10 +127,10 @@ func SendOTPWithTemplate(phone string, code string, templateName string, langCod
 				{
 					"type": "body",
 					"parameters": []map[string]interface{}{
-						{
-							"type": "text",
-							"text": code,
-						},
+						{ "type": "text", "text": brandName },
+						{ "type": "text", "text": code },
+						{ "type": "text", "text": token },
+						{ "type": "text", "text": phoneClean },
 					},
 				},
 				{
