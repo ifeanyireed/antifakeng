@@ -14,7 +14,8 @@ import {
   IconMapPin,
   IconUpload,
   IconChevronRight,
-  IconQrcode
+  IconQrcode,
+  IconCircleCaretLeft
 } from "@tabler/icons-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -257,7 +258,8 @@ export default function ConsumerPortal() {
 
   const handleReset = (newVerdict: string) => {
     setVerdict(newVerdict);
-    setStep("landing");
+    setStep("enter_token");
+    setToken("");
     setPhoneNumber("");
     setOtpCode("");
     setOtpSent(false);
@@ -381,8 +383,9 @@ export default function ConsumerPortal() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setStep("enter_token")}
-                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-full text-xs"
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-full text-xs flex items-center justify-center gap-1.5"
                   >
+                    <IconCircleCaretLeft className="w-4 h-4" />
                     Enter Different Code
                   </button>
                   <button
@@ -474,12 +477,22 @@ export default function ConsumerPortal() {
                     <p className="text-[10px] text-red-500 font-bold leading-normal text-center">{apiError}</p>
                   )}
 
-                  <button
-                    type="submit"
-                    className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md"
-                  >
-                    Request OTP Code
-                  </button>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setStep("landing")}
+                      className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-full text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <IconCircleCaretLeft className="w-4 h-4" />
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md"
+                    >
+                      Request OTP Code
+                    </button>
+                  </div>
                 </form>
               </motion.div>
             )}
@@ -523,12 +536,22 @@ export default function ConsumerPortal() {
                     )}
                   </div>
 
-                  <button
-                    type="submit"
-                    className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md"
-                  >
-                    Confirm &amp; Run Risk Scan
-                  </button>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setStep("phone")}
+                      className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-full text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <IconCircleCaretLeft className="w-4 h-4" />
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md"
+                    >
+                      Confirm &amp; Run Risk Scan
+                    </button>
+                  </div>
                 </form>
               </motion.div>
             )}
@@ -746,6 +769,13 @@ export default function ConsumerPortal() {
                   >
                     Run Scan Again
                   </button>
+                  <button
+                    onClick={() => handleReset("genuine")}
+                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all font-bold py-3.5 rounded-full text-xs flex items-center justify-center gap-1.5"
+                  >
+                    <IconCircleCaretLeft className="w-4 h-4" />
+                    Back to Start
+                  </button>
                 </div>
 
               </motion.div>
@@ -838,8 +868,9 @@ export default function ConsumerPortal() {
                     <button
                       type="button"
                       onClick={() => setStep("verdict")}
-                      className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all font-bold py-3 rounded-full text-xs"
+                      className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all font-bold py-3 rounded-full text-xs flex items-center justify-center gap-1.5"
                     >
+                      <IconCircleCaretLeft className="w-4 h-4" />
                       Back
                     </button>
                     <button

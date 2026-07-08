@@ -310,24 +310,36 @@ func handleOTPRequest(w http.ResponseWriter, r *http.Request) {
 		pinID, err := termii.SendToken(req.Phone, req.Token)
 		if err != nil {
 			log.Printf("[Termii SMS] Failed to send OTP token to %s: %v", req.Phone, err)
-			dispatchStatus = "failed"
-			dispatchError = err.Error()
-		} else {
-			dispatchStatus = "sms_sent"
-			otpMutex.Lock()
-			otpStore[req.Phone] = "termii_pin_id:" + pinID
-			otpMutex.Unlock()
-			log.Printf("[Termii SMS] Sent token to %s, PinID: %s", req.Phone, pinID)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": fmt.Sprintf("SMS delivery failed: %v", err),
+			})
+			return
 		}
+		dispatchStatus = "sms_sent"
+		otpMutex.Lock()
+		otpStore[req.Phone] = "termii_pin_id:" + pinID
+		otpMutex.Unlock()
+		log.Printf("[Termii SMS] Sent token to %s, PinID: %s", req.Phone, pinID)
 	} else {
-		err := whatsapp.SendOTP(req.Phone, code, req.Token)
+		var err error
+		templateName := os.Getenv("WHATSAPP_TEMPLATE_NAME")
+		if templateName != "" {
+			err = whatsapp.SendOTPWithTemplate(req.Phone, code, templateName, "en_US")
+		} else {
+			err = whatsapp.SendOTP(req.Phone, code, req.Token)
+		}
 		if err != nil {
 			log.Printf("[WhatsApp] Failed to send OTP to %s: %v", req.Phone, err)
-			dispatchStatus = "failed"
-			dispatchError = err.Error()
-		} else {
-			dispatchStatus = "whatsapp_sent"
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": fmt.Sprintf("WhatsApp delivery failed: %v", err),
+			})
+			return
 		}
+		dispatchStatus = "whatsapp_sent"
 	}
 
 	w.Header().Set("Content-Type", "application/json")
