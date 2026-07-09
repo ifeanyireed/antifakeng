@@ -924,40 +924,126 @@ export default function ProducerBatches() {
                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Live Preview</h4>
                     
                     {/* Live Label Item Rendering */}
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-row items-stretch overflow-hidden h-[135px]">
-                      {/* Left: QR code section */}
-                      <div className="w-[100px] flex-none bg-slate-50/50 border-r border-slate-100 flex items-center justify-center p-3">
-                        <div className="w-16 h-16 bg-white border border-slate-200/80 flex items-center justify-center rounded-lg p-1.5 shadow-xs">
-                          <IconQrcode className="w-full h-full text-slate-800" />
+                    {activePrintBatch?.label_image_url ? (
+                      <div className="flex justify-center p-2 bg-white border border-slate-200 rounded-2xl overflow-hidden h-[135px] relative items-center">
+                        <div className="relative inline-block max-h-full">
+                          {/* Background Graphic */}
+                          <img
+                            src={activePrintBatch.label_image_url}
+                            alt="Label Background"
+                            style={{
+                              transform: `rotate(${activePrintBatch.label_rotation || 0}deg)`,
+                              transformOrigin: "center"
+                            }}
+                            className="max-h-[119px] w-auto object-contain transition-all duration-100 block"
+                          />
+
+                          {/* Embedded Original QR Label Card */}
+                          {(() => {
+                            const { x, y, qrScale } = parseQrPositionAndScales(activePrintBatch.qr_position);
+                            const scale = qrScale / 100;
+                            return (
+                              <div 
+                                style={{
+                                  width: `${72 * scale * 1.8}px`,
+                                  height: `${34 * scale * 1.8}px`,
+                                  padding: `${2 * scale * 1.8}px`,
+                                  position: "absolute",
+                                  left: `${x}%`,
+                                  top: `${y}%`,
+                                  transform: `translate(-${x}%, -${y}%)`
+                                }}
+                                className="bg-white/95 border border-slate-200/50 rounded-none shadow-md flex items-center select-none"
+                              >
+                                {/* Left: QR Icon */}
+                                <div 
+                                  style={{
+                                    width: `${30 * scale * 1.8}px`,
+                                    height: `${30 * scale * 1.8}px`,
+                                  }}
+                                  className="flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0"
+                                >
+                                  <svg viewBox="0 0 24 24" className="w-full h-full text-slate-800 p-0.5" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <rect x="3" y="3" width="7" height="7" />
+                                    <rect x="14" y="3" width="7" height="7" />
+                                    <rect x="3" y="14" width="7" height="7" />
+                                    <rect x="14" y="14" width="7" height="7" />
+                                  </svg>
+                                </div>
+                                {/* Right: Metadata */}
+                                <div 
+                                  style={{ paddingLeft: `${3 * scale * 1.8}px` }}
+                                  className="flex-1 h-full flex flex-col justify-between text-left min-w-0"
+                                >
+                                  <div>
+                                    <div 
+                                      style={{ fontSize: `${8 * scale * 0.6}px` }}
+                                      className="font-black text-slate-500 tracking-wider uppercase leading-none"
+                                    >
+                                      SERIAL: <span className="font-mono text-slate-800 font-extrabold">B-XXXX</span>
+                                    </div>
+                                    <p 
+                                      style={{ fontSize: `${9 * scale * 0.6}px`, marginTop: `${1 * scale * 0.6}px`, lineHeight: 1.1 }}
+                                      className="text-slate-600 font-medium line-clamp-3"
+                                    >
+                                      {printMessage || "Scan QR code..."}
+                                    </p>
+                                  </div>
+                                  <div 
+                                    style={{ gap: `${2 * scale * 0.6}px` }}
+                                    className="flex items-center"
+                                  >
+                                    <div style={{ width: `${5.5 * scale * 0.6}px`, height: `${5.5 * scale * 0.6}px` }} className="bg-slate-300 rounded-full shrink-0" />
+                                    <span style={{ fontSize: `${10 * scale * 0.6}px` }} className="font-black text-[#12213B] tracking-tight leading-none">AntiFakeNG</span>
+                                  </div>
+                                  <div 
+                                    style={{ fontSize: `${6 * scale * 0.6}px` }}
+                                    className="text-[#0089C1] font-black tracking-wider uppercase leading-none"
+                                  >
+                                    SECURE VERIFICATION PORTAL
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
+                    ) : (
+                      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-row items-stretch overflow-hidden h-[135px]">
+                        {/* Left: QR code section */}
+                        <div className="w-[100px] flex-none bg-slate-50/50 border-r border-slate-100 flex items-center justify-center p-3">
+                          <div className="w-16 h-16 bg-white border border-slate-200/80 flex items-center justify-center rounded-lg p-1.5 shadow-xs">
+                            <IconQrcode className="w-full h-full text-slate-800" />
+                          </div>
+                        </div>
 
-                      {/* Right: Text and metadata section */}
-                      <div className="flex-1 flex flex-col p-3.5 justify-between">
-                        <div>
-                          {/* Serial Code header */}
-                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                            SERIAL: <span className="font-mono text-slate-800 font-extrabold ml-1">XXXX-XXXX</span>
+                        {/* Right: Text and metadata section */}
+                        <div className="flex-1 flex flex-col p-3.5 justify-between">
+                          <div>
+                            {/* Serial Code header */}
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                              SERIAL: <span className="font-mono text-slate-800 font-extrabold ml-1">XXXX-XXXX</span>
+                            </div>
+
+                            {/* Instructions using IBM Plex Sans font */}
+                            <p className="text-[11px] text-slate-500 font-medium leading-tight font-ibm mt-1 max-w-[220px]">
+                              {printMessage || "(No message specified)"}
+                            </p>
                           </div>
 
-                          {/* Instructions using IBM Plex Sans font */}
-                          <p className="text-[11px] text-slate-500 font-medium leading-tight font-ibm mt-1 max-w-[220px]">
-                            {printMessage || "(No message specified)"}
-                          </p>
-                        </div>
+                          {/* Middle-bottom: Logo and Name */}
+                          <div className="flex items-center gap-2 py-0.5">
+                            <img src="/logo.png" alt="AntiFakeNG Logo" className="w-5.5 h-5.5 object-contain" />
+                            <span className="text-xs font-black text-[#12213B] tracking-tight">AntiFakeNG</span>
+                          </div>
 
-                        {/* Middle-bottom: Logo and Name */}
-                        <div className="flex items-center gap-2 py-0.5">
-                          <img src="/logo.png" alt="AntiFakeNG Logo" className="w-5.5 h-5.5 object-contain" />
-                          <span className="text-xs font-black text-[#12213B] tracking-tight">AntiFakeNG</span>
-                        </div>
-
-                        {/* Bottom: Blue secure verification portal footer */}
-                        <div className="text-[8px] text-[#0089C1] font-black tracking-wider uppercase">
-                          SECURE VERIFICATION PORTAL
+                          {/* Bottom: Blue secure verification portal footer */}
+                          <div className="text-[8px] text-[#0089C1] font-black tracking-wider uppercase">
+                            SECURE VERIFICATION PORTAL
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Industrial Roll Layout schematic */}
                     <div className="flex-1 flex flex-col gap-2 justify-center border border-dashed border-slate-200 rounded-xl p-4 bg-white/50">
