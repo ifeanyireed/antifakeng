@@ -21,27 +21,56 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-// ParseQrPositionAndScales parses "pos;qrScale;lblScale" into position, qrScale, and labelScale
-func ParseQrPositionAndScales(raw string) (string, float64, float64) {
+// ParseQrPositionAndScales parses "x;y;qrScale" or legacy "pos;qrScale" into coordinates and qrScale
+func ParseQrPositionAndScales(raw string) (float64, float64, float64) {
 	parts := strings.Split(raw, ";")
-	pos := "bottom-right"
+	xPercent := 80.0
+	yPercent := 80.0
 	qrScale := 100.0
-	labelScale := 100.0
 
-	if len(parts) > 0 && parts[0] != "" {
-		pos = parts[0]
+	if len(parts) == 0 || parts[0] == "" {
+		return xPercent, yPercent, qrScale
 	}
-	if len(parts) > 1 {
-		if val, err := strconv.ParseFloat(parts[1], 64); err == nil {
-			qrScale = val
+
+	// Try to parse the first part as a float (modern X-axis coordinate)
+	firstVal, err := strconv.ParseFloat(parts[0], 64)
+	if err == nil {
+		xPercent = firstVal
+		if len(parts) > 1 {
+			if val, err := strconv.ParseFloat(parts[1], 64); err == nil {
+				yPercent = val
+			}
+		}
+		if len(parts) > 2 {
+			if val, err := strconv.ParseFloat(parts[2], 64); err == nil {
+				qrScale = val
+			}
+		}
+	} else {
+		// Legacy format: pos;qrScale;lblScale
+		pos := parts[0]
+		if len(parts) > 1 {
+			if val, err := strconv.ParseFloat(parts[1], 64); err == nil {
+				qrScale = val
+			}
+		}
+		// Map legacy named positions to percentages
+		if pos == "top-left" {
+			xPercent = 5.0
+			yPercent = 5.0
+		} else if pos == "top-right" {
+			xPercent = 75.0
+			yPercent = 5.0
+		} else if pos == "bottom-left" {
+			xPercent = 5.0
+			yPercent = 75.0
+		} else {
+			xPercent = 75.0
+			yPercent = 75.0
 		}
 	}
-	if len(parts) > 2 {
-		if val, err := strconv.ParseFloat(parts[2], 64); err == nil {
-			labelScale = val
-		}
-	}
-	return pos, qrScale, labelScale
+
+	return xPercent, yPercent, qrScale
 }
 
 func resolveImagePath(path string) string {
@@ -129,7 +158,8 @@ func ParseWidth(widthStr string) float64 {
 
 // GenerateVectorPDF generates a custom-width roll PDF containing vector QR codes and serial metadata labels
 func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
-	_, qrScale, labelScale := ParseQrPositionAndScales(config.QRPosition)
+	xPercent, yPercent, qrScale := ParseQrPositionAndScales(config.QRPosition)
+	labelScale := 100.0
 
 	labelPath := resolveImagePath(config.LabelImage)
 	localImage := labelPath
@@ -344,8 +374,8 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 			paddingScale = qrScale / 100.0
 			overlayW = 72.0 * paddingScale
 			overlayH = 34.0 * paddingScale
-			overlayX = x + (labelWidth-overlayW)/2.0
-			overlayY = y + (labelHeight-overlayH)/2.0
+			overlayX = x + (xPercent/100.0)*(labelWidth-overlayW)
+			overlayY = y + (yPercent/100.0)*(labelHeight-overlayH)
 
 			// Draw white background card for the overlay original QR label
 			pdf.SetFillColor(255, 255, 255)
