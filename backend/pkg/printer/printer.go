@@ -2,6 +2,10 @@ package printer
 
 import (
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"math"
 	"net/http"
@@ -220,6 +224,19 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 	labelWidth := 80.0
 	labelHeight := 40.0
 	padding := 5.0
+
+	// Adjust labelHeight to preserve the original aspect ratio of the custom label graphic without restrictions
+	if localImage != "" && fileExists(localImage) {
+		if file, err := os.Open(localImage); err == nil {
+			if imgConfig, _, err := image.DecodeConfig(file); err == nil {
+				if imgConfig.Width > 0 && imgConfig.Height > 0 {
+					aspectRatio := float64(imgConfig.Width) / float64(imgConfig.Height)
+					labelHeight = labelWidth / aspectRatio
+				}
+			}
+			file.Close()
+		}
+	}
 	
 	// Check if roll width can accommodate requested columns with spacing
 	minRequiredWidth := float64(columns) * (labelWidth + padding) + padding
