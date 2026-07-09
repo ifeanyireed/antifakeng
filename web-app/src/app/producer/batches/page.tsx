@@ -605,7 +605,7 @@ export default function ProducerBatches() {
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Live Label Layout Preview</label>
                         
                         <div className="flex justify-center p-2">
-                          <div className="relative inline-block">
+                          <div className="relative w-[320px] h-[160px] border border-slate-200/80 rounded-2xl overflow-hidden bg-slate-50">
                             {/* Background Graphic */}
                             <img
                               src={labelImage}
@@ -614,15 +614,15 @@ export default function ProducerBatches() {
                                 transform: `rotate(${labelRotation}deg)`,
                                 transformOrigin: "center"
                               }}
-                              className="max-h-[220px] w-auto object-contain transition-all duration-100 block"
+                              className="w-full h-full object-cover transition-all duration-100 block"
                             />
 
                             {/* Embedded Original QR Label Card */}
                             <div 
                               style={{
-                                width: `${72 * (qrScale / 100) * 3.5}px`,
-                                height: `${34 * (qrScale / 100) * 3.5}px`,
-                                padding: `${2 * (qrScale / 100) * 3.5}px`,
+                                width: `${72 * (qrScale / 100) * 4.0}px`,
+                                height: `${34 * (qrScale / 100) * 4.0}px`,
+                                padding: `${2 * (qrScale / 100) * 4.0}px`,
                                 position: "absolute",
                                 left: `${qrX}%`,
                                 top: `${qrY}%`,
@@ -633,8 +633,8 @@ export default function ProducerBatches() {
                               {/* Left: QR Icon */}
                               <div 
                                 style={{
-                                  width: `${30 * (qrScale / 100) * 3.5}px`,
-                                  height: `${30 * (qrScale / 100) * 3.5}px`,
+                                  width: `${30 * (qrScale / 100) * 4.0}px`,
+                                  height: `${30 * (qrScale / 100) * 4.0}px`,
                                 }}
                                 className="flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0"
                               >
@@ -647,7 +647,7 @@ export default function ProducerBatches() {
                               </div>
                               {/* Right: Metadata */}
                               <div 
-                                style={{ paddingLeft: `${3 * (qrScale / 100) * 3.5}px` }}
+                                style={{ paddingLeft: `${3 * (qrScale / 100) * 4.0}px` }}
                                 className="flex-1 h-full flex flex-col justify-between text-left min-w-0"
                               >
                                 <div>
@@ -658,17 +658,17 @@ export default function ProducerBatches() {
                                     SERIAL: <span className="font-mono text-slate-800 font-extrabold">B-XXXX</span>
                                   </div>
                                   <p 
-                                    style={{ fontSize: `${9 * (qrScale / 100)}px`, marginTop: `${1 * (qrScale / 100) * 3.5}px`, lineHeight: 1.1, paddingTop: `${0.5 * (qrScale / 100) * 3.5}px` }}
+                                    style={{ fontSize: `${9 * (qrScale / 100)}px`, marginTop: `${1 * (qrScale / 100) * 4.0}px`, lineHeight: 1.1, paddingTop: `${0.5 * (qrScale / 100) * 4.0}px` }}
                                     className="text-slate-600 font-medium line-clamp-3"
                                   >
                                     {printMessage || "Scan QR code or visit antifake.ng/verify..."}
                                   </p>
                                 </div>
                                 <div 
-                                  style={{ gap: `${2 * (qrScale / 100) * 3.5}px` }}
+                                  style={{ gap: `${2 * (qrScale / 100) * 4.0}px` }}
                                   className="flex items-center"
                                 >
-                                  <div style={{ width: `${5.5 * (qrScale / 100) * 3.5}px`, height: `${5.5 * (qrScale / 100) * 3.5}px` }} className="bg-slate-300 rounded-full shrink-0" />
+                                  <div style={{ width: `${5.5 * (qrScale / 100) * 4.0}px`, height: `${5.5 * (qrScale / 100) * 4.0}px` }} className="bg-slate-300 rounded-full shrink-0" />
                                   <span style={{ fontSize: `${10 * (qrScale / 100)}px` }} className="font-black text-[#12213B] tracking-tight leading-none">AntiFakeNG</span>
                                 </div>
                                 <div 
@@ -1136,7 +1136,7 @@ export default function ProducerBatches() {
                           return (
                             <div
                               key={idx}
-                              className="relative inline-block select-none w-[80mm] h-auto bg-white animate-fade-in"
+                              className="relative inline-block select-none w-[80mm] h-[40mm] bg-white animate-fade-in overflow-hidden border border-slate-200/40"
                             >
                               {/* Background Image Layer */}
                               <img
@@ -1146,7 +1146,7 @@ export default function ProducerBatches() {
                                   transform: `rotate(${activePrintBatch.label_rotation || 0}deg)`,
                                   transformOrigin: "center"
                                 }}
-                                className="w-full h-auto block pointer-events-none"
+                                className="w-full h-full object-cover block pointer-events-none"
                               />
 
                                 {/* Embedded Original QR Label Card */}
@@ -1355,7 +1355,7 @@ export default function ProducerBatches() {
                 return (
                   <div
                     key={idx}
-                    className="print-card relative inline-block select-none w-[80mm] h-auto bg-white"
+                    className="print-card relative inline-block select-none w-[80mm] h-[40mm] bg-white overflow-hidden"
                   >
                     {/* Background Image Layer */}
                     <img
@@ -1365,7 +1365,7 @@ export default function ProducerBatches() {
                         transform: `rotate(${activePrintBatch.label_rotation || 0}deg)`,
                         transformOrigin: "center"
                       }}
-                      className="w-full h-auto block pointer-events-none"
+                      className="w-full h-full object-cover block pointer-events-none"
                     />
 
                       {/* Centered Embedded Original QR Label Card */}
@@ -1552,14 +1552,11 @@ export default function ProducerBatches() {
                             <option value="180">180° Upside Down</option>
                             <option value="270">270° Left</option>
                           </select>
-                        </div>
-                      </div>
-
-                      {/* Live Preview Card */}
+                    {/* Live Preview Card */}
                       <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Live Label Layout Preview</label>
                         <div className="flex justify-center p-2">
-                          <div className="relative inline-block">
+                          <div className="relative w-[320px] h-[160px] border border-slate-200/80 rounded-2xl overflow-hidden bg-slate-50">
                             {/* Background Graphic */}
                             <img
                               src={editLabelImage}
@@ -1568,15 +1565,15 @@ export default function ProducerBatches() {
                                 transform: `rotate(${editLabelRotation}deg)`,
                                 transformOrigin: "center"
                               }}
-                              className="max-h-[380px] w-auto object-contain transition-all duration-100 block"
+                              className="w-full h-full object-cover transition-all duration-100 block"
                             />
 
                             {/* Centered Embedded Original QR Label Card */}
                              <div 
                                style={{
-                                 width: `${72 * (editQrScale / 100) * 3.5}px`,
-                                 height: `${34 * (editQrScale / 100) * 3.5}px`,
-                                 padding: `${2 * (editQrScale / 100) * 3.5}px`,
+                                 width: `${72 * (editQrScale / 100) * 4.0}px`,
+                                 height: `${34 * (editQrScale / 100) * 4.0}px`,
+                                 padding: `${2 * (editQrScale / 100) * 4.0}px`,
                                  position: "absolute",
                                  left: `${editQrX}%`,
                                  top: `${editQrY}%`,
@@ -1587,8 +1584,8 @@ export default function ProducerBatches() {
                               {/* Left: QR Icon */}
                               <div 
                                 style={{
-                                  width: `${30 * (editQrScale / 100) * 3.5}px`,
-                                  height: `${30 * (editQrScale / 100) * 3.5}px`,
+                                  width: `${30 * (editQrScale / 100) * 4.0}px`,
+                                  height: `${30 * (editQrScale / 100) * 4.0}px`,
                                 }}
                                 className="flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0"
                               >
@@ -1601,7 +1598,7 @@ export default function ProducerBatches() {
                               </div>
                               {/* Right: Metadata */}
                               <div 
-                                style={{ paddingLeft: `${3 * (editQrScale / 100) * 3.5}px` }}
+                                style={{ paddingLeft: `${3 * (editQrScale / 100) * 4.0}px` }}
                                 className="flex-1 h-full flex flex-col justify-between text-left min-w-0"
                               >
                                 <div>
@@ -1612,17 +1609,17 @@ export default function ProducerBatches() {
                                     SERIAL: <span className="font-mono text-slate-800 font-extrabold">B-XXXX</span>
                                   </div>
                                   <p 
-                                    style={{ fontSize: `${9 * (editQrScale / 100)}px`, marginTop: `${1 * (editQrScale / 100) * 3.5}px`, lineHeight: 1.1, paddingTop: `${0.5 * (editQrScale / 100) * 3.5}px` }}
+                                    style={{ fontSize: `${9 * (editQrScale / 100)}px`, marginTop: `${1 * (editQrScale / 100) * 4.0}px`, lineHeight: 1.1, paddingTop: `${0.5 * (editQrScale / 100) * 4.0}px` }}
                                     className="text-slate-600 font-medium line-clamp-3"
                                   >
                                     {printMessage || "Scan QR code or visit antifake.ng/verify..."}
                                   </p>
                                 </div>
                                 <div 
-                                  style={{ gap: `${2 * (editQrScale / 100) * 3.5}px` }}
+                                  style={{ gap: `${2 * (editQrScale / 100) * 4.0}px` }}
                                   className="flex items-center"
                                 >
-                                  <div style={{ width: `${5.5 * (editQrScale / 100) * 3.5}px`, height: `${5.5 * (editQrScale / 100) * 3.5}px` }} className="bg-slate-300 rounded-full shrink-0" />
+                                  <div style={{ width: `${5.5 * (editQrScale / 100) * 4.0}px`, height: `${5.5 * (editQrScale / 100) * 4.0}px` }} className="bg-slate-300 rounded-full shrink-0" />
                                   <span style={{ fontSize: `${10 * (editQrScale / 100)}px` }} className="font-black text-[#12213B] tracking-tight leading-none">AntiFakeNG</span>
                                 </div>
                                 <div 
@@ -1632,7 +1629,7 @@ export default function ProducerBatches() {
                                   SECURE VERIFICATION PORTAL
                                 </div>
                               </div>
-                            </div>
+                             </div>
                           </div>
                         </div>
                           
