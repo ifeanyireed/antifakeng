@@ -1552,6 +1552,8 @@ export default function ProducerBatches() {
                             <option value="180">180° Upside Down</option>
                             <option value="270">270° Left</option>
                           </select>
+                        </div>
+                      </div>
                     {/* Live Preview Card */}
                       <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Live Label Layout Preview</label>
