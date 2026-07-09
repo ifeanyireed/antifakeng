@@ -620,23 +620,17 @@ export default function ProducerBatches() {
                             {/* Embedded Original QR Label Card */}
                             <div 
                               style={{
-                                width: `${72 * (qrScale / 100) * 3.5}px`,
-                                height: `${34 * (qrScale / 100) * 3.5}px`,
-                                padding: `${2 * (qrScale / 100) * 3.5}px`,
+                                width: `${90 * (qrScale / 100)}%`,
                                 position: "absolute",
                                 left: `${qrX}%`,
                                 top: `${qrY}%`,
                                 transform: `translate(-${qrX}%, -${qrY}%)`
                               }}
-                              className="bg-white/95 border border-slate-200/50 rounded-none shadow-md flex items-center select-none"
+                              className="bg-white/95 border border-slate-200/50 rounded-none shadow-md flex items-center select-none aspect-[72/34] @container"
                             >
                               {/* Left: QR Icon */}
                               <div 
-                                style={{
-                                  width: `${30 * (qrScale / 100) * 3.5}px`,
-                                  height: `${30 * (qrScale / 100) * 3.5}px`,
-                                }}
-                                className="flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0"
+                                className="w-[41.67%] aspect-square flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0 ml-[2.77%]"
                               >
                                 <svg viewBox="0 0 24 24" className="w-full h-full text-slate-800 p-0.5" fill="none" stroke="currentColor" strokeWidth="2">
                                   <rect x="3" y="3" width="7" height="7" />
@@ -647,33 +641,29 @@ export default function ProducerBatches() {
                               </div>
                               {/* Right: Metadata */}
                               <div 
-                                style={{ paddingLeft: `${3 * (qrScale / 100) * 3.5}px` }}
-                                className="flex-1 h-full flex flex-col justify-between text-left min-w-0"
+                                className="flex-1 h-full flex flex-col justify-between text-left min-w-0 pl-[4.16%] py-[2.77%] pr-[2.77%]"
                               >
                                 <div>
                                   <div 
-                                    style={{ fontSize: `${8 * (qrScale / 100)}px` }}
-                                    className="font-black text-slate-500 tracking-wider uppercase leading-none"
+                                    className="font-black text-slate-500 tracking-wider uppercase leading-none text-[3.17cqw]"
                                   >
                                     SERIAL: <span className="font-mono text-slate-800 font-extrabold">B-XXXX</span>
                                   </div>
                                   <p 
-                                    style={{ fontSize: `${9 * (qrScale / 100)}px`, marginTop: `${1 * (qrScale / 100) * 3.5}px`, lineHeight: 1.1, paddingTop: `${0.5 * (qrScale / 100) * 3.5}px` }}
-                                    className="text-slate-600 font-medium line-clamp-3"
+                                    className="text-slate-600 font-medium line-clamp-3 leading-tight mt-[1%]"
+                                    style={{ fontSize: '3.57cqw' }}
                                   >
                                     {printMessage || "Scan QR code or visit antifake.ng/verify..."}
                                   </p>
                                 </div>
                                 <div 
-                                  style={{ gap: `${2 * (qrScale / 100) * 3.5}px` }}
-                                  className="flex items-center"
+                                  className="flex items-center gap-[2%]"
                                 >
-                                  <div style={{ width: `${5.5 * (qrScale / 100) * 3.5}px`, height: `${5.5 * (qrScale / 100) * 3.5}px` }} className="bg-slate-300 rounded-full shrink-0" />
-                                  <span style={{ fontSize: `${10 * (qrScale / 100)}px` }} className="font-black text-[#12213B] tracking-tight leading-none">AntiFakeNG</span>
+                                  <div className="w-[7.64%] aspect-square bg-slate-300 rounded-full shrink-0" />
+                                  <span className="font-black text-[#12213B] tracking-tight leading-none text-[3.97cqw]">AntiFakeNG</span>
                                 </div>
                                 <div 
-                                  style={{ fontSize: `${6 * (qrScale / 100)}px` }}
-                                  className="text-[#0089C1] font-black tracking-wider uppercase leading-none"
+                                  className="text-[#0089C1] font-black tracking-wider uppercase leading-none text-[2.38cqw]"
                                 >
                                   SECURE VERIFICATION PORTAL
                                 </div>
@@ -945,23 +935,17 @@ export default function ProducerBatches() {
                             return (
                               <div 
                                 style={{
-                                  width: `${72 * scale * 1.8}px`,
-                                  height: `${34 * scale * 1.8}px`,
-                                  padding: `${2 * scale * 1.8}px`,
+                                  width: `${90 * scale}%`,
                                   position: "absolute",
                                   left: `${x}%`,
                                   top: `${y}%`,
                                   transform: `translate(-${x}%, -${y}%)`
                                 }}
-                                className="bg-white/95 border border-slate-200/50 rounded-none shadow-md flex items-center select-none"
+                                className="bg-white/95 border border-slate-200/50 rounded-none shadow-md flex items-center select-none aspect-[72/34] @container"
                               >
                                 {/* Left: QR Icon */}
                                 <div 
-                                  style={{
-                                    width: `${30 * scale * 1.8}px`,
-                                    height: `${30 * scale * 1.8}px`,
-                                  }}
-                                  className="flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0"
+                                  className="w-[41.67%] aspect-square flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0 ml-[2.77%]"
                                 >
                                   <svg viewBox="0 0 24 24" className="w-full h-full text-slate-800 p-0.5" fill="none" stroke="currentColor" strokeWidth="2">
                                     <rect x="3" y="3" width="7" height="7" />
@@ -972,33 +956,29 @@ export default function ProducerBatches() {
                                 </div>
                                 {/* Right: Metadata */}
                                 <div 
-                                  style={{ paddingLeft: `${3 * scale * 1.8}px` }}
-                                  className="flex-1 h-full flex flex-col justify-between text-left min-w-0"
+                                  className="flex-1 h-full flex flex-col justify-between text-left min-w-0 pl-[4.16%] py-[2.77%] pr-[2.77%]"
                                 >
                                   <div>
                                     <div 
-                                      style={{ fontSize: `${8 * scale * 0.6}px` }}
-                                      className="font-black text-slate-500 tracking-wider uppercase leading-none"
+                                      className="font-black text-slate-500 tracking-wider uppercase leading-none text-[3.17cqw]"
                                     >
                                       SERIAL: <span className="font-mono text-slate-800 font-extrabold">B-XXXX</span>
                                     </div>
                                     <p 
-                                      style={{ fontSize: `${9 * scale * 0.6}px`, marginTop: `${1 * scale * 0.6}px`, lineHeight: 1.1 }}
-                                      className="text-slate-600 font-medium line-clamp-3"
+                                      className="text-slate-600 font-medium line-clamp-3 leading-tight mt-[1%]"
+                                      style={{ fontSize: '3.57cqw' }}
                                     >
                                       {printMessage || "Scan QR code..."}
                                     </p>
                                   </div>
                                   <div 
-                                    style={{ gap: `${2 * scale * 0.6}px` }}
-                                    className="flex items-center"
+                                    className="flex items-center gap-[2%]"
                                   >
-                                    <div style={{ width: `${5.5 * scale * 0.6}px`, height: `${5.5 * scale * 0.6}px` }} className="bg-slate-300 rounded-full shrink-0" />
-                                    <span style={{ fontSize: `${10 * scale * 0.6}px` }} className="font-black text-[#12213B] tracking-tight leading-none">AntiFakeNG</span>
+                                    <div className="w-[7.64%] aspect-square bg-slate-300 rounded-full shrink-0" />
+                                    <span className="font-black text-[#12213B] tracking-tight leading-none text-[3.97cqw]">AntiFakeNG</span>
                                   </div>
                                   <div 
-                                    style={{ fontSize: `${6 * scale * 0.6}px` }}
-                                    className="text-[#0089C1] font-black tracking-wider uppercase leading-none"
+                                    className="text-[#0089C1] font-black tracking-wider uppercase leading-none text-[2.38cqw]"
                                   >
                                     SECURE VERIFICATION PORTAL
                                   </div>
@@ -1573,23 +1553,17 @@ export default function ProducerBatches() {
                             {/* Centered Embedded Original QR Label Card */}
                              <div 
                                style={{
-                                 width: `${72 * (editQrScale / 100) * 3.5}px`,
-                                 height: `${34 * (editQrScale / 100) * 3.5}px`,
-                                 padding: `${2 * (editQrScale / 100) * 3.5}px`,
+                                 width: `${90 * (editQrScale / 100)}%`,
                                  position: "absolute",
                                  left: `${editQrX}%`,
                                  top: `${editQrY}%`,
                                  transform: `translate(-${editQrX}%, -${editQrY}%)`
                                }}
-                               className="absolute bg-white/95 border border-slate-200/50 rounded-none shadow-md flex items-center select-none animate-fade-in"
+                               className="absolute bg-white/95 border border-slate-200/50 rounded-none shadow-md flex items-center select-none animate-fade-in aspect-[72/34] @container"
                              >
                               {/* Left: QR Icon */}
                               <div 
-                                style={{
-                                  width: `${30 * (editQrScale / 100) * 3.5}px`,
-                                  height: `${30 * (editQrScale / 100) * 3.5}px`,
-                                }}
-                                className="flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0"
+                                className="w-[41.67%] aspect-square flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0 ml-[2.77%]"
                               >
                                 <svg viewBox="0 0 24 24" className="w-full h-full text-slate-800 p-0.5" fill="none" stroke="currentColor" strokeWidth="2">
                                   <rect x="3" y="3" width="7" height="7" />
@@ -1600,33 +1574,29 @@ export default function ProducerBatches() {
                               </div>
                               {/* Right: Metadata */}
                               <div 
-                                style={{ paddingLeft: `${3 * (editQrScale / 100) * 3.5}px` }}
-                                className="flex-1 h-full flex flex-col justify-between text-left min-w-0"
+                                className="flex-1 h-full flex flex-col justify-between text-left min-w-0 pl-[4.16%] py-[2.77%] pr-[2.77%]"
                               >
                                 <div>
                                   <div 
-                                    style={{ fontSize: `${8 * (editQrScale / 100)}px` }}
-                                    className="font-black text-slate-500 tracking-wider uppercase leading-none"
+                                    className="font-black text-slate-500 tracking-wider uppercase leading-none text-[3.17cqw]"
                                   >
                                     SERIAL: <span className="font-mono text-slate-800 font-extrabold">B-XXXX</span>
                                   </div>
                                   <p 
-                                    style={{ fontSize: `${9 * (editQrScale / 100)}px`, marginTop: `${1 * (editQrScale / 100) * 3.5}px`, lineHeight: 1.1, paddingTop: `${0.5 * (editQrScale / 100) * 3.5}px` }}
-                                    className="text-slate-600 font-medium line-clamp-3"
+                                    className="text-slate-600 font-medium line-clamp-3 leading-tight mt-[1%]"
+                                    style={{ fontSize: '3.57cqw' }}
                                   >
                                     {printMessage || "Scan QR code or visit antifake.ng/verify..."}
                                   </p>
                                 </div>
                                 <div 
-                                  style={{ gap: `${2 * (editQrScale / 100) * 3.5}px` }}
-                                  className="flex items-center"
+                                  className="flex items-center gap-[2%]"
                                 >
-                                  <div style={{ width: `${5.5 * (editQrScale / 100) * 3.5}px`, height: `${5.5 * (editQrScale / 100) * 3.5}px` }} className="bg-slate-300 rounded-full shrink-0" />
-                                  <span style={{ fontSize: `${10 * (editQrScale / 100)}px` }} className="font-black text-[#12213B] tracking-tight leading-none">AntiFakeNG</span>
+                                  <div className="w-[7.64%] aspect-square bg-slate-300 rounded-full shrink-0" />
+                                  <span className="font-black text-[#12213B] tracking-tight leading-none text-[3.97cqw]">AntiFakeNG</span>
                                 </div>
                                 <div 
-                                  style={{ fontSize: `${6 * (editQrScale / 100)}px` }}
-                                  className="text-[#0089C1] font-black tracking-wider uppercase leading-none"
+                                  className="text-[#0089C1] font-black tracking-wider uppercase leading-none text-[2.38cqw]"
                                 >
                                   SECURE VERIFICATION PORTAL
                                 </div>
