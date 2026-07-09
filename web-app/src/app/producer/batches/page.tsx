@@ -470,7 +470,7 @@ export default function ProducerBatches() {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-md max-h-[90vh] bg-white border border-slate-200/80 rounded-[32px] p-6 shadow-2xl relative z-10 text-left flex flex-col gap-5 overflow-hidden"
+              className="w-full max-w-4xl max-h-[90vh] bg-white border border-slate-200/80 rounded-[32px] p-6 shadow-2xl relative z-10 text-left flex flex-col gap-5 overflow-hidden"
             >
               <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
                 <h3 className="text-lg font-black text-slate-800 text-display">Issue Serial Codes</h3>
@@ -692,7 +692,7 @@ export default function ProducerBatches() {
                             </div>
                             <input
                               type="range"
-                              min="25"
+                              min="5"
                               max="150"
                               value={qrScale}
                               onChange={(e) => setQrScale(parseInt(e.target.value))}
@@ -1560,7 +1560,7 @@ export default function ProducerBatches() {
                             </div>
                             <input
                               type="range"
-                              min="25"
+                              min="5"
                               max="150"
                               value={editQrScale}
                               onChange={(e) => setEditQrScale(parseInt(e.target.value))}
