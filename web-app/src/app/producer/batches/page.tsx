@@ -255,6 +255,75 @@ export default function ProducerBatches() {
     const spacingMM = 0.26; // 1px = ~0.26mm
     return Math.floor((rollWidthMM + spacingMM) / (labelWidthMM + spacingMM)) || 1;
   };
+
+  const handleDirectDownload = async () => {
+    if (!activePrintBatch) return;
+    setIsGenerating(true);
+    setGenerationProgress(0);
+
+    const interval = setInterval(() => {
+      setGenerationProgress((prev) => {
+        if (prev >= 90) return 90;
+        return prev + 10;
+      });
+    }, 150);
+
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
+      
+      const widthParam = layoutWidth === "custom" 
+        ? `${customWidth}${customWidthUnit}` 
+        : layoutWidth;
+
+      const columnsParam = getDynamicColumns();
+      const messageParam = encodeURIComponent(printMessage);
+
+      // Build url
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      const cleanBaseUrl = baseUrl.replace(/\/$/, "") + "/api";
+      
+      const response = await fetch(
+        `${cleanBaseUrl}/producer/batches/${activePrintBatch.id}/print?width=${widthParam}&columns=${columnsParam}&message=${messageParam}&format=${fileFormat}&download=true`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to download layout: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      
+      // Determine file extension
+      let fileExt = "pdf";
+      if (fileFormat === "png") fileExt = "png";
+      else if (fileFormat === "tiff") fileExt = "tiff";
+
+      // Trigger browser download
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `antifake-print-${activePrintBatch.batch_code}.${fileExt}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+
+      setGenerationProgress(100);
+      clearInterval(interval);
+      setTimeout(() => {
+        setIsGenerating(false);
+        setIsPrintModalOpen(false);
+      }, 500);
+
+    } catch (err: any) {
+      clearInterval(interval);
+      setIsGenerating(false);
+      alert(err.message || "Failed to download print layout.");
+    }
+  };
+
   const [generationProgress, setGenerationProgress] = useState(0);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -935,8 +1004,8 @@ export default function ProducerBatches() {
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white disabled:opacity-60"
                         >
                           <option value="pdf">Vector PDF (CMYK Print Ready)</option>
-                          <option value="png_zip">High-Res PNG Sheets (ZIP)</option>
-                          <option value="csv">CSV Keys (Codes Only)</option>
+                          <option value="png">High-Res PNG Roll</option>
+                          <option value="tiff">High-Res TIFF Roll</option>
                         </select>
                       </div>
                     </div>
@@ -982,18 +1051,23 @@ export default function ProducerBatches() {
                       </button>
                       <button
                         type="button"
-                        onClick={handleStartGeneration}
+                        onClick={handleDirectDownload}
                         disabled={isGenerating}
-                        className="flex-1 bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md disabled:opacity-60"
+                        className="flex-1 bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md disabled:opacity-60 flex items-center justify-center gap-1.5"
                       >
-                        Generate &amp; Preview
+                        {isGenerating ? "Generating..." : `Download ${fileFormat.toUpperCase()}`}
                       </button>
                     </div>
                   </div>
 
                   {/* Right Column - Live Visual Preview Workspace (5 Cols) */}
                   <div className="md:col-span-5 bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-col gap-4">
-                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Live Preview</h4>
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Live Preview</h4>
+                      <span className="text-[9px] font-extrabold text-[#0089C1] bg-white border border-slate-200/60 rounded-md px-2 py-0.5 shadow-xs">
+                        {getDynamicColumns()} Columns
+                      </span>
+                    </div>
                     
                     {/* Live Label Item Rendering */}
                     {activePrintBatch?.label_image_url ? (
@@ -1109,9 +1183,15 @@ export default function ProducerBatches() {
 
                     {/* Industrial Roll Layout schematic */}
                     <div className="flex-1 flex flex-col gap-2 justify-center border border-dashed border-slate-200 rounded-xl p-4 bg-white/50">
-                      <div className="flex justify-between text-[10px] font-bold text-slate-400">
-                        <span>Roll Layout: {layoutWidth === "custom" ? `${customWidth} ${customWidthUnit}` : layoutWidth} Width</span>
-                        <span>{getDynamicColumns()} Columns (Auto-fit)</span>
+                      <div className="flex flex-col gap-1 text-[10px] font-bold text-slate-400">
+                        <div className="flex justify-between">
+                          <span>Roll Width: {layoutWidth === "custom" ? `${customWidth} ${customWidthUnit}` : layoutWidth} ({getRollWidthMM().toFixed(1)} mm)</span>
+                          <span>Label Graphic Width: 80.0 mm</span>
+                        </div>
+                        <div className="flex justify-between border-t border-slate-200/50 pt-1 mt-1 text-slate-500">
+                          <span>Columns: Roll Width / Label Width</span>
+                          <span className="font-extrabold text-[#0089C1]">{getDynamicColumns()} Columns</span>
+                        </div>
                       </div>
                       
                       {/* Visual grid rendering */}
@@ -1163,7 +1243,7 @@ export default function ProducerBatches() {
                     <h3 className="text-xl font-extrabold text-slate-900 tracking-tight text-display">Print Layout Preview</h3>
                   </div>
                   <p className="text-slate-400 text-xs mt-0.5">
-                    Review generated layouts. You can print directly from the viewer or download the file.
+                    Review generated layouts. Selected Roll Width: <span className="font-extrabold text-[#0089C1]">{layoutWidth === "custom" ? `${customWidth} ${customWidthUnit}` : layoutWidth === "4ft" ? "4ft (~1219mm)" : layoutWidth === "6ft" ? "6ft (~1828mm)" : "10ft (~3048mm)"} ({getRollWidthMM().toFixed(1)} mm)</span>
                   </p>
                 </div>
                 <button

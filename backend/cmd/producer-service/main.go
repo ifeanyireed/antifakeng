@@ -492,11 +492,16 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 			cols = 12
 		}
 
+		format := r.URL.Query().Get("format")
+		if format == "" {
+			format = "pdf"
+		}
+
 		printConfig := printer.PrintConfig{
 			BatchCode:     batchIDStr,
 			Message:       msg,
 			WidthOption:   widthOpt,
-			Format:        "pdf",
+			Format:        format,
 			Columns:       cols,
 			LabelImage:    labelImageURL,
 			LabelRotation: labelRotation,
@@ -509,12 +514,23 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("download") == "true" {
 			disposition = "attachment"
 		}
-		w.Header().Set("Content-Type", "application/pdf")
-		w.Header().Set("Content-Disposition", fmt.Sprintf("%s; filename=\"antifake-print-%s.pdf\"", disposition, batchIDStr))
+
+		contentType := "application/pdf"
+		fileExt := "pdf"
+		if format == "png" {
+			contentType = "image/png"
+			fileExt = "png"
+		} else if format == "tiff" {
+			contentType = "image/tiff"
+			fileExt = "tiff"
+		}
+
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Content-Disposition", fmt.Sprintf("%s; filename=\"antifake-print-%s.%s\"", disposition, batchIDStr, fileExt))
 
 		err = printer.GenerateVectorPDF(w, printConfig, tokens)
 		if err != nil {
-			log.Printf("Failed to generate PDF print sheet: %v", err)
+			log.Printf("Failed to generate PDF/image print sheet: %v", err)
 		}
 		return
 	}

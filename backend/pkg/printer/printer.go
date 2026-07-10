@@ -7,9 +7,11 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -162,6 +164,21 @@ func ParseWidth(widthStr string) float64 {
 
 // GenerateVectorPDF generates a custom-width roll PDF containing vector QR codes and serial metadata labels
 func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
+	outputFormat := strings.ToLower(config.Format)
+	var pdfWriter io.Writer = w
+	var tempPdfFile *os.File
+	var err error
+
+	if outputFormat == "png" || outputFormat == "tiff" {
+		tempPdfFile, err = os.CreateTemp("", "print-*.pdf")
+		if err != nil {
+			return fmt.Errorf("failed to create temp pdf file: %v", err)
+		}
+		defer os.Remove(tempPdfFile.Name())
+		defer tempPdfFile.Close()
+		pdfWriter = tempPdfFile
+	}
+
 	xPercent, yPercent, qrScale := ParseQrPositionAndScales(config.QRPosition)
 	labelScale := 100.0
 
@@ -495,5 +512,39 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 		}
 	}
 
-	return pdf.Output(w)
+	err = pdf.Output(pdfWriter)
+	if err != nil {
+		return err
+	}
+
+	if outputFormat == "png" || outputFormat == "tiff" {
+		tempPdfFile.Close()
+
+		tempImgFile, err := os.CreateTemp("", "print-*." + outputFormat)
+		if err != nil {
+			return fmt.Errorf("failed to create temp image file: %v", err)
+		}
+		tempImgFile.Close()
+		defer os.Remove(tempImgFile.Name())
+
+		cmd := exec.Command("sips", "-s", "format", outputFormat, tempPdfFile.Name(), "--out", tempImgFile.Name())
+		if outputErr := cmd.Run(); outputErr != nil {
+			log.Printf("sips conversion failed: %v, falling back to writing PDF", outputErr)
+			pdfBytes, readErr := os.ReadFile(tempPdfFile.Name())
+			if readErr != nil {
+				return readErr
+			}
+			_, writeErr := w.Write(pdfBytes)
+			return writeErr
+		}
+
+		imgBytes, readErr := os.ReadFile(tempImgFile.Name())
+		if readErr != nil {
+			return readErr
+		}
+		_, writeErr := w.Write(imgBytes)
+		return writeErr
+	}
+
+	return nil
 }
