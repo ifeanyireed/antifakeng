@@ -80,6 +80,7 @@ export default function ProducerBatches() {
   const [dimensionUnit, setDimensionUnit] = useState<"px" | "mm" | "cm" | "in" | "ft">("mm");
   const [labelDimensions, setLabelDimensions] = useState<{ width: number; height: number } | null>(null);
   const [editLabelDimensions, setEditLabelDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     if (!labelImage) {
@@ -258,15 +259,7 @@ export default function ProducerBatches() {
 
   const handleDirectDownload = async () => {
     if (!activePrintBatch) return;
-    setIsGenerating(true);
-    setGenerationProgress(0);
-
-    const interval = setInterval(() => {
-      setGenerationProgress((prev) => {
-        if (prev >= 90) return 90;
-        return prev + 10;
-      });
-    }, 150);
+    setIsDownloading(true);
 
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("ahnara_token") : "";
@@ -310,17 +303,10 @@ export default function ProducerBatches() {
       document.body.removeChild(link);
       URL.revokeObjectURL(downloadUrl);
 
-      setGenerationProgress(100);
-      clearInterval(interval);
-      setTimeout(() => {
-        setIsGenerating(false);
-        setIsPrintModalOpen(false);
-      }, 500);
-
     } catch (err: any) {
-      clearInterval(interval);
-      setIsGenerating(false);
       alert(err.message || "Failed to download print layout.");
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -1051,11 +1037,11 @@ export default function ProducerBatches() {
                       </button>
                       <button
                         type="button"
-                        onClick={handleDirectDownload}
+                        onClick={handleStartGeneration}
                         disabled={isGenerating}
                         className="flex-1 bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-3.5 rounded-full text-xs shadow-md disabled:opacity-60 flex items-center justify-center gap-1.5"
                       >
-                        {isGenerating ? "Generating..." : `Download ${fileFormat.toUpperCase()}`}
+                        {isGenerating ? "Generating..." : "Generate & Preview"}
                       </button>
                     </div>
                   </div>
@@ -1397,7 +1383,7 @@ export default function ProducerBatches() {
                     </div>
                     {tokensList.length > 100 && (
                       <div className="bg-slate-200/60 border border-slate-300/40 rounded-xl p-3 text-center text-xs font-bold text-slate-600">
-                        ⚠️ Preview is limited to the first 100 labels to preserve browser performance. All {tokensList.length} labels will be printed when you click "Print / Save as PDF".
+                        ⚠️ Preview is limited to the first 100 labels to preserve browser performance. All {tokensList.length} labels will be downloaded when you click "Download Layout File".
                       </div>
                     )}
                   </div>
@@ -1436,11 +1422,12 @@ export default function ProducerBatches() {
                   </button>
                   <button
                     type="button"
-                    onClick={handlePrint}
-                    className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-6 py-3 rounded-full text-xs shadow-md flex items-center gap-1.5 animate-bounce-subtle"
+                    onClick={handleDirectDownload}
+                    disabled={isDownloading}
+                    className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-6 py-3 rounded-full text-xs shadow-md flex items-center gap-1.5 animate-bounce-subtle disabled:opacity-50"
                   >
-                    <IconPrinter className="w-4 h-4" />
-                    Print / Save as PDF
+                    <IconDownload className="w-4 h-4" />
+                    {isDownloading ? "Downloading..." : "Download Layout File"}
                   </button>
                 </div>
               </div>
