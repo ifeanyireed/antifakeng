@@ -34,11 +34,9 @@ func main() {
 		}
 		proxy := httputil.NewSingleHostReverseProxy(targetURL)
 		proxy.ModifyResponse = func(resp *http.Response) error {
-			resp.Header.Del("Access-Control-Allow-Origin")
-			resp.Header.Del("Access-Control-Allow-Methods")
-			resp.Header.Del("Access-Control-Allow-Headers")
-			resp.Header.Del("Access-Control-Expose-Headers")
-			resp.Header.Del("Access-Control-Allow-Credentials")
+			resp.Header.Set("Access-Control-Allow-Origin", "*")
+			resp.Header.Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			resp.Header.Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 			return nil
 		}
 		proxies[r.Prefix] = proxy

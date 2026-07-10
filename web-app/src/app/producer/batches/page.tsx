@@ -254,6 +254,19 @@ export default function ProducerBatches() {
   const handleEditLabelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Parse physical width locally from the selected file immediately
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const buffer = event.target?.result as ArrayBuffer;
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => {
+          const physWidth = getJSImagePhysicalWidth(buffer, img.naturalWidth);
+          setEditLabelPhysicalWidth(physWidth > 0 ? physWidth : null);
+        };
+      };
+      reader.readAsArrayBuffer(file);
+
       const formData = new FormData();
       formData.append("image", file);
       try {
@@ -296,6 +309,19 @@ export default function ProducerBatches() {
   const handleLabelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Parse physical width locally from the selected file immediately
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const buffer = event.target?.result as ArrayBuffer;
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => {
+          const physWidth = getJSImagePhysicalWidth(buffer, img.naturalWidth);
+          setLabelPhysicalWidth(physWidth > 0 ? physWidth : null);
+        };
+      };
+      reader.readAsArrayBuffer(file);
+
       const formData = new FormData();
       formData.append("image", file);
       
