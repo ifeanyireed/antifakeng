@@ -19,6 +19,81 @@ import {
   IconEdit
 } from "@tabler/icons-react";
 
+const getJSImagePhysicalWidth = (buffer: ArrayBuffer, pixelWidth: number): number => {
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+
+  // PNG: Check signature
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    let offset = 8;
+    while (offset < view.byteLength) {
+      if (offset + 8 > view.byteLength) break;
+      const length = view.getUint32(offset);
+      const chunkType = String.fromCharCode(bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]);
+
+      if (chunkType === "pHYs" && length === 9) {
+        if (offset + 12 + 9 <= view.byteLength) {
+          const pxPerMeterX = view.getUint32(offset + 8);
+          const unit = bytes[offset + 16];
+          if (unit === 1 && pxPerMeterX > 0) {
+            return (pixelWidth / pxPerMeterX) * 1000;
+          }
+        }
+        break;
+      } else if (chunkType === "IDAT" || chunkType === "IEND") {
+        break;
+      }
+      offset += 12 + length;
+    }
+  }
+  // JPEG: Check signature
+  else if (bytes[0] === 0xff && bytes[1] === 0xd8) {
+    let offset = 2;
+    while (offset < view.byteLength) {
+      if (offset + 2 > view.byteLength) break;
+      if (bytes[offset] !== 0xff) break;
+      const marker = bytes[offset + 1];
+      if (marker === 0xd8 || marker === 0xd9 || marker === 0x01) {
+        offset += 2;
+        continue;
+      }
+      const length = view.getUint16(offset + 2);
+      if (marker === 0xe0 && length >= 16) { // APP0 JFIF
+        if (offset + 4 + length <= view.byteLength) {
+          const identifier = String.fromCharCode(bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7], bytes[offset + 8]);
+          if (identifier === "JFIF\0") {
+            const units = bytes[offset + 11]; // 1 = DPI, 2 = dots/cm
+            const xDensity = view.getUint16(offset + 12);
+            if (xDensity > 0) {
+              if (units === 1) {
+                return (pixelWidth / xDensity) * 25.4;
+              } else if (units === 2) {
+                return (pixelWidth / xDensity) * 10;
+              }
+            }
+          }
+        }
+        break;
+      }
+      offset += 2 + length;
+    }
+  }
+  return 0;
+};
+
+const fetchPhysicalWidth = async (url: string, pixelWidth: number, callback: (w: number | null) => void) => {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const buffer = await res.arrayBuffer();
+    const physWidth = getJSImagePhysicalWidth(buffer, pixelWidth);
+    callback(physWidth > 0 ? physWidth : null);
+  } catch (e) {
+    console.error("Failed to fetch or parse image physical width:", e);
+    callback(null);
+  }
+};
+
 export default function ProducerBatches() {
   const [products, setProducts] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
@@ -80,40 +155,50 @@ export default function ProducerBatches() {
   const [dimensionUnit, setDimensionUnit] = useState<"px" | "mm" | "cm" | "in" | "ft">("mm");
   const [labelDimensions, setLabelDimensions] = useState<{ width: number; height: number } | null>(null);
   const [editLabelDimensions, setEditLabelDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [labelPhysicalWidth, setLabelPhysicalWidth] = useState<number | null>(null);
+  const [editLabelPhysicalWidth, setEditLabelPhysicalWidth] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     if (!labelImage) {
       setLabelDimensions(null);
+      setLabelPhysicalWidth(null);
       return;
     }
     const img = new Image();
     img.src = labelImage;
     img.onload = () => {
       setLabelDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+      fetchPhysicalWidth(labelImage, img.naturalWidth, setLabelPhysicalWidth);
     };
   }, [labelImage]);
 
   useEffect(() => {
     if (!editLabelImage) {
       setEditLabelDimensions(null);
+      setEditLabelPhysicalWidth(null);
       return;
     }
     const img = new Image();
     img.src = editLabelImage;
     img.onload = () => {
       setEditLabelDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+      fetchPhysicalWidth(editLabelImage, img.naturalWidth, setEditLabelPhysicalWidth);
     };
   }, [editLabelImage]);
 
-  const formatDimensions = (dims: { width: number; height: number } | null, unit: "px" | "mm" | "cm" | "in" | "ft") => {
+  const formatDimensions = (
+    dims: { width: number; height: number } | null,
+    physWidth: number | null,
+    unit: "px" | "mm" | "cm" | "in" | "ft"
+  ) => {
     if (!dims) return "Detecting...";
     const { width, height } = dims;
     if (unit === "px") {
       return `${width} × ${height} px`;
     }
     const aspectRatio = width / height;
-    const baseWidthMM = 80; // Standard label width
+    const baseWidthMM = physWidth && physWidth > 0 ? physWidth : 80;
     const baseHeightMM = baseWidthMM / aspectRatio;
 
     if (unit === "mm") {
@@ -707,10 +792,11 @@ export default function ProducerBatches() {
                         </div>
                         <div className="flex items-center gap-1.5 mt-1">
                           <span className="text-xs font-mono font-extrabold text-slate-800">
-                            {formatDimensions(labelDimensions, dimensionUnit)}
+                            {formatDimensions(labelDimensions, labelPhysicalWidth, dimensionUnit)}
                           </span>
                           <span className="text-[9px] text-slate-400 font-semibold italic">
-                            {dimensionUnit !== "px" && "(calculated print size at standard 80mm base width)"}
+                            {dimensionUnit !== "px" && labelPhysicalWidth && labelPhysicalWidth > 0 && "(inherent physical print size detected from file)"}
+                            {dimensionUnit !== "px" && (!labelPhysicalWidth || labelPhysicalWidth <= 0) && "(calculated print size at standard 80mm base width)"}
                             {dimensionUnit === "px" && "(original uploaded image resolution)"}
                           </span>
                         </div>
@@ -1686,10 +1772,11 @@ export default function ProducerBatches() {
                         </div>
                         <div className="flex items-center gap-1.5 mt-1">
                           <span className="text-xs font-mono font-extrabold text-slate-800">
-                            {formatDimensions(editLabelDimensions, dimensionUnit)}
+                            {formatDimensions(editLabelDimensions, editLabelPhysicalWidth, dimensionUnit)}
                           </span>
                           <span className="text-[9px] text-slate-400 font-semibold italic">
-                            {dimensionUnit !== "px" && "(calculated print size at standard 80mm base width)"}
+                            {dimensionUnit !== "px" && editLabelPhysicalWidth && editLabelPhysicalWidth > 0 && "(inherent physical print size detected from file)"}
+                            {dimensionUnit !== "px" && (!editLabelPhysicalWidth || editLabelPhysicalWidth <= 0) && "(calculated print size at standard 80mm base width)"}
                             {dimensionUnit === "px" && "(original uploaded image resolution)"}
                           </span>
                         </div>
