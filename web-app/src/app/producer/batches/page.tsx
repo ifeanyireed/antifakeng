@@ -315,12 +315,25 @@ export default function ProducerBatches() {
   // Print Layout states
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [activePrintBatch, setActivePrintBatch] = useState<any>(null);
+  const [activePrintLabelPhysicalWidth, setActivePrintLabelPhysicalWidth] = useState<number | null>(null);
   const [printMessage, setPrintMessage] = useState("Scan QR code or visit www.antifake.ng/verify, input serial to check authenticity.");
   const [layoutWidth, setLayoutWidth] = useState("4ft");
   const [customWidth, setCustomWidth] = useState("48");
   const [customWidthUnit, setCustomWidthUnit] = useState("inch");
   const [fileFormat, setFileFormat] = useState("pdf");
   const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    if (!activePrintBatch || !activePrintBatch.label_image_url) {
+      setActivePrintLabelPhysicalWidth(null);
+      return;
+    }
+    const img = new Image();
+    img.src = activePrintBatch.label_image_url;
+    img.onload = () => {
+      fetchPhysicalWidth(activePrintBatch.label_image_url, img.naturalWidth, setActivePrintLabelPhysicalWidth);
+    };
+  }, [activePrintBatch]);
 
   const getRollWidthMM = () => {
     if (layoutWidth === "4ft") return 1219.2;
@@ -337,7 +350,9 @@ export default function ProducerBatches() {
 
   const getDynamicColumns = () => {
     const rollWidthMM = getRollWidthMM();
-    const labelWidthMM = 80;
+    const labelWidthMM = activePrintLabelPhysicalWidth && activePrintLabelPhysicalWidth > 0 
+      ? activePrintLabelPhysicalWidth 
+      : 80;
     const spacingMM = 0.26; // 1px = ~0.26mm
     return Math.floor((rollWidthMM + spacingMM) / (labelWidthMM + spacingMM)) || 1;
   };
@@ -1259,7 +1274,7 @@ export default function ProducerBatches() {
                       <div className="flex flex-col gap-1 text-[10px] font-bold text-slate-400">
                         <div className="flex justify-between">
                           <span>Roll Width: {layoutWidth === "custom" ? `${customWidth} ${customWidthUnit}` : layoutWidth} ({getRollWidthMM().toFixed(1)} mm)</span>
-                          <span>Label Graphic Width: 80.0 mm</span>
+                          <span>Label Graphic Width: {(activePrintLabelPhysicalWidth || 80.0).toFixed(1)} mm</span>
                         </div>
                         <div className="flex justify-between border-t border-slate-200/50 pt-1 mt-1 text-slate-500">
                           <span>Columns: Roll Width / Label Width</span>
@@ -1334,7 +1349,7 @@ export default function ProducerBatches() {
                     <div
                       className="grid gap-[1px] justify-start overflow-auto"
                       style={{
-                        gridTemplateColumns: `repeat(${getDynamicColumns()}, 80mm)`,
+                        gridTemplateColumns: `repeat(${getDynamicColumns()}, ${activePrintLabelPhysicalWidth || 80}mm)`,
                         width: "fit-content",
                         maxWidth: "100%",
                       }}
@@ -1351,7 +1366,8 @@ export default function ProducerBatches() {
                           return (
                             <div
                               key={idx}
-                              className="relative inline-block select-none w-[80mm] h-auto bg-white animate-fade-in"
+                              style={{ width: `${activePrintLabelPhysicalWidth || 80}mm` }}
+                              className="relative inline-block select-none h-auto bg-white animate-fade-in"
                             >
                               {/* Background Image Layer */}
                               <img
@@ -1555,7 +1571,7 @@ export default function ProducerBatches() {
           <div
             className="grid gap-[1px] p-[1px]"
             style={{
-              gridTemplateColumns: `repeat(${getDynamicColumns()}, 80mm)`,
+              gridTemplateColumns: `repeat(${getDynamicColumns()}, ${activePrintLabelPhysicalWidth || 80}mm)`,
               width: `${getRollWidthMM()}mm`,
             }}
           >
@@ -1571,7 +1587,8 @@ export default function ProducerBatches() {
                 return (
                   <div
                     key={idx}
-                    className="print-card relative inline-block select-none w-[80mm] h-auto bg-white"
+                    style={{ width: `${activePrintLabelPhysicalWidth || 80}mm` }}
+                    className="print-card relative inline-block select-none h-auto bg-white"
                   >
                     {/* Background Image Layer */}
                     <img
