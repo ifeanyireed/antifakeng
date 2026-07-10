@@ -272,11 +272,12 @@ export default function ProducerBatches() {
       const messageParam = encodeURIComponent(printMessage);
 
       // Build url
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
-      const cleanBaseUrl = baseUrl.replace(/\/$/, "") + "/api";
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const cleanBaseUrl = baseUrl.replace(/\/$/, "");
+      const apiUrl = cleanBaseUrl.endsWith("/api") ? cleanBaseUrl : `${cleanBaseUrl}/api`;
       
       const response = await fetch(
-        `${cleanBaseUrl}/producer/batches/${activePrintBatch.id}/print?width=${widthParam}&columns=${columnsParam}&message=${messageParam}&format=${fileFormat}&download=true`,
+        `${apiUrl}/producer/batches/${activePrintBatch.id}/print?width=${widthParam}&columns=${columnsParam}&message=${messageParam}&format=${fileFormat}&download=true`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         }
