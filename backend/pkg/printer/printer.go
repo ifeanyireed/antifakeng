@@ -27,6 +27,111 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
+// GetImagePhysicalWidth parses PNG/JPEG metadata to extract the horizontal density/DPI
+// and calculates the physical width in millimeters. Returns 0 if metadata is missing or on error.
+func GetImagePhysicalWidth(filePath string, pixelWidth int) float64 {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0
+	}
+	defer file.Close()
+
+	header := make([]byte, 8)
+	if _, err := io.ReadFull(file, header); err != nil {
+		return 0
+	}
+
+	// Check PNG signature: \x89PNG\r\n\x1a\n
+	if header[0] == 0x89 && header[1] == 'P' && header[2] == 'N' && header[3] == 'G' {
+		for {
+			lengthBuf := make([]byte, 4)
+			if _, err := io.ReadFull(file, lengthBuf); err != nil {
+				break
+			}
+			length := int(uint32(lengthBuf[0])<<24 | uint32(lengthBuf[1])<<16 | uint32(lengthBuf[2])<<8 | uint32(lengthBuf[3]))
+
+			typeBuf := make([]byte, 4)
+			if _, err := io.ReadFull(file, typeBuf); err != nil {
+				break
+			}
+			chunkType := string(typeBuf)
+
+			if chunkType == "pHYs" && length == 9 {
+				data := make([]byte, 9)
+				if _, err := io.ReadFull(file, data); err != nil {
+					break
+				}
+				pxPerMeterX := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+				unit := data[8]
+				if unit == 1 && pxPerMeterX > 0 { // unit 1 means meter
+					return (float64(pixelWidth) / float64(pxPerMeterX)) * 1000.0
+				}
+				break
+			} else if chunkType == "IDAT" || chunkType == "IEND" {
+				// pHYs must appear before IDAT
+				break
+			} else {
+				// skip data + 4 bytes CRC
+				if _, err := file.Seek(int64(length+4), io.SeekCurrent); err != nil {
+					break
+				}
+			}
+		}
+	} else if header[0] == 0xFF && header[1] == 0xD8 {
+		// Seek to after SOI (offset 2)
+		if _, err := file.Seek(2, io.SeekStart); err != nil {
+			return 0
+		}
+
+		for {
+			markerBuf := make([]byte, 2)
+			if _, err := io.ReadFull(file, markerBuf); err != nil {
+				break
+			}
+			if markerBuf[0] != 0xFF {
+				break
+			}
+			marker := markerBuf[1]
+
+			if marker == 0xD8 || marker == 0xD9 || marker == 0x01 {
+				continue
+			}
+
+			lengthBuf := make([]byte, 2)
+			if _, err := io.ReadFull(file, lengthBuf); err != nil {
+				break
+			}
+			length := int(uint16(lengthBuf[0])<<8 | uint16(lengthBuf[1]))
+
+			if marker == 0xE0 && length >= 16 { // APP0 JFIF
+				data := make([]byte, length-2)
+				if _, err := io.ReadFull(file, data); err != nil {
+					break
+				}
+				if len(data) >= 10 && string(data[0:5]) == "JFIF\x00" {
+					units := data[7] // 1 = dots per inch, 2 = dots per cm
+					xDensity := uint16(data[8])<<8 | uint16(data[9])
+					if xDensity > 0 {
+						if units == 1 { // DPI
+							return (float64(pixelWidth) / float64(xDensity)) * 25.4
+						} else if units == 2 { // dots/cm
+							return (float64(pixelWidth) / float64(xDensity)) * 10.0
+						}
+					}
+				}
+				break
+			} else {
+				// skip segment data (length includes length field, so skip length - 2)
+				if _, err := file.Seek(int64(length-2), io.SeekCurrent); err != nil {
+					break
+				}
+			}
+		}
+	}
+
+	return 0
+}
+
 // ParseQrPositionAndScales parses "x;y;qrScale" or legacy "pos;qrScale" into coordinates and qrScale
 func ParseQrPositionAndScales(raw string) (float64, float64, float64) {
 	parts := strings.Split(raw, ";")
@@ -242,12 +347,16 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 	labelHeight := 40.0
 	padding := 5.0
 
-	// Adjust labelHeight to preserve the original aspect ratio of the custom label graphic without restrictions
+	// Adjust labelWidth and labelHeight to preserve the original inherent physical size and aspect ratio of the custom label graphic
 	if localImage != "" && fileExists(localImage) {
 		if file, err := os.Open(localImage); err == nil {
 			if imgConfig, _, err := image.DecodeConfig(file); err == nil {
 				if imgConfig.Width > 0 && imgConfig.Height > 0 {
 					aspectRatio := float64(imgConfig.Width) / float64(imgConfig.Height)
+					// Try to read physical width from the image metadata (DPI/density)
+					if physWidth := GetImagePhysicalWidth(localImage, imgConfig.Width); physWidth > 0 {
+						labelWidth = physWidth
+					}
 					labelHeight = labelWidth / aspectRatio
 				}
 			}
@@ -255,17 +364,37 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 		}
 	}
 	
-	// Check if roll width can accommodate requested columns with spacing
-	minRequiredWidth := float64(columns) * (labelWidth + padding) + padding
+	// Check if roll width can accommodate requested columns with spacing.
+	// If the requested columns do not fit, we reduce the column count instead of scaling down
+	// the label, thereby maintaining the original physical size of the label.
+	maxColumns := int(math.Floor((rollWidth - padding) / (labelWidth + padding)))
+	if maxColumns < 1 {
+		maxColumns = 1
+	}
+
+	if columns > maxColumns {
+		columns = maxColumns
+	}
+
+	minRequiredWidth := float64(columns)*(labelWidth+padding) + padding
 	if rollWidth < minRequiredWidth {
-		// scale down label size to fit the roll width
-		availableWidthPerCol := (rollWidth - padding) / float64(columns)
-		labelWidth = availableWidthPerCol - padding
-		labelHeight = labelWidth * 0.5 // maintain 2:1 aspect ratio
-	} else {
-		// Center the grid on the roll
-		totalGridWidth := float64(columns)*(labelWidth+padding) - padding
-		_ = (rollWidth - totalGridWidth) / 2.0 // side margins
+		// This case only occurs if even a single column is wider than the roll width.
+		// In this case, we must scale down the single label to fit the roll.
+		labelWidth = rollWidth - 2.0*padding
+		if localImage != "" && fileExists(localImage) {
+			if file, err := os.Open(localImage); err == nil {
+				if imgConfig, _, err := image.DecodeConfig(file); err == nil {
+					if imgConfig.Width > 0 && imgConfig.Height > 0 {
+						aspectRatio := float64(imgConfig.Width) / float64(imgConfig.Height)
+						labelHeight = labelWidth / aspectRatio
+					}
+				}
+				file.Close()
+			}
+		} else {
+			labelHeight = labelWidth * 0.5 // default 2:1
+		}
+		columns = 1
 	}
 
 	// Row calculations
