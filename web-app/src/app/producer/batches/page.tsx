@@ -76,6 +76,60 @@ export default function ProducerBatches() {
   const [editQrY, setEditQrY] = useState(80);
   const [editQrScale, setEditQrScale] = useState(100);
 
+  // Graphic Dimensions & Units States
+  const [dimensionUnit, setDimensionUnit] = useState<"px" | "mm" | "cm" | "in" | "ft">("mm");
+  const [labelDimensions, setLabelDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [editLabelDimensions, setEditLabelDimensions] = useState<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    if (!labelImage) {
+      setLabelDimensions(null);
+      return;
+    }
+    const img = new Image();
+    img.src = labelImage;
+    img.onload = () => {
+      setLabelDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+  }, [labelImage]);
+
+  useEffect(() => {
+    if (!editLabelImage) {
+      setEditLabelDimensions(null);
+      return;
+    }
+    const img = new Image();
+    img.src = editLabelImage;
+    img.onload = () => {
+      setEditLabelDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+  }, [editLabelImage]);
+
+  const formatDimensions = (dims: { width: number; height: number } | null, unit: "px" | "mm" | "cm" | "in" | "ft") => {
+    if (!dims) return "Detecting...";
+    const { width, height } = dims;
+    if (unit === "px") {
+      return `${width} × ${height} px`;
+    }
+    const aspectRatio = width / height;
+    const baseWidthMM = 80; // Standard label width
+    const baseHeightMM = baseWidthMM / aspectRatio;
+
+    if (unit === "mm") {
+      return `${baseWidthMM.toFixed(1)} × ${baseHeightMM.toFixed(1)} mm`;
+    }
+    if (unit === "cm") {
+      return `${(baseWidthMM / 10).toFixed(2)} × ${(baseHeightMM / 10).toFixed(2)} cm`;
+    }
+    if (unit === "in") {
+      return `${(baseWidthMM / 25.4).toFixed(2)} × ${(baseHeightMM / 25.4).toFixed(2)} in`;
+    }
+    if (unit === "ft") {
+      return `${(baseWidthMM / 304.8).toFixed(3)} × ${(baseHeightMM / 304.8).toFixed(3)} ft`;
+    }
+    return "";
+  };
+
   const parseQrPositionAndScales = (raw: string) => {
     const parts = (raw || "").split(";");
     const isLegacy = parts[0] && isNaN(Number(parts[0]));
@@ -576,6 +630,34 @@ export default function ProducerBatches() {
                     {labelImage && (
                       <div className="text-[9px] text-slate-500 break-all select-all font-mono bg-white p-2 rounded-lg border border-slate-200/60 mt-1">
                         <strong>Uploaded URL:</strong> {labelImage}
+                      </div>
+                    )}
+
+                    {labelImage && (
+                      <div className="flex flex-col gap-1.5 mt-2 bg-white p-3 rounded-xl border border-slate-200/60">
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">Graphic Dimensions</span>
+                          <select
+                            value={dimensionUnit}
+                            onChange={(e) => setDimensionUnit(e.target.value as any)}
+                            className="bg-slate-50 border border-slate-200 rounded-lg py-1 px-2 text-[10px] font-bold text-slate-700 outline-none focus:border-[#0089C1]"
+                          >
+                            <option value="px">Pixels (px)</option>
+                            <option value="mm">Millimeters (mm)</option>
+                            <option value="cm">Centimeters (cm)</option>
+                            <option value="in">Inches (in)</option>
+                            <option value="ft">Feet (ft)</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-xs font-mono font-extrabold text-slate-800">
+                            {formatDimensions(labelDimensions, dimensionUnit)}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-semibold italic">
+                            {dimensionUnit !== "px" && "(calculated print size at standard 80mm base width)"}
+                            {dimensionUnit === "px" && "(original uploaded image resolution)"}
+                          </span>
+                        </div>
                       </div>
                     )}
 
@@ -1518,6 +1600,33 @@ export default function ProducerBatches() {
 
                   {editLabelImage && (
                     <>
+                      {/* Dimension display and unit selector */}
+                      <div className="flex flex-col gap-1.5 bg-slate-50 border border-slate-200/60 rounded-2xl p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">Graphic Dimensions</span>
+                          <select
+                            value={dimensionUnit}
+                            onChange={(e) => setDimensionUnit(e.target.value as any)}
+                            className="bg-white border border-slate-200 rounded-lg py-1 px-2 text-[10px] font-bold text-slate-700 outline-none focus:border-[#0089C1]"
+                          >
+                            <option value="px">Pixels (px)</option>
+                            <option value="mm">Millimeters (mm)</option>
+                            <option value="cm">Centimeters (cm)</option>
+                            <option value="in">Inches (in)</option>
+                            <option value="ft">Feet (ft)</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-xs font-mono font-extrabold text-slate-800">
+                            {formatDimensions(editLabelDimensions, dimensionUnit)}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-semibold italic">
+                            {dimensionUnit !== "px" && "(calculated print size at standard 80mm base width)"}
+                            {dimensionUnit === "px" && "(original uploaded image resolution)"}
+                          </span>
+                        </div>
+                      </div>
+
                       {/* Configuration Controls */}
                       <div className="mt-2">
                         <div>
