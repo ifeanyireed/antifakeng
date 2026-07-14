@@ -342,60 +342,26 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 	}
 
 	// Calculate label sizing and spacing dynamically based on columns and roll width
-	// For standard layouts: each label will be roughly 80mm wide by 40mm high
-	labelWidth := 80.0
-	labelHeight := 40.0
 	padding := 5.0
+	aspectRatio := 2.0 // default 2:1
 
-	// Adjust labelWidth and labelHeight to preserve the original inherent physical size and aspect ratio of the custom label graphic
 	if localImage != "" && fileExists(localImage) {
 		if file, err := os.Open(localImage); err == nil {
 			if imgConfig, _, err := image.DecodeConfig(file); err == nil {
 				if imgConfig.Width > 0 && imgConfig.Height > 0 {
-					aspectRatio := float64(imgConfig.Width) / float64(imgConfig.Height)
-					// Try to read physical width from the image metadata (DPI/density)
-					if physWidth := GetImagePhysicalWidth(localImage, imgConfig.Width); physWidth > 0 {
-						labelWidth = physWidth
-					}
-					labelHeight = labelWidth / aspectRatio
+					aspectRatio = float64(imgConfig.Width) / float64(imgConfig.Height)
 				}
 			}
 			file.Close()
 		}
 	}
-	
-	// Check if roll width can accommodate requested columns with spacing.
-	// If the requested columns do not fit, we reduce the column count instead of scaling down
-	// the label, thereby maintaining the original physical size of the label.
-	maxColumns := int(math.Floor((rollWidth - padding) / (labelWidth + padding)))
-	if maxColumns < 1 {
-		maxColumns = 1
-	}
 
-	if columns > maxColumns {
-		columns = maxColumns
+	// Dynamic labelWidth computed to fit rollWidth exactly based on user selected columns
+	labelWidth := (rollWidth - padding*float64(columns+1)) / float64(columns)
+	if labelWidth < 10.0 {
+		labelWidth = 10.0
 	}
-
-	minRequiredWidth := float64(columns)*(labelWidth+padding) + padding
-	if rollWidth < minRequiredWidth {
-		// This case only occurs if even a single column is wider than the roll width.
-		// In this case, we must scale down the single label to fit the roll.
-		labelWidth = rollWidth - 2.0*padding
-		if localImage != "" && fileExists(localImage) {
-			if file, err := os.Open(localImage); err == nil {
-				if imgConfig, _, err := image.DecodeConfig(file); err == nil {
-					if imgConfig.Width > 0 && imgConfig.Height > 0 {
-						aspectRatio := float64(imgConfig.Width) / float64(imgConfig.Height)
-						labelHeight = labelWidth / aspectRatio
-					}
-				}
-				file.Close()
-			}
-		} else {
-			labelHeight = labelWidth * 0.5 // default 2:1
-		}
-		columns = 1
-	}
+	labelHeight := labelWidth / aspectRatio
 
 	// Row calculations
 	totalCodes := len(tokens)
@@ -533,8 +499,23 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 		isCustom := config.LabelImage != ""
 		paddingScale := 1.0
 
+		// Find the base width that was used at design time
+		baseWidth := 80.0
 		if isCustom {
-			paddingScale = qrScale / 100.0
+			if localImage != "" && fileExists(localImage) {
+				if file, err := os.Open(localImage); err == nil {
+					if imgConfig, _, err := image.DecodeConfig(file); err == nil {
+						if imgConfig.Width > 0 {
+							if physWidth := GetImagePhysicalWidth(localImage, imgConfig.Width); physWidth > 0 {
+								baseWidth = physWidth
+							}
+						}
+					}
+					file.Close()
+				}
+			}
+			scaleFactor := labelWidth / baseWidth
+			paddingScale = (qrScale / 100.0) * scaleFactor
 			overlayW = 72.0 * paddingScale
 			overlayH = 34.0 * paddingScale
 			overlayX = x + (xPercent/100.0)*(labelWidth-overlayW)
@@ -546,6 +527,8 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 			pdf.SetLineWidth(0.1)
 			pdf.Rect(overlayX, overlayY, overlayW, overlayH, "FD")
 		} else {
+			scaleFactor := labelWidth / 80.0
+			paddingScale = scaleFactor
 			overlayX = x
 			overlayY = y
 			overlayW = labelWidth

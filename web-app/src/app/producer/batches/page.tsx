@@ -348,6 +348,8 @@ export default function ProducerBatches() {
   const [customWidthUnit, setCustomWidthUnit] = useState("inch");
   const [fileFormat, setFileFormat] = useState("pdf");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [columnsMode, setColumnsMode] = useState<"auto" | "manual">("auto");
+  const [manualColumns, setManualColumns] = useState<number>(12);
 
   useEffect(() => {
     if (!activePrintBatch || !activePrintBatch.label_image_url) {
@@ -383,6 +385,38 @@ export default function ProducerBatches() {
     return Math.floor((rollWidthMM + spacingMM) / (labelWidthMM + spacingMM)) || 1;
   };
 
+  const getSelectedColumns = () => {
+    if (columnsMode === "auto") {
+      return getDynamicColumns();
+    }
+    return manualColumns;
+  };
+
+  const getPrintLabelWidthMM = () => {
+    if (columnsMode === "auto") {
+      return activePrintLabelPhysicalWidth && activePrintLabelPhysicalWidth > 0 
+        ? activePrintLabelPhysicalWidth 
+        : 80;
+    }
+    const rollWidthMM = getRollWidthMM();
+    const spacingMM = 0.26; // 1px = ~0.26mm
+    const calculatedWidth = (rollWidthMM + spacingMM) / manualColumns - spacingMM;
+    return Math.max(calculatedWidth, 10);
+  };
+
+  const getPhysicalQrSizeMM = () => {
+    const batch = activePrintBatch;
+    if (!batch) return 30;
+    const { qrScale } = parseQrPositionAndScales(batch.qr_position);
+    const scale = qrScale / 100;
+    const labelWidthMM = getPrintLabelWidthMM();
+    const baseWidthMM = activePrintLabelPhysicalWidth && activePrintLabelPhysicalWidth > 0 
+      ? activePrintLabelPhysicalWidth 
+      : 80;
+    const scaleFactor = labelWidthMM / baseWidthMM;
+    return 30 * scale * scaleFactor;
+  };
+
   const handleDirectDownload = async () => {
     if (!activePrintBatch) return;
     setIsDownloading(true);
@@ -394,7 +428,7 @@ export default function ProducerBatches() {
         ? `${customWidth}${customWidthUnit}` 
         : layoutWidth;
 
-      const columnsParam = getDynamicColumns();
+      const columnsParam = getSelectedColumns();
       const messageParam = encodeURIComponent(printMessage);
 
       // Build url
@@ -1153,6 +1187,57 @@ export default function ProducerBatches() {
                       </div>
                     )}
 
+                    {/* Columns Layout mode and input */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Column Density Mode</label>
+                        <select
+                          value={columnsMode}
+                          onChange={(e) => setColumnsMode(e.target.value as any)}
+                          disabled={isGenerating}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white disabled:opacity-60"
+                        >
+                          <option value="auto">Auto-Fit Columns (Preserve Label Size)</option>
+                          <option value="manual">Manual Columns (Stretch/Shrink Label)</option>
+                        </select>
+                      </div>
+
+                      {columnsMode === "manual" ? (
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Columns Across Roll</label>
+                          <select
+                            value={manualColumns}
+                            onChange={(e) => setManualColumns(parseInt(e.target.value))}
+                            disabled={isGenerating}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white disabled:opacity-60"
+                          >
+                            <option value="4">4 Columns</option>
+                            <option value="6">6 Columns</option>
+                            <option value="8">8 Columns</option>
+                            <option value="10">10 Columns</option>
+                            <option value="12">12 Columns</option>
+                            <option value="14">14 Columns</option>
+                            <option value="16">16 Columns</option>
+                            <option value="18">18 Columns</option>
+                            <option value="20">20 Columns</option>
+                            <option value="24">24 Columns</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col justify-end pb-2">
+                          <p className="text-[10px] text-slate-400 font-bold leading-normal">
+                            * Dynamic columns automatically fit standard {(activePrintLabelPhysicalWidth || 80).toFixed(0)}mm labels across roll width.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {columnsMode === "manual" && getPhysicalQrSizeMM() < 15 && (
+                      <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-[10px] font-bold leading-normal flex items-start gap-2 animate-fade-in">
+                        <span>⚠️ WARNING: Calculated QR code width is very small ({(getPhysicalQrSizeMM()).toFixed(1)}mm). It might not scan reliably on thermal printers. Consider reducing column count.</span>
+                      </div>
+                    )}
+
                     {/* Actions */}
                     <div className="flex gap-3 mt-4 border-t border-slate-100 pt-4">
                       <button
@@ -1179,7 +1264,7 @@ export default function ProducerBatches() {
                     <div className="flex justify-between items-center">
                       <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Live Preview</h4>
                       <span className="text-[9px] font-extrabold text-[#0089C1] bg-white border border-slate-200/60 rounded-md px-2 py-0.5 shadow-xs">
-                        {getDynamicColumns()} Columns
+                        {getSelectedColumns()} Columns
                       </span>
                     </div>
                     
@@ -1300,11 +1385,11 @@ export default function ProducerBatches() {
                       <div className="flex flex-col gap-1 text-[10px] font-bold text-slate-400">
                         <div className="flex justify-between">
                           <span>Roll Width: {layoutWidth === "custom" ? `${customWidth} ${customWidthUnit}` : layoutWidth} ({getRollWidthMM().toFixed(1)} mm)</span>
-                          <span>Label Graphic Width: {(activePrintLabelPhysicalWidth || 80.0).toFixed(1)} mm</span>
+                          <span>Label Graphic Width: {getPrintLabelWidthMM().toFixed(1)} mm</span>
                         </div>
                         <div className="flex justify-between border-t border-slate-200/50 pt-1 mt-1 text-slate-500">
-                          <span>Columns: Roll Width / Label Width</span>
-                          <span className="font-extrabold text-[#0089C1]">{getDynamicColumns()} Columns</span>
+                          <span>Columns: {columnsMode === "auto" ? "Roll Width / Label Width" : "Manually Selected"}</span>
+                          <span className="font-extrabold text-[#0089C1]">{getSelectedColumns()} Columns</span>
                         </div>
                       </div>
                       
@@ -1312,7 +1397,7 @@ export default function ProducerBatches() {
                       <div className="w-full h-24 bg-white border border-slate-200 rounded-md relative p-2 flex flex-col gap-1 overflow-hidden">
                         {[...Array(3)].map((_, r) => (
                           <div key={r} className="flex gap-1 justify-between">
-                            {[...Array(Math.min(getDynamicColumns(), 20))].map((_, c) => (
+                            {[...Array(Math.min(getSelectedColumns(), 20))].map((_, c) => (
                               <div key={c} className="w-2.5 h-2.5 bg-slate-100 border border-slate-200/80 rounded-xs flex items-center justify-center p-0.5">
                                 <div className="w-full h-full bg-slate-400/50 rounded-xs" />
                               </div>
@@ -1375,7 +1460,7 @@ export default function ProducerBatches() {
                     <div
                       className="grid gap-[1px] justify-start overflow-auto"
                       style={{
-                        gridTemplateColumns: `repeat(${getDynamicColumns()}, ${activePrintLabelPhysicalWidth || 80}mm)`,
+                        gridTemplateColumns: `repeat(${getSelectedColumns()}, ${getPrintLabelWidthMM()}mm)`,
                         width: "fit-content",
                         maxWidth: "100%",
                       }}
@@ -1384,15 +1469,21 @@ export default function ProducerBatches() {
                         const prod = products.find(p => p.id === activePrintBatch?.product_id);
                         const productImage = prod?.image_url || "/logo.png";
                         const hasCustomLabel = !!activePrintBatch?.label_image_url;
+                        const labelWidthMM = getPrintLabelWidthMM();
 
                         if (hasCustomLabel) {
                           const { x, y, qrScale } = parseQrPositionAndScales(activePrintBatch.qr_position);
                           const scale = qrScale / 100;
+                          const baseWidthMM = activePrintLabelPhysicalWidth && activePrintLabelPhysicalWidth > 0 
+                            ? activePrintLabelPhysicalWidth 
+                            : 80;
+                          const scaleFactor = labelWidthMM / baseWidthMM;
+                          const finalScale = scale * scaleFactor;
 
                           return (
                             <div
                               key={idx}
-                              style={{ width: `${activePrintLabelPhysicalWidth || 80}mm` }}
+                              style={{ width: `${labelWidthMM}mm` }}
                               className="relative inline-block select-none h-auto bg-white animate-fade-in"
                             >
                               {/* Background Image Layer */}
@@ -1409,9 +1500,9 @@ export default function ProducerBatches() {
                                 {/* Embedded Original QR Label Card */}
                                 <div
                                   style={{
-                                    width: `${72 * scale}mm`,
-                                    height: `${34 * scale}mm`,
-                                    padding: `${2 * scale}mm`,
+                                    width: `${72 * finalScale}mm`,
+                                    height: `${34 * finalScale}mm`,
+                                    padding: `${2 * finalScale}mm`,
                                     position: "absolute",
                                     left: `${x}%`,
                                     top: `${y}%`,
@@ -1422,9 +1513,9 @@ export default function ProducerBatches() {
                                 {/* Left: QR Code */}
                                 <div 
                                   style={{
-                                    width: `${30 * scale}mm`,
-                                    height: `${30 * scale}mm`,
-                                    padding: `${2 * scale}px`
+                                    width: `${30 * finalScale}mm`,
+                                    height: `${30 * finalScale}mm`,
+                                    padding: `${2 * finalScale}px`
                                   }}
                                   className="flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0"
                                 >
@@ -1437,18 +1528,18 @@ export default function ProducerBatches() {
 
                                 {/* Right: Metadata */}
                                 <div 
-                                  style={{ paddingLeft: `${3 * scale}mm` }}
+                                  style={{ paddingLeft: `${3 * finalScale}mm` }}
                                   className="flex-1 h-full flex flex-col justify-between text-left min-w-0"
                                 >
                                   <div>
                                     <div 
-                                      style={{ fontSize: `${10 * scale}px` }}
+                                      style={{ fontSize: `${10 * finalScale}px` }}
                                       className="font-black text-slate-500 tracking-wider uppercase leading-none"
                                     >
                                       SERIAL: <span className="font-mono text-slate-800 font-extrabold">{tokenObj.token}</span>
                                     </div>
                                     <p 
-                                      style={{ fontSize: `${11 * scale}px`, marginTop: `${1 * scale}mm`, lineHeight: 1.1, paddingTop: `${0.5 * scale}mm` }}
+                                      style={{ fontSize: `${11 * finalScale}px`, marginTop: `${1 * finalScale}mm`, lineHeight: 1.1, paddingTop: `${0.5 * finalScale}mm` }}
                                       className="text-slate-600 font-medium line-clamp-3"
                                     >
                                       {printMessage || "Scan QR code or visit antifake.ng/verify, input serial to check authenticity."}
@@ -1456,15 +1547,15 @@ export default function ProducerBatches() {
                                   </div>
                                   
                                   <div 
-                                    style={{ gap: `${2 * scale}px`, padding: `${0.5 * scale}mm 0` }}
+                                    style={{ gap: `${2 * finalScale}px`, padding: `${0.5 * finalScale}mm 0` }}
                                     className="flex items-center"
                                   >
-                                    <img src="/logo.png" alt="Logo" className="object-contain" style={{ width: `${5.5 * scale}mm`, height: `${5.5 * scale}mm` }} />
-                                    <span style={{ fontSize: `${12 * scale}px` }} className="font-black text-[#12213B] tracking-tight leading-none">AntiFakeNG</span>
+                                    <img src="/logo.png" alt="Logo" className="object-contain" style={{ width: `${5.5 * finalScale}mm`, height: `${5.5 * finalScale}mm` }} />
+                                    <span style={{ fontSize: `${12 * finalScale}px` }} className="font-black text-[#12213B] tracking-tight leading-none">AntiFakeNG</span>
                                   </div>
 
                                   <div 
-                                    style={{ fontSize: `${8 * scale}px` }}
+                                    style={{ fontSize: `${8 * finalScale}px` }}
                                     className="text-[#0089C1] font-black tracking-wider uppercase leading-none"
                                   >
                                     SECURE VERIFICATION PORTAL
@@ -1472,16 +1563,26 @@ export default function ProducerBatches() {
                                 </div>
                               </div>
                             </div>
-                            );
+                          );
                         }
 
+                        const standardScale = labelWidthMM / 80;
                         return (
                           <div
                             key={idx}
-                            className="w-[80mm] h-[40mm] border border-slate-200 rounded-lg flex overflow-hidden p-2 bg-white text-slate-800 shrink-0 select-none shadow-xs mx-auto"
+                            style={{ width: `${labelWidthMM}mm`, height: `${40 * standardScale}mm` }}
+                            className="border border-slate-200 rounded-lg flex overflow-hidden bg-white text-slate-800 shrink-0 select-none shadow-xs mx-auto"
                           >
                             {/* Left: QR Code */}
-                            <div className="w-[34mm] h-[34mm] flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md p-[2px]">
+                            <div 
+                              style={{
+                                width: `${34 * standardScale}mm`,
+                                height: `${34 * standardScale}mm`,
+                                padding: `${2 * standardScale}mm`,
+                                margin: `${3 * standardScale}mm`
+                              }}
+                              className="flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0"
+                            >
                               <img
                                 src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=0&data=${encodeURIComponent(`https://antifake.ng/verify?token=${tokenObj.token}`)}`}
                                 alt="QR Code"
@@ -1489,20 +1590,35 @@ export default function ProducerBatches() {
                               />
                             </div>
                             {/* Right: Metadata */}
-                            <div className="flex-1 flex flex-col justify-between pl-3 text-left">
+                            <div 
+                              style={{ padding: `${3 * standardScale}mm`, paddingLeft: "0" }}
+                              className="flex-1 flex flex-col justify-between text-left min-w-0"
+                            >
                               <div>
-                                <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase">
+                                <div 
+                                  style={{ fontSize: `${10 * standardScale}px` }}
+                                  className="font-black text-slate-500 tracking-wider uppercase leading-none"
+                                >
                                   SERIAL: <span className="font-mono text-slate-800 font-extrabold">{tokenObj.token}</span>
                                 </div>
-                                <p className="text-[11px] text-slate-600 font-medium leading-tight mt-1">
+                                <p 
+                                  style={{ fontSize: `${11 * standardScale}px`, marginTop: `${1 * standardScale}mm`, lineHeight: 1.1 }}
+                                  className="text-slate-600 font-medium line-clamp-3 font-ibm"
+                                >
                                   {printMessage || "Scan QR code or visit antifake.ng/verify, input serial to check authenticity."}
                                 </p>
                               </div>
-                              <div className="flex items-center gap-2 py-0.5">
-                                <img src="/logo.png" alt="Logo" className="w-5.5 h-5.5 object-contain" />
-                                <span className="text-xs font-black text-[#12213B] tracking-tight">AntiFakeNG</span>
+                              <div 
+                                style={{ gap: `${2 * standardScale}px`, padding: `${0.5 * standardScale}mm 0` }}
+                                className="flex items-center"
+                              >
+                                <img src="/logo.png" alt="Logo" className="object-contain" style={{ width: `${5.5 * standardScale}mm`, height: `${5.5 * standardScale}mm` }} />
+                                <span style={{ fontSize: `${12 * standardScale}px` }} className="font-black text-[#12213B] tracking-tight leading-none font-ibm">AntiFakeNG</span>
                               </div>
-                              <div className="text-[8px] text-[#0089C1] font-black tracking-wider uppercase">
+                              <div 
+                                style={{ fontSize: `${8 * standardScale}px` }}
+                                className="text-[#0089C1] font-black tracking-wider uppercase leading-none font-ibm"
+                              >
                                 SECURE VERIFICATION PORTAL
                               </div>
                             </div>
@@ -1588,16 +1704,12 @@ export default function ProducerBatches() {
                 margin: 0 !important;
                 padding: 0 !important;
               }
-              .print-card {
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-              }
             }
           `}} />
           <div
             className="grid gap-[1px] p-[1px]"
             style={{
-              gridTemplateColumns: `repeat(${getDynamicColumns()}, ${activePrintLabelPhysicalWidth || 80}mm)`,
+              gridTemplateColumns: `repeat(${getSelectedColumns()}, ${getPrintLabelWidthMM()}mm)`,
               width: `${getRollWidthMM()}mm`,
             }}
           >
@@ -1605,15 +1717,21 @@ export default function ProducerBatches() {
               const prod = products.find(p => p.id === activePrintBatch?.product_id);
               const productImage = prod?.image_url || "/logo.png";
               const hasCustomLabel = !!activePrintBatch?.label_image_url;
+              const labelWidthMM = getPrintLabelWidthMM();
 
               if (hasCustomLabel) {
                 const { x, y, qrScale } = parseQrPositionAndScales(activePrintBatch.qr_position);
                 const scale = qrScale / 100;
+                const baseWidthMM = activePrintLabelPhysicalWidth && activePrintLabelPhysicalWidth > 0 
+                  ? activePrintLabelPhysicalWidth 
+                  : 80;
+                const scaleFactor = labelWidthMM / baseWidthMM;
+                const finalScale = scale * scaleFactor;
 
                 return (
                   <div
                     key={idx}
-                    style={{ width: `${activePrintLabelPhysicalWidth || 80}mm` }}
+                    style={{ width: `${labelWidthMM}mm` }}
                     className="print-card relative inline-block select-none h-auto bg-white"
                   >
                     {/* Background Image Layer */}
@@ -1630,9 +1748,9 @@ export default function ProducerBatches() {
                       {/* Centered Embedded Original QR Label Card */}
                       <div
                         style={{
-                        width: `${72 * scale}mm`,
-                        height: `${34 * scale}mm`,
-                        padding: `${2 * scale}mm`,
+                        width: `${72 * finalScale}mm`,
+                        height: `${34 * finalScale}mm`,
+                        padding: `${2 * finalScale}mm`,
                         position: "absolute",
                         left: `${x}%`,
                         top: `${y}%`,
@@ -1643,9 +1761,9 @@ export default function ProducerBatches() {
                       {/* Left: QR Code */}
                       <div 
                         style={{
-                          width: `${30 * scale}mm`,
-                          height: `${30 * scale}mm`,
-                          padding: `${2 * scale}px`
+                          width: `${30 * finalScale}mm`,
+                          height: `${30 * finalScale}mm`,
+                          padding: `${2 * finalScale}px`
                         }}
                         className="flex items-center justify-center bg-slate-50 border border-slate-100 rounded-md shrink-0"
                       >
@@ -1658,18 +1776,18 @@ export default function ProducerBatches() {
 
                       {/* Right: Metadata */}
                       <div 
-                        style={{ paddingLeft: `${3 * scale}mm` }}
+                        style={{ paddingLeft: `${3 * finalScale}mm` }}
                         className="flex-1 h-full flex flex-col justify-between text-left min-w-0"
                       >
                         <div>
                           <div 
-                            style={{ fontSize: `${10 * scale}px` }}
+                            style={{ fontSize: `${10 * finalScale}px` }}
                             className="font-black text-slate-500 tracking-wider uppercase leading-none"
                           >
                             SERIAL: <span className="font-mono text-slate-800 font-extrabold">{tokenObj.token}</span>
                           </div>
                           <p 
-                            style={{ fontSize: `${11 * scale}px`, marginTop: `${1 * scale}mm`, lineHeight: 1.1, paddingTop: `${0.5 * scale}mm` }}
+                            style={{ fontSize: `${11 * finalScale}px`, marginTop: `${1 * finalScale}mm`, lineHeight: 1.1, paddingTop: `${0.5 * finalScale}mm` }}
                             className="text-slate-600 font-medium line-clamp-3"
                           >
                             {printMessage || "Scan QR code or visit antifake.ng/verify, input serial to check authenticity."}
@@ -1677,15 +1795,15 @@ export default function ProducerBatches() {
                         </div>
                         
                         <div 
-                          style={{ gap: `${2 * scale}px`, padding: `${0.5 * scale}mm 0` }}
+                          style={{ gap: `${2 * finalScale}px`, padding: `${0.5 * finalScale}mm 0` }}
                           className="flex items-center"
                         >
-                          <img src="/logo.png" alt="Logo" className="object-contain" style={{ width: `${5.5 * scale}mm`, height: `${5.5 * scale}mm` }} />
-                          <span style={{ fontSize: `${12 * scale}px` }} className="font-black text-[#12213B] tracking-tight leading-none">AntiFakeNG</span>
+                          <img src="/logo.png" alt="Logo" className="object-contain" style={{ width: `${5.5 * finalScale}mm`, height: `${5.5 * finalScale}mm` }} />
+                          <span style={{ fontSize: `${12 * finalScale}px` }} className="font-black text-[#12213B] tracking-tight leading-none">AntiFakeNG</span>
                         </div>
 
                         <div 
-                          style={{ fontSize: `${8 * scale}px` }}
+                          style={{ fontSize: `${8 * finalScale}px` }}
                           className="text-[#0089C1] font-black tracking-wider uppercase leading-none"
                         >
                           SECURE VERIFICATION PORTAL
@@ -1696,13 +1814,23 @@ export default function ProducerBatches() {
                   );
               }
 
+              const standardScale = labelWidthMM / 80;
               return (
                 <div
                   key={idx}
-                  className="print-card w-[80mm] h-[40mm] border border-slate-300 rounded-lg flex overflow-hidden p-2 bg-white text-slate-800 shrink-0 select-none"
+                  style={{ width: `${labelWidthMM}mm`, height: `${40 * standardScale}mm` }}
+                  className="print-card border border-slate-300 rounded-lg flex overflow-hidden bg-white text-slate-800 shrink-0 select-none"
                 >
                   {/* Left: QR Code */}
-                  <div className="w-[34mm] h-[34mm] flex items-center justify-center bg-white border border-slate-100 rounded-md p-[2px]">
+                  <div 
+                    style={{
+                      width: `${34 * standardScale}mm`,
+                      height: `${34 * standardScale}mm`,
+                      padding: `${2 * standardScale}mm`,
+                      margin: `${3 * standardScale}mm`
+                    }}
+                    className="flex items-center justify-center bg-white border border-slate-100 rounded-md shrink-0"
+                  >
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=0&data=${encodeURIComponent(`https://antifake.ng/verify?token=${tokenObj.token}`)}`}
                       alt="QR Code"
@@ -1710,20 +1838,35 @@ export default function ProducerBatches() {
                     />
                   </div>
                   {/* Right: Metadata */}
-                  <div className="flex-1 flex flex-col justify-between pl-3 text-left">
+                  <div 
+                    style={{ padding: `${3 * standardScale}mm`, paddingLeft: "0" }}
+                    className="flex-1 flex flex-col justify-between text-left min-w-0"
+                  >
                     <div>
-                      <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase">
+                      <div 
+                        style={{ fontSize: `${10 * standardScale}px` }}
+                        className="font-black text-slate-500 tracking-wider uppercase leading-none"
+                      >
                         SERIAL: <span className="font-mono text-slate-800 font-extrabold">{tokenObj.token}</span>
                       </div>
-                      <p className="text-[11px] text-slate-600 font-medium leading-tight mt-1">
+                      <p 
+                        style={{ fontSize: `${11 * standardScale}px`, marginTop: `${1 * standardScale}mm`, lineHeight: 1.1 }}
+                        className="text-slate-600 font-medium leading-tight mt-1"
+                      >
                         {printMessage || "Scan QR code or visit antifake.ng/verify, input serial to check authenticity."}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 py-0.5">
-                      <img src="/logo.png" alt="Logo" className="w-5.5 h-5.5 object-contain" />
-                      <span className="text-xs font-black text-[#12213B] tracking-tight">AntiFakeNG</span>
+                    <div 
+                      style={{ gap: `${2 * standardScale}px`, padding: `${0.5 * standardScale}mm 0` }}
+                      className="flex items-center"
+                    >
+                      <img src="/logo.png" alt="Logo" className="object-contain" style={{ width: `${5.5 * standardScale}mm`, height: `${5.5 * standardScale}mm` }} />
+                      <span style={{ fontSize: `${12 * standardScale}px` }} className="font-black text-[#12213B] tracking-tight leading-none">AntiFakeNG</span>
                     </div>
-                    <div className="text-[8px] text-[#0089C1] font-black tracking-wider uppercase">
+                    <div 
+                      style={{ fontSize: `${8 * standardScale}px` }}
+                      className="text-[#0089C1] font-black tracking-wider uppercase leading-none"
+                    >
                       SECURE VERIFICATION PORTAL
                     </div>
                   </div>
