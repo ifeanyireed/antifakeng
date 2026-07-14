@@ -23,7 +23,7 @@ func main() {
 		WidthOption:   "4ft",
 		Format:        "pdf",
 		Columns:       12,
-		LabelImage:    "",
+		LabelImage:    "label.png",
 		LabelRotation: 0,
 		QRPosition:    "bottom-right",
 		ProductImage:  "",

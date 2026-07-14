@@ -7,7 +7,6 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
-	"log"
 	"math"
 	"net/http"
 	"os"
@@ -498,6 +497,7 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 		var overlayX, overlayY, overlayW, overlayH float64
 		isCustom := config.LabelImage != ""
 		paddingScale := 1.0
+		contentScale := 1.0
 
 		// Find the base width that was used at design time
 		baseWidth := 80.0
@@ -516,10 +516,11 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 			}
 			scaleFactor := labelWidth / baseWidth
 			paddingScale = (qrScale / 100.0) * scaleFactor
-			overlayW = 72.0 * paddingScale
-			overlayH = 34.0 * paddingScale
+			overlayW = (baseWidth * 0.90) * paddingScale
+			overlayH = (baseWidth * 0.425) * paddingScale
 			overlayX = x + (xPercent/100.0)*(labelWidth-overlayW)
 			overlayY = y + (yPercent/100.0)*(labelHeight-overlayH)
+			contentScale = paddingScale * (baseWidth / 80.0)
 
 			// Draw white background card for the overlay original QR label
 			pdf.SetFillColor(255, 255, 255)
@@ -533,6 +534,7 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 			overlayY = y
 			overlayW = labelWidth
 			overlayH = labelHeight
+			contentScale = paddingScale
 		}
 
 		// 1. Generate QR Code Matrix for the token
@@ -566,55 +568,55 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 		}
 
 		// 2. Draw Metadata & Serial details on the right side of the label
-		textX := overlayX + overlayH + 2.0*paddingScale
-		textWidth := overlayW - overlayH - 4.0*paddingScale
+		textX := overlayX + overlayH + 2.0*contentScale
+		textWidth := overlayW - overlayH - 4.0*contentScale
 
 		// Label title / Serial ID
-		pdf.SetFont(fontFamily, "B", 6.0*paddingScale)
+		pdf.SetFont(fontFamily, "B", 6.0*contentScale)
 		pdf.SetTextColor(120, 120, 120)
-		pdf.Text(textX, overlayY+6.0*paddingScale, fmt.Sprintf("SERIAL: %s", token))
+		pdf.Text(textX, overlayY+6.0*contentScale, fmt.Sprintf("SERIAL: %s", token))
 
 		// Instruction message (wrapped text)
-		pdf.SetFont(fontFamily, "", 4.5*paddingScale)
+		pdf.SetFont(fontFamily, "", 4.5*contentScale)
 		pdf.SetTextColor(60, 60, 60)
-		pdf.SetXY(textX, overlayY+8.5*paddingScale)
-		pdf.MultiCell(textWidth, 2.2*paddingScale, config.Message, "", "", false)
+		pdf.SetXY(textX, overlayY+8.5*contentScale)
+		pdf.MultiCell(textWidth, 2.2*contentScale, config.Message, "", "", false)
 
 		// 3. Draw Site Logo and Name ("AntiFakeNG") in the empty space
-		logoY := overlayY + 20.0*paddingScale
-		logoX := textX + 2.0*paddingScale
-		logoSize := 8.0 * paddingScale
+		logoY := overlayY + 20.0*contentScale
+		logoX := textX + 2.0*contentScale
+		logoSize := 8.0 * contentScale
 
 		if foundLogo != "" {
 			centerY := logoY + (logoSize / 2.0)
 			pdf.Image(foundLogo, logoX, logoY, logoSize, logoSize, false, "PNG", 0, "")
 
 			// Draw Site Name "AntiFakeNG" next to the logo
-			pdf.SetFont(fontFamily, "B", 9.0*paddingScale)
+			pdf.SetFont(fontFamily, "B", 9.0*contentScale)
 			pdf.SetTextColor(18, 33, 59) // #12213B (Navy)
-			pdf.Text(logoX+logoSize+2.0*paddingScale, centerY+1.5*paddingScale, "AntiFakeNG")
+			pdf.Text(logoX+logoSize+2.0*contentScale, centerY+1.5*contentScale, "AntiFakeNG")
 		} else {
 			// Fallback: Draw green circular seal vector if logo file not found
-			logoRadius := 4.0 * paddingScale
+			logoRadius := 4.0 * contentScale
 			centerYVector := logoY + logoRadius
 			pdf.SetFillColor(47, 228, 141) // #2FE48D
 			pdf.Circle(logoX+logoRadius, centerYVector, logoRadius, "F")
 
 			// Draw white checkmark inside the seal
-			pdf.SetLineWidth(0.6 * paddingScale)
+			pdf.SetLineWidth(0.6 * contentScale)
 			pdf.SetDrawColor(255, 255, 255)
-			pdf.Line(logoX+logoRadius-1.6*paddingScale, centerYVector, logoX+logoRadius-0.4*paddingScale, centerYVector+1.2*paddingScale)
-			pdf.Line(logoX+logoRadius-0.4*paddingScale, centerYVector+1.2*paddingScale, logoX+logoRadius+1.8*paddingScale, centerYVector-1.2*paddingScale)
+			pdf.Line(logoX+logoRadius-1.6*contentScale, centerYVector, logoX+logoRadius-0.4*contentScale, centerYVector+1.2*contentScale)
+			pdf.Line(logoX+logoRadius-0.4*contentScale, centerYVector+1.2*contentScale, logoX+logoRadius+1.8*contentScale, centerYVector-1.2*contentScale)
 
 			// Draw Site Name "AntiFakeNG" next to the seal
-			pdf.SetFont(fontFamily, "B", 9.0*paddingScale)
+			pdf.SetFont(fontFamily, "B", 9.0*contentScale)
 			pdf.SetTextColor(18, 33, 59) // #12213B
-			pdf.Text(logoX+logoRadius*2.0+2.0*paddingScale, centerYVector+1.5*paddingScale, "AntiFakeNG")
+			pdf.Text(logoX+logoRadius*2.0+2.0*contentScale, centerYVector+1.5*contentScale, "AntiFakeNG")
 		}
 
 		// Verification endpoint footer
-		footerY := overlayY + overlayH - 3.0*paddingScale
-		pdf.SetFont(fontFamily, "B", 4.5*paddingScale)
+		footerY := overlayY + overlayH - 3.0*contentScale
+		pdf.SetFont(fontFamily, "B", 4.5*contentScale)
 		pdf.SetTextColor(0, 137, 193) // brand blue
 		pdf.Text(textX, footerY, "SECURE VERIFICATION PORTAL")
 
@@ -632,30 +634,65 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 	if outputFormat == "png" || outputFormat == "tiff" {
 		tempPdfFile.Close()
 
-		tempImgFile, err := os.CreateTemp("", "print-*." + outputFormat)
+		tempImgFile, err := os.CreateTemp("", "print-*."+outputFormat)
 		if err != nil {
 			return fmt.Errorf("failed to create temp image file: %v", err)
 		}
 		tempImgFile.Close()
 		defer os.Remove(tempImgFile.Name())
 
-		cmd := exec.Command("sips", "-s", "format", outputFormat, tempPdfFile.Name(), "--out", tempImgFile.Name())
-		if outputErr := cmd.Run(); outputErr != nil {
-			log.Printf("sips conversion failed: %v, falling back to writing PDF", outputErr)
-			pdfBytes, readErr := os.ReadFile(tempPdfFile.Name())
-			if readErr != nil {
-				return readErr
-			}
-			_, writeErr := w.Write(pdfBytes)
-			return writeErr
+		// Detect available PDF-to-image conversion utility
+		var cmd *exec.Cmd
+		usePdftoppm := false
+		if _, err := exec.LookPath("pdftoppm"); err == nil {
+			usePdftoppm = true
 		}
 
-		imgBytes, readErr := os.ReadFile(tempImgFile.Name())
-		if readErr != nil {
-			return readErr
+		if usePdftoppm {
+			// pdftoppm outputs files with page suffix, e.g. /tmp/print-123-1.png
+			prefix := tempImgFile.Name()
+			prefixClean := strings.TrimSuffix(prefix, "."+outputFormat)
+
+			cmd = exec.Command("pdftoppm", "-"+outputFormat, "-r", "150", tempPdfFile.Name(), prefixClean)
+			if out, outputErr := cmd.CombinedOutput(); outputErr != nil {
+				return fmt.Errorf("pdftoppm conversion failed: %v, output: %s", outputErr, string(out))
+			}
+
+			generatedFile := prefixClean + "-1." + outputFormat
+			defer os.Remove(generatedFile)
+
+			imgBytes, readErr := os.ReadFile(generatedFile)
+			if readErr != nil {
+				return fmt.Errorf("failed to read pdftoppm output image: %v", readErr)
+			}
+			_, writeErr := w.Write(imgBytes)
+			return writeErr
+		} else {
+			// Fall back to macOS sips
+			if _, err := exec.LookPath("sips"); err != nil {
+				return fmt.Errorf("no PDF image conversion utility (pdftoppm/sips) found in system path")
+			}
+
+			var sipsArgs []string
+			if outputFormat == "tiff" {
+				// Use LZW compression for TIFF to reduce file size dramatically
+				sipsArgs = []string{"-s", "format", "tiff", "-s", "formatOptions", "lzw", tempPdfFile.Name(), "--out", tempImgFile.Name()}
+			} else {
+				sipsArgs = []string{"-s", "format", outputFormat, tempPdfFile.Name(), "--out", tempImgFile.Name()}
+			}
+
+			cmd = exec.Command("sips", sipsArgs...)
+			if out, outputErr := cmd.CombinedOutput(); outputErr != nil {
+				return fmt.Errorf("sips conversion failed: %v, output: %s", outputErr, string(out))
+			}
+
+			imgBytes, readErr := os.ReadFile(tempImgFile.Name())
+			if readErr != nil {
+				return fmt.Errorf("failed to read sips output image: %v", readErr)
+			}
+			_, writeErr := w.Write(imgBytes)
+			return writeErr
 		}
-		_, writeErr := w.Write(imgBytes)
-		return writeErr
 	}
 
 	return nil

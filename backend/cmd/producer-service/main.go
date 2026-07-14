@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/tls"
 	"database/sql"
@@ -525,13 +526,20 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 			fileExt = "tiff"
 		}
 
-		w.Header().Set("Content-Type", contentType)
-		w.Header().Set("Content-Disposition", fmt.Sprintf("%s; filename=\"antifake-print-%s.%s\"", disposition, batchIDStr, fileExt))
-
-		err = printer.GenerateVectorPDF(w, printConfig, tokens)
+		// Use buffer to avoid writing headers/status on generation failure
+		var buf bytes.Buffer
+		err = printer.GenerateVectorPDF(&buf, printConfig, tokens)
 		if err != nil {
 			log.Printf("Failed to generate PDF/image print sheet: %v", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("Failed to generate print layout: %v", err)})
+			return
 		}
+
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Content-Disposition", fmt.Sprintf("%s; filename=\"antifake-print-%s.%s\"", disposition, batchIDStr, fileExt))
+		w.Write(buf.Bytes())
 		return
 	}
 
