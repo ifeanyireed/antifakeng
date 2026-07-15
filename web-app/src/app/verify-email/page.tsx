@@ -2,10 +2,17 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { motion } from "framer-motion";
-import { IconMail, IconArrowLeft, IconRotateClockwise2, IconCheck } from "@tabler/icons-react";
+import { 
+  IconArrowLeft, 
+  IconRotateClockwise2, 
+  IconCheck, 
+  IconAlertCircle, 
+  IconCircleCheck 
+} from "@tabler/icons-react";
 import { useAuth } from "@/components/ahnara/AuthContext";
+import { AhnaraCard } from "@/components/ahnara/AhnaraCard";
+import { AhnaraButton } from "@/components/ahnara/AhnaraButton";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -103,105 +110,101 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-slate-100">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="flex justify-center mb-6">
-          <div className="h-16 w-16 bg-[#8BB436]/10 border border-[#8BB436]/20 rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
-            <Image src="/logo.png" alt="AntiFakeNG" width={40} height={40} className="object-contain" />
-          </div>
-        </div>
-        <h2 className="text-3xl font-black tracking-tight text-white font-serif">
-          Verify Your Email
-        </h2>
-        <p className="mt-2 text-sm text-slate-400 font-medium px-4">
-          We sent a 6-digit confirmation code to <span className="text-white font-bold">{email || "your address"}</span>.
-        </p>
-      </div>
+    <div className="min-h-screen bg-[#E8EFF4] text-[#0D090C] font-sans flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      
+      {/* Decorative background shapes */}
+      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-[#D4F475]/30 rounded-full filter blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-[#0089C1]/10 rounded-full filter blur-3xl pointer-events-none" />
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      {/* Main card wrapper */}
+      <div className="w-full max-w-md z-10">
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 py-8 px-4 shadow-xl rounded-3xl sm:px-10"
+          transition={{ duration: 0.25 }}
         >
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">
-              ⚠️ {error}
+          <AhnaraCard variant="flat" className="bg-white/85 backdrop-blur-md border border-slate-200/80 p-8 shadow-2xl rounded-3xl flex flex-col gap-6">
+            
+            {/* Logo & Header */}
+            <div className="flex flex-col items-center text-center gap-2">
+              <div className="flex items-center justify-center mb-2">
+                <img src="/logo.png" alt="AntiFakeNG Logo" className="w-12 h-12 object-contain" />
+              </div>
+              <h2 className="text-2xl font-black tracking-tight text-slate-800 text-display">Verify Email</h2>
+              <p className="text-xs text-slate-400 font-semibold px-4">
+                We sent a 6-digit confirmation code to <span className="text-[#0089C1] font-bold">{email || "your address"}</span>.
+              </p>
             </div>
-          )}
 
-          {success && (
-            <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs font-semibold flex items-center gap-1.5">
-              <IconCheck className="w-4 h-4 shrink-0" />
-              {success}
-            </div>
-          )}
+            {/* Form */}
+            <form onSubmit={handleVerify} className="flex flex-col gap-5">
+              {error && (
+                <div className="bg-rose-50 border border-rose-100 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2">
+                  <IconAlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
 
-          <form onSubmit={handleVerify} className="space-y-6">
-            <div>
-              <label htmlFor="otp-code" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                Verification Code
-              </label>
-              <div className="relative">
+              {success && (
+                <div className="bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2">
+                  <IconCircleCheck className="w-4 h-4 flex-shrink-0" />
+                  <span>{success}</span>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2 w-full">
+                <label htmlFor="otp-code" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-1">
+                  Verification Code
+                </label>
                 <input
                   id="otp-code"
                   type="text"
                   maxLength={6}
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="Enter 6-digit code"
-                  className="w-full bg-slate-900/80 border border-slate-700 rounded-2xl py-3.5 px-4 text-lg font-mono font-bold tracking-widest text-center text-white placeholder-slate-600 focus:outline-none focus:border-[#8BB436] focus:bg-slate-900 transition-all"
+                  placeholder="0 0 0 0 0 0"
+                  className="w-full h-12 bg-white/50 border border-slate-200 rounded-xl text-center text-lg font-mono font-bold tracking-[0.75em] text-slate-800 placeholder-slate-300 focus:outline-none focus:border-[#0089C1] focus:bg-white transition-all shadow-sm pl-[0.75em]"
                   required
                 />
               </div>
-            </div>
 
-            <div>
-              <button
-                id="btn-submit"
+              <AhnaraButton
                 type="submit"
-                disabled={loading || !email}
-                className="w-full bg-[#8BB436] text-white hover:bg-[#729c25] disabled:opacity-50 disabled:cursor-not-allowed font-bold py-3.5 px-4 rounded-2xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#8BB436]/10"
+                variant="primary"
+                size="lg"
+                className="w-full bg-[#1E293B] text-white hover:bg-slate-800 rounded-xl mt-1"
+                isLoading={loading}
+                disabled={!email}
               >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  <>
-                    Verify & Continue
-                    <IconCheck className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
+                Verify & Continue
+              </AhnaraButton>
+            </form>
 
-          <div className="mt-6 flex flex-col items-center gap-4 text-xs font-semibold border-t border-slate-700/50 pt-6">
-            <div className="flex items-center justify-between w-full">
-              <span className="text-slate-400">Didn't receive the code?</span>
+            <div className="flex flex-col items-center gap-4 text-xs font-semibold border-t border-slate-100 pt-6">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-slate-400">Didn't receive the code?</span>
+                <button
+                  onClick={handleResend}
+                  disabled={timer > 0 || resending || !email}
+                  className="text-[#0089C1] hover:underline disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 transition-all font-bold"
+                >
+                  <IconRotateClockwise2 className="w-4 h-4" />
+                  {timer > 0 ? `Resend in ${timer}s` : "Resend Code"}
+                </button>
+              </div>
+
               <button
-                onClick={handleResend}
-                disabled={timer > 0 || resending || !email}
-                className="text-[#8BB436] hover:text-[#729c25] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 transition-all"
+                onClick={() => {
+                  logout();
+                  router.push("/login");
+                }}
+                className="text-[#0089C1] hover:underline flex items-center gap-1 mt-2 transition-all font-bold self-start"
               >
-                <IconRotateClockwise2 className="w-4 h-4" />
-                {timer > 0 ? `Resend in ${timer}s` : "Resend Code"}
+                <IconArrowLeft className="w-4 h-4" />
+                Back to Sign In
               </button>
             </div>
-
-            <button
-              onClick={() => {
-                logout();
-                router.push("/login");
-              }}
-              className="text-slate-500 hover:text-slate-300 flex items-center gap-1 mt-2 transition-all self-start"
-            >
-              <IconArrowLeft className="w-4 h-4" />
-              Back to Registration
-            </button>
-          </div>
+          </AhnaraCard>
         </motion.div>
       </div>
     </div>
