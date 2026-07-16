@@ -692,8 +692,8 @@ func GenerateImageSheet(w io.Writer, config PrintConfig, tokens []string) error 
 	rows := int(math.Ceil(float64(totalCodes) / float64(columns)))
 	currentPageHeight := float64(rows)*(labelHeight+padding) + padding
 
-	// Set resolution to 150 DPI for clean graphic generation
-	dpi := 150.0
+	// Set resolution to 300 DPI for clean high-quality graphic print generation
+	dpi := 300.0
 	pxScale := dpi / 25.4
 
 	px := func(mm float64) float64 {
@@ -891,14 +891,14 @@ func GenerateImageSheet(w io.Writer, config PrintConfig, tokens []string) error 
 			dc.SetFontFace(serialFace)
 		}
 		dc.SetRGB(0.47, 0.47, 0.47) // #787878
-		dc.DrawString(fmt.Sprintf("SERIAL: %s", token), textX, px(overlayY)+6.0*contentScale*ptScale)
+		dc.DrawString(fmt.Sprintf("SERIAL: %s", token), textX, px(overlayY+6.0*contentScale))
 
 		// Draw Instruction
 		if msgFace != nil {
 			dc.SetFontFace(msgFace)
 		}
 		dc.SetRGB(0.24, 0.24, 0.24) // #3C3C3C
-		dc.DrawStringWrapped(config.Message, textX, px(overlayY)+8.5*contentScale*pxScale, 0, 0, textWidth, 1.2, gg.AlignLeft)
+		dc.DrawStringWrapped(config.Message, textX, px(overlayY+8.5*contentScale), 0, 0, textWidth, 1.2, gg.AlignLeft)
 
 		// 6. Draw Site Logo / Circular Seal
 		logoX := px(overlayX + overlayH + 4.0*contentScale)
