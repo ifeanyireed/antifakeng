@@ -692,8 +692,13 @@ func GenerateImageSheet(w io.Writer, config PrintConfig, tokens []string) error 
 	rows := int(math.Ceil(float64(totalCodes) / float64(columns)))
 	currentPageHeight := float64(rows)*(labelHeight+padding) + padding
 
-	// Set resolution to 300 DPI for clean high-quality graphic print generation
+	// Set resolution: default 300 DPI, but scale down for large batches to prevent out-of-memory crashes
 	dpi := 300.0
+	if totalCodes > 500 {
+		dpi = 72.0
+	} else if totalCodes > 100 {
+		dpi = 150.0
+	}
 	pxScale := dpi / 25.4
 
 	px := func(mm float64) float64 {

@@ -20,7 +20,7 @@ func TestGenerateImageSheets(t *testing.T) {
 		Message:     "Scan QR code to verify product.",
 		WidthOption: "4ft",
 		Columns:     3,
-		QRPosition:  "80;80;100", // X;Y;Scale
+		QRPosition:  "bottom-right",
 	}
 
 	// 1. Test PNG format
