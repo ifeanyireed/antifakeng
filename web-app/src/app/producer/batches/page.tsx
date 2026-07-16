@@ -492,6 +492,12 @@ export default function ProducerBatches() {
         setIsSubmitting(true);
         const qty = parseInt(codeQuantity);
         
+        if (qty > 1000) {
+          alert("Failed to create batch: the quantity of codes to generate cannot exceed 1,000.");
+          setIsSubmitting(false);
+          return;
+        }
+
         const planTier = summary?.plan_tier?.toLowerCase() || "free";
         const allowedQRLimit = summary?.allowed_qr_limit > 0 ? summary.allowed_qr_limit : (planTier === "starter" ? 25000 : planTier === "growth" ? 250000 : planTier === "enterprise" ? 1000000000 : 0);
         const codesCount = summary?.codes_count || 0;
@@ -798,8 +804,9 @@ export default function ProducerBatches() {
                     type="number"
                     value={codeQuantity}
                     onChange={(e) => setCodeQuantity(e.target.value)}
-                    placeholder="e.g. 5000"
+                    placeholder="e.g. 500 (max 1000)"
                     min="1"
+                    max="1000"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
                     required
                   />

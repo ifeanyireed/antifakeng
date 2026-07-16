@@ -175,6 +175,11 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if b.Quantity > 1000 {
+			http.Error(w, `{"error": "Maximum quantity per batch is limited to 1000 codes"}`, http.StatusBadRequest)
+			return
+		}
+
 		// Ensure product belongs to this producer
 		var ownerProdID int
 		err := db.DB.QueryRow(`SELECT producer_id FROM products WHERE id = ?`, b.ProductID).Scan(&ownerProdID)
