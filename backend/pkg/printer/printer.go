@@ -5,17 +5,20 @@ import (
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
-	_ "image/png"
+	"image/png"
 	"io"
 	"math"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 
+	"github.com/boombuler/barcode"
 	"github.com/boombuler/barcode/qr"
+	"github.com/fogleman/gg"
 	"github.com/jung-kurt/gofpdf"
+	"golang.org/x/image/font"
+	"golang.org/x/image/tiff"
 )
 
 func fileExists(filename string) bool {
@@ -269,18 +272,8 @@ func ParseWidth(widthStr string) float64 {
 // GenerateVectorPDF generates a custom-width roll PDF containing vector QR codes and serial metadata labels
 func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 	outputFormat := strings.ToLower(config.Format)
-	var pdfWriter io.Writer = w
-	var tempPdfFile *os.File
-	var err error
-
 	if outputFormat == "png" || outputFormat == "tiff" {
-		tempPdfFile, err = os.CreateTemp("", "print-*.pdf")
-		if err != nil {
-			return fmt.Errorf("failed to create temp pdf file: %v", err)
-		}
-		defer os.Remove(tempPdfFile.Name())
-		defer tempPdfFile.Close()
-		pdfWriter = tempPdfFile
+		return GenerateImageSheet(w, config, tokens)
 	}
 
 	xPercent, yPercent, qrScale := ParseQrPositionAndScales(config.QRPosition)
@@ -626,74 +619,334 @@ func GenerateVectorPDF(w io.Writer, config PrintConfig, tokens []string) error {
 		}
 	}
 
-	err = pdf.Output(pdfWriter)
-	if err != nil {
-		return err
+	return pdf.Output(w)
+}
+
+// GenerateImageSheet generates a high-quality PNG or TIFF sheet directly in memory using Go Graphics (gg)
+func GenerateImageSheet(w io.Writer, config PrintConfig, tokens []string) error {
+	outputFormat := strings.ToLower(config.Format)
+
+	xPercent, yPercent, qrScale := ParseQrPositionAndScales(config.QRPosition)
+	labelScale := 100.0
+
+	labelPath := resolveImagePath(config.LabelImage)
+	localImage := labelPath
+	isTempFile := false
+	if labelPath != "" && (strings.HasPrefix(labelPath, "http://") || strings.HasPrefix(labelPath, "https://")) {
+		resp, err := http.Get(labelPath)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			defer resp.Body.Close()
+			tempFile, err := os.CreateTemp("", "label-*.png")
+			if err == nil {
+				_, err = io.Copy(tempFile, resp.Body)
+				tempFile.Close()
+				if err == nil {
+					localImage = tempFile.Name()
+					isTempFile = true
+				}
+			}
+		}
+	}
+	if isTempFile {
+		defer os.Remove(localImage)
 	}
 
-	if outputFormat == "png" || outputFormat == "tiff" {
-		tempPdfFile.Close()
+	rollWidth := config.WidthVal
+	if rollWidth <= 0 {
+		rollWidth = ParseWidth(config.WidthOption)
+	}
 
-		tempImgFile, err := os.CreateTemp("", "print-*."+outputFormat)
+	columns := config.Columns
+	if columns <= 0 {
+		columns = 12
+	}
+
+	padding := 5.0
+	aspectRatio := 2.0 // default 2:1
+
+	// Decode background image configuration & cache/pre-load background image once
+	var bgImg image.Image
+	if localImage != "" && fileExists(localImage) {
+		if file, err := os.Open(localImage); err == nil {
+			if imgConfig, _, err := image.DecodeConfig(file); err == nil {
+				if imgConfig.Width > 0 && imgConfig.Height > 0 {
+					aspectRatio = float64(imgConfig.Width) / float64(imgConfig.Height)
+				}
+			}
+			file.Close()
+		}
+		var err error
+		bgImg, err = gg.LoadImage(localImage)
 		if err != nil {
-			return fmt.Errorf("failed to create temp image file: %v", err)
-		}
-		tempImgFile.Close()
-		defer os.Remove(tempImgFile.Name())
-
-		// Detect available PDF-to-image conversion utility
-		var cmd *exec.Cmd
-		usePdftoppm := false
-		if _, err := exec.LookPath("pdftoppm"); err == nil {
-			usePdftoppm = true
-		}
-
-		if usePdftoppm {
-			// pdftoppm outputs files with page suffix, e.g. /tmp/print-123-1.png
-			prefix := tempImgFile.Name()
-			prefixClean := strings.TrimSuffix(prefix, "."+outputFormat)
-
-			cmd = exec.Command("pdftoppm", "-"+outputFormat, "-r", "150", tempPdfFile.Name(), prefixClean)
-			if out, outputErr := cmd.CombinedOutput(); outputErr != nil {
-				return fmt.Errorf("pdftoppm conversion failed: %v, output: %s", outputErr, string(out))
-			}
-
-			generatedFile := prefixClean + "-1." + outputFormat
-			defer os.Remove(generatedFile)
-
-			imgBytes, readErr := os.ReadFile(generatedFile)
-			if readErr != nil {
-				return fmt.Errorf("failed to read pdftoppm output image: %v", readErr)
-			}
-			_, writeErr := w.Write(imgBytes)
-			return writeErr
-		} else {
-			// Fall back to macOS sips
-			if _, err := exec.LookPath("sips"); err != nil {
-				return fmt.Errorf("no PDF image conversion utility (pdftoppm/sips) found in system path")
-			}
-
-			var sipsArgs []string
-			if outputFormat == "tiff" {
-				// Use LZW compression for TIFF to reduce file size dramatically
-				sipsArgs = []string{"-s", "format", "tiff", "-s", "formatOptions", "lzw", tempPdfFile.Name(), "--out", tempImgFile.Name()}
-			} else {
-				sipsArgs = []string{"-s", "format", outputFormat, tempPdfFile.Name(), "--out", tempImgFile.Name()}
-			}
-
-			cmd = exec.Command("sips", sipsArgs...)
-			if out, outputErr := cmd.CombinedOutput(); outputErr != nil {
-				return fmt.Errorf("sips conversion failed: %v, output: %s", outputErr, string(out))
-			}
-
-			imgBytes, readErr := os.ReadFile(tempImgFile.Name())
-			if readErr != nil {
-				return fmt.Errorf("failed to read sips output image: %v", readErr)
-			}
-			_, writeErr := w.Write(imgBytes)
-			return writeErr
+			bgImg = nil
 		}
 	}
 
-	return nil
+	labelWidth := (rollWidth - padding*float64(columns+1)) / float64(columns)
+	if labelWidth < 10.0 {
+		labelWidth = 10.0
+	}
+	labelHeight := labelWidth / aspectRatio
+
+	totalCodes := len(tokens)
+	rows := int(math.Ceil(float64(totalCodes) / float64(columns)))
+	currentPageHeight := float64(rows)*(labelHeight+padding) + padding
+
+	// Set resolution to 150 DPI for clean graphic generation
+	dpi := 150.0
+	pxScale := dpi / 25.4
+
+	px := func(mm float64) float64 {
+		return mm * pxScale
+	}
+
+	canvasW := int(math.Ceil(px(rollWidth)))
+	canvasH := int(math.Ceil(px(currentPageHeight)))
+
+	dc := gg.NewContext(canvasW, canvasH)
+
+	// Fill background with white
+	dc.SetRGB(1, 1, 1)
+	dc.Clear()
+
+	// Find the base width that was used at design time
+	isCustom := config.LabelImage != ""
+	paddingScale := 1.0
+	contentScale := 1.0
+	baseWidth := 80.0
+
+	if isCustom {
+		if localImage != "" && fileExists(localImage) {
+			if file, err := os.Open(localImage); err == nil {
+				if imgConfig, _, err := image.DecodeConfig(file); err == nil {
+					if imgConfig.Width > 0 {
+						if physWidth := GetImagePhysicalWidth(localImage, imgConfig.Width); physWidth > 0 {
+							baseWidth = physWidth
+						}
+					}
+				}
+				file.Close()
+			}
+		}
+		scaleFactor := labelWidth / baseWidth
+		paddingScale = (qrScale / 100.0) * scaleFactor
+		contentScale = paddingScale * (baseWidth / 80.0)
+	} else {
+		scaleFactor := labelWidth / 80.0
+		paddingScale = scaleFactor
+		contentScale = paddingScale
+	}
+
+	// Load Font files once
+	var foundRegularFont, foundBoldFont string
+	fontRegularPaths := []string{
+		"assets/fonts/IBMPlexSans-Regular.ttf",
+		"../assets/fonts/IBMPlexSans-Regular.ttf",
+		"backend/assets/fonts/IBMPlexSans-Regular.ttf",
+		"../backend/assets/fonts/IBMPlexSans-Regular.ttf",
+	}
+	fontBoldPaths := []string{
+		"assets/fonts/IBMPlexSans-Bold.ttf",
+		"../assets/fonts/IBMPlexSans-Bold.ttf",
+		"backend/assets/fonts/IBMPlexSans-Bold.ttf",
+		"../backend/assets/fonts/IBMPlexSans-Bold.ttf",
+	}
+	for _, fp := range fontRegularPaths {
+		if fileExists(fp) {
+			foundRegularFont = fp
+			break
+		}
+	}
+	for _, fp := range fontBoldPaths {
+		if fileExists(fp) {
+			foundBoldFont = fp
+			break
+		}
+	}
+
+	// Pre-resolve font faces for sizes so we don't do maps/locks in the loop
+	var serialFace, msgFace, logoFace, footerFace font.Face
+	if foundBoldFont != "" {
+		serialFace, _ = gg.LoadFontFace(foundBoldFont, 6.0*contentScale*pxScale)
+		logoFace, _ = gg.LoadFontFace(foundBoldFont, 9.0*contentScale*pxScale)
+		footerFace, _ = gg.LoadFontFace(foundBoldFont, 4.5*contentScale*pxScale)
+	}
+	if foundRegularFont != "" {
+		msgFace, _ = gg.LoadFontFace(foundRegularFont, 4.5*contentScale*pxScale)
+	}
+
+	// Load Logo file once
+	logoPaths := []string{
+		"logo.png",
+		"../logo.png",
+		"backend/logo.png",
+		"../backend/logo.png",
+		"web-app/public/logo.png",
+		"../web-app/public/logo.png",
+	}
+	var foundLogo string
+	for _, lp := range logoPaths {
+		if fileExists(lp) {
+			foundLogo = lp
+			break
+		}
+	}
+	var logoImg image.Image
+	if foundLogo != "" {
+		logoImg, _ = gg.LoadImage(foundLogo)
+	}
+
+	for i, token := range tokens {
+		colIndex := i % columns
+		rowIndex := i / columns
+
+		// Coordinates in millimeters
+		xMM := padding + float64(colIndex)*(labelWidth+padding)
+		yMM := padding + float64(rowIndex)*(labelHeight+padding)
+
+		// Coordinates in pixels
+		x := px(xMM)
+		y := px(yMM)
+		lblW := px(labelWidth)
+		lblH := px(labelHeight)
+
+		// 1. Draw Label Border
+		dc.SetLineWidth(px(0.2))
+		dc.SetRGB(0.7, 0.7, 0.7) // #B4B4B4
+		dc.DrawRectangle(x, y, lblW, lblH)
+		dc.Stroke()
+
+		// 2. Draw background label image if provided
+		if bgImg != nil {
+			dc.Push()
+			if config.LabelRotation != 0 {
+				centerX := x + lblW/2.0
+				centerY := y + lblH/2.0
+				dc.RotateAbout(gg.Radians(float64(config.LabelRotation)), centerX, centerY)
+			}
+
+			drawW := lblW * (labelScale / 100.0)
+			drawH := lblH * (labelScale / 100.0)
+			offsetX := (drawW - lblW) / 2.0
+			offsetY := (drawH - lblH) / 2.0
+
+			dc.Push()
+			dc.Translate(x-offsetX, y-offsetY)
+			dc.Scale(drawW/float64(bgImg.Bounds().Dx()), drawH/float64(bgImg.Bounds().Dy()))
+			dc.DrawImage(bgImg, 0, 0)
+			dc.Pop()
+
+			dc.Pop()
+		}
+
+		// 3. Compute Card Overlay Bounds
+		var overlayX, overlayY, overlayW, overlayH float64
+		if isCustom {
+			overlayW = (baseWidth * 0.90) * paddingScale
+			overlayH = (baseWidth * 0.425) * paddingScale
+			overlayX = xMM + (xPercent/100.0)*(labelWidth-overlayW)
+			overlayY = yMM + (yPercent/100.0)*(labelHeight-overlayH)
+
+			// Draw white background card with 95% opacity
+			dc.SetRGBA(1, 1, 1, 0.95)
+			dc.DrawRectangle(px(overlayX), px(overlayY), px(overlayW), px(overlayH))
+			dc.Fill()
+
+			// Draw border card
+			dc.SetLineWidth(px(0.1))
+			dc.SetRGB(0.86, 0.86, 0.86) // #DCDCDC
+			dc.DrawRectangle(px(overlayX), px(overlayY), px(overlayW), px(overlayH))
+			dc.Stroke()
+		} else {
+			overlayX = xMM
+			overlayY = yMM
+			overlayW = labelWidth
+			overlayH = labelHeight
+		}
+
+		// 4. Generate QR Code Matrix for the token
+		verificationURL := fmt.Sprintf("https://antifake.ng/verify?token=%s", token)
+		qrCode, err := qr.Encode(verificationURL, qr.M, qr.Auto)
+		if err == nil {
+			qrSizeMM := overlayH * 0.85
+			qrXMM := overlayX + (overlayH-qrSizeMM)/2.0
+			qrYMM := overlayY + (overlayH-qrSizeMM)/2.0
+
+			qrSizePX := int(math.Round(px(qrSizeMM)))
+			scaledQR, err := barcode.Scale(qrCode, qrSizePX, qrSizePX)
+			if err == nil {
+				dc.DrawImage(scaledQR, int(math.Round(px(qrXMM))), int(math.Round(px(qrYMM))))
+			}
+		}
+
+		// 5. Draw Metadata on the right side of the label
+		textX := px(overlayX + overlayH + 2.0*contentScale)
+		textWidth := px(overlayW - overlayH - 4.0*contentScale)
+
+		// Draw Serial
+		if serialFace != nil {
+			dc.SetFontFace(serialFace)
+		}
+		dc.SetRGB(0.47, 0.47, 0.47) // #787878
+		dc.DrawString(fmt.Sprintf("SERIAL: %s", token), textX, px(overlayY)+6.0*contentScale*pxScale)
+
+		// Draw Instruction
+		if msgFace != nil {
+			dc.SetFontFace(msgFace)
+		}
+		dc.SetRGB(0.24, 0.24, 0.24) // #3C3C3C
+		dc.DrawStringWrapped(config.Message, textX, px(overlayY)+8.5*contentScale*pxScale, 0, 0, textWidth, 1.2, gg.AlignLeft)
+
+		// 6. Draw Site Logo / Circular Seal
+		logoX := px(overlayX + overlayH + 4.0*contentScale)
+		logoY := px(overlayY + 20.0*contentScale)
+		logoSize := px(8.0 * contentScale)
+
+		if logoImg != nil {
+			dc.Push()
+			dc.Translate(logoX, logoY)
+			dc.Scale(logoSize/float64(logoImg.Bounds().Dx()), logoSize/float64(logoImg.Bounds().Dy()))
+			dc.DrawImage(logoImg, 0, 0)
+			dc.Pop()
+
+			// Draw Site Name next to logo
+			if logoFace != nil {
+				dc.SetFontFace(logoFace)
+			}
+			dc.SetRGB(0.07, 0.13, 0.23) // #12213B
+			centerY := logoY + (logoSize / 2.0)
+			dc.DrawString("AntiFakeNG", logoX+logoSize+px(2.0*contentScale), centerY+px(1.5*contentScale))
+		} else {
+			logoRadius := px(4.0 * contentScale)
+			centerYVector := logoY + logoRadius
+			dc.SetRGB(0.18, 0.89, 0.55) // #2FE48D
+			dc.DrawCircle(logoX+logoRadius, centerYVector, logoRadius)
+			dc.Fill()
+
+			dc.SetLineWidth(px(0.6 * contentScale))
+			dc.SetRGB(1, 1, 1)
+			dc.DrawLine(logoX+logoRadius-px(1.6*contentScale), centerYVector, logoX+logoRadius-px(0.4*contentScale), centerYVector+px(1.2*contentScale))
+			dc.DrawLine(logoX+logoRadius-px(0.4*contentScale), centerYVector+px(1.2*contentScale), logoX+logoRadius+px(1.8*contentScale), centerYVector-px(1.2*contentScale))
+			dc.Stroke()
+
+			if logoFace != nil {
+				dc.SetFontFace(logoFace)
+			}
+			dc.SetRGB(0.07, 0.13, 0.23) // #12213B
+			dc.DrawString("AntiFakeNG", logoX+logoRadius*2.0+px(2.0*contentScale), centerYVector+px(1.5*contentScale))
+		}
+
+		// 7. Draw Secure Portal Footer
+		footerY := px(overlayY + overlayH - 3.0*contentScale)
+		if footerFace != nil {
+			dc.SetFontFace(footerFace)
+		}
+		dc.SetRGB(0, 0.54, 0.76) // #0089C3 (brand blue)
+		dc.DrawString("SECURE VERIFICATION PORTAL", textX, footerY)
+	}
+
+	if outputFormat == "tiff" {
+		return tiff.Encode(w, dc.Image(), &tiff.Options{Compression: tiff.Deflate})
+	}
+	return png.Encode(w, dc.Image())
 }
