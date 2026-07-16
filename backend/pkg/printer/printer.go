@@ -765,14 +765,17 @@ func GenerateImageSheet(w io.Writer, config PrintConfig, tokens []string) error 
 	}
 
 	// Pre-resolve font faces for sizes so we don't do maps/locks in the loop
+	// Note: Font sizes are loaded relative to point scale (dpi / 72.0) rather than pxScale (dpi / 25.4)
+	// to ensure text proportions match point-based layout (1pt = 1/72 inch).
+	ptScale := dpi / 72.0
 	var serialFace, msgFace, logoFace, footerFace font.Face
 	if foundBoldFont != "" {
-		serialFace, _ = gg.LoadFontFace(foundBoldFont, 6.0*contentScale*pxScale)
-		logoFace, _ = gg.LoadFontFace(foundBoldFont, 9.0*contentScale*pxScale)
-		footerFace, _ = gg.LoadFontFace(foundBoldFont, 4.5*contentScale*pxScale)
+		serialFace, _ = gg.LoadFontFace(foundBoldFont, 6.0*contentScale*ptScale)
+		logoFace, _ = gg.LoadFontFace(foundBoldFont, 9.0*contentScale*ptScale)
+		footerFace, _ = gg.LoadFontFace(foundBoldFont, 4.5*contentScale*ptScale)
 	}
 	if foundRegularFont != "" {
-		msgFace, _ = gg.LoadFontFace(foundRegularFont, 4.5*contentScale*pxScale)
+		msgFace, _ = gg.LoadFontFace(foundRegularFont, 4.5*contentScale*ptScale)
 	}
 
 	// Load Logo file once
@@ -888,7 +891,7 @@ func GenerateImageSheet(w io.Writer, config PrintConfig, tokens []string) error 
 			dc.SetFontFace(serialFace)
 		}
 		dc.SetRGB(0.47, 0.47, 0.47) // #787878
-		dc.DrawString(fmt.Sprintf("SERIAL: %s", token), textX, px(overlayY)+6.0*contentScale*pxScale)
+		dc.DrawString(fmt.Sprintf("SERIAL: %s", token), textX, px(overlayY)+6.0*contentScale*ptScale)
 
 		// Draw Instruction
 		if msgFace != nil {
