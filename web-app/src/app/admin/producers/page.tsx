@@ -154,9 +154,9 @@ export default function AdminProducers() {
                   filteredProducers.map((p) => {
                     const planName = p.plan_tier ? p.plan_tier.charAt(0).toUpperCase() + p.plan_tier.slice(1).toLowerCase() : "Free";
                     const planTier = p.plan_tier?.toLowerCase() || "";
-                    const codeLimit = planTier === "free" ? 0 : planTier === "starter" ? 25000 : planTier === "growth" ? 250000 : 1000000;
-                    const codesUsed = planTier === "free" ? 0 : planTier === "starter" ? 24812 : planTier === "growth" ? 12010 : 742190;
-                    const percentUsed = Math.round((codesUsed / codeLimit) * 100);
+                    const codeLimit = p.allowed_qr_limit > 0 ? p.allowed_qr_limit : (planTier === "free" ? 0 : planTier === "starter" ? 25000 : planTier === "growth" ? 250000 : 1000000);
+                    const codesUsed = p.codes_generated || 0;
+                    const percentUsed = codeLimit > 0 ? Math.round((codesUsed / codeLimit) * 100) : 0;
                     
                     let formattedDate = "N/A";
                     if (p.created_at) {

@@ -28,8 +28,8 @@ func main() {
 	}
 
 	// 1. Seed Producers
-	_, err := database.Exec(`INSERT INTO producers (id, name, slug, plan_tier, contact_email, brand_logo_url, status, created_at)
-		VALUES (1, 'AURA Skincare', 'aura', 'growth', 'hello@auraskin.com', '/logo.png', 'active', ?)`, time.Now().AddDate(0, 0, -14))
+	_, err := database.Exec(`INSERT INTO producers (id, name, slug, plan_tier, contact_email, brand_logo_url, status, created_at, allowed_qr_limit)
+		VALUES (1, 'AURA Skincare', 'aura', 'growth', 'hello@auraskin.com', '/logo.png', 'active', ?, 250000)`, time.Now().AddDate(0, 0, -14))
 	if err != nil {
 		log.Fatalf("Failed to seed producers: %v", err)
 	}

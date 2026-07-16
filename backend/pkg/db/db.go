@@ -324,6 +324,13 @@ func createTables(driver string) {
 	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN api_key VARCHAR(255) NULL`)
 	_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN api_secret VARCHAR(255) NULL`)
 
+	// Migrations for allowed_qr_limit column
+	if driver == "mysql" {
+		_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN allowed_qr_limit INT NOT NULL DEFAULT 0`)
+	} else {
+		_, _ = DB.Exec(`ALTER TABLE producers ADD COLUMN allowed_qr_limit INTEGER NOT NULL DEFAULT 0`)
+	}
+
 	// Migrations for batches table to support custom label background embedding
 	_, _ = DB.Exec(`ALTER TABLE batches ADD COLUMN label_image_url VARCHAR(512) NULL`)
 	_, _ = DB.Exec(`ALTER TABLE batches ADD COLUMN label_rotation INT NOT NULL DEFAULT 0`)

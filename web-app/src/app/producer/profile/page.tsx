@@ -238,6 +238,8 @@ export default function ProducerProfile() {
   }
 
   const scansCount = summary?.scans_count || 0;
+  const codesCount = summary?.codes_count || 0;
+  const allowedQRLimit = summary?.allowed_qr_limit || 0;
 
   return (
     <div className="w-full max-w-4xl mx-auto text-left flex flex-col gap-6 animate-fade-in">
@@ -492,35 +494,32 @@ export default function ProducerProfile() {
               </div>
 
               {/* Usage Progress */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-500">QR Generation Limit (This Month)</span>
-                  <span className="text-xs font-black text-slate-800">
-                    {planTier === "Starter" && `${scansCount.toLocaleString()} / 25,000 codes`}
-                    {planTier === "Growth" && `${scansCount.toLocaleString()} / 250,000 codes`}
-                    {planTier === "Enterprise" && `${scansCount.toLocaleString()} / Unlimited codes`}
-                    {(planTier === "Free" || planTier === "free") && `${scansCount.toLocaleString()} / 0 codes`}
-                    {!["Starter", "Growth", "Enterprise", "Free", "free"].includes(planTier) && `${scansCount.toLocaleString()} / 250,000 codes`}
-                  </span>
-                </div>
-                {/* Progress bar container */}
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
-                  <div 
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
-                    style={{ 
-                      width: 
-                        planTier === "Starter" ? `${Math.min((scansCount / 25000) * 100, 100)}%` : 
-                        planTier === "Growth" ? `${Math.min((scansCount / 250000) * 100, 100)}%` : 
-                        planTier === "Enterprise" ? "0.1%" :
-                        (planTier === "Free" || planTier === "free") ? "0%" :
-                        `${Math.min((scansCount / 250000) * 100, 100)}%`
-                    }} 
-                  />
-                </div>
-                <p className="text-slate-400 text-[10px] font-medium leading-normal">
-                  Calculated from 1st of the calendar month. Limits refresh on August 1st.
-                </p>
-              </div>
+              {(() => {
+                const resolvedLimit = allowedQRLimit > 0 ? allowedQRLimit : (planTier === "Starter" ? 25000 : planTier === "Growth" ? 250000 : planTier === "Enterprise" ? 1000000000 : 0);
+                const progressPercent = resolvedLimit > 0 ? Math.min((codesCount / resolvedLimit) * 100, 100) : 0;
+                return (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-500">QR Generation Limit (Lifetime Capacity)</span>
+                      <span className="text-xs font-black text-slate-800">
+                        {planTier === "Enterprise" ? `${codesCount.toLocaleString()} / Unlimited codes` : `${codesCount.toLocaleString()} / ${resolvedLimit.toLocaleString()} codes`}
+                      </span>
+                    </div>
+                    {/* Progress bar container */}
+                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                      <div 
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                        style={{ 
+                          width: planTier === "Enterprise" ? "0.1%" : `${progressPercent}%`
+                        }} 
+                      />
+                    </div>
+                    <p className="text-slate-400 text-[10px] font-medium leading-normal">
+                      Unused QR generation capacity is saved permanently and rolls over indefinitely.
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

@@ -97,6 +97,7 @@ const fetchPhysicalWidth = async (url: string, pixelWidth: number, callback: (w:
 export default function ProducerBatches() {
   const [products, setProducts] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -109,8 +110,13 @@ export default function ProducerBatches() {
 
         const batchData = await api.get("/producer/batches");
         setBatches(batchData || []);
+
+        const summaryData = await api.get("/analytics/summary").catch(() => null);
+        if (summaryData) {
+          setSummary(summaryData);
+        }
       } catch (err) {
-        console.error("Failed to load products/batches:", err);
+        console.error("Failed to load products/batches/summary:", err);
       }
     };
     fetchData();
@@ -485,6 +491,18 @@ export default function ProducerBatches() {
       try {
         setIsSubmitting(true);
         const qty = parseInt(codeQuantity);
+        
+        const planTier = summary?.plan_tier?.toLowerCase() || "free";
+        const allowedQRLimit = summary?.allowed_qr_limit > 0 ? summary.allowed_qr_limit : (planTier === "starter" ? 25000 : planTier === "growth" ? 250000 : planTier === "enterprise" ? 1000000000 : 0);
+        const codesCount = summary?.codes_count || 0;
+        const remaining = Math.max(allowedQRLimit - codesCount, 0);
+
+        if (planTier !== "enterprise" && qty > remaining) {
+          alert(`Failed to create batch: the quantity of ${qty} codes exceeds your remaining allowed limit of ${remaining} codes.`);
+          setIsSubmitting(false);
+          return;
+        }
+
         const code = batchId || `B-${Math.floor(Math.random() * 90000 + 10000)}`;
         
         // Create batch record with custom label parameters
@@ -506,6 +524,12 @@ export default function ProducerBatches() {
         // Reload batches
         const data = await api.get("/producer/batches");
         setBatches(data || []);
+
+        // Reload summary metrics
+        const summaryData = await api.get("/analytics/summary").catch(() => null);
+        if (summaryData) {
+          setSummary(summaryData);
+        }
         
         setBatchId("");
         setCodeQuantity("1000");
@@ -779,6 +803,14 @@ export default function ProducerBatches() {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
                     required
                   />
+                  <p className="text-[10px] text-slate-500 mt-1.5 font-bold">
+                    Remaining QR Generation Credits:{" "}
+                    <span className="text-[#0089C1] font-black">
+                      {summary?.plan_tier?.toLowerCase() === "enterprise"
+                        ? "Unlimited"
+                        : `${(Math.max((summary?.allowed_qr_limit > 0 ? summary.allowed_qr_limit : (summary?.plan_tier?.toLowerCase() === "starter" ? 25000 : summary?.plan_tier?.toLowerCase() === "growth" ? 250000 : 0)) - (summary?.codes_count || 0), 0)).toLocaleString()} codes`}
+                    </span>
+                  </p>
                 </div>
 
                 <div>

@@ -183,6 +183,39 @@ func handleBatches(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Enforce QR code limit check
+		var allowedLimit int
+		var generatedCount int
+		var planTier string
+		err = db.DB.QueryRow(`SELECT allowed_qr_limit, plan_tier FROM producers WHERE id = ?`, prodID).Scan(&allowedLimit, &planTier)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to fetch allowed QR limit: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		err = db.DB.QueryRow(`SELECT COUNT(q.id) FROM qr_codes q JOIN batches b ON q.batch_id = b.id JOIN products p ON b.product_id = p.id WHERE p.producer_id = ?`, prodID).Scan(&generatedCount)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to calculate generated QR count: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		// Fallback to defaults if allowedLimit in DB is 0
+		if allowedLimit == 0 {
+			switch strings.ToLower(planTier) {
+			case "starter":
+				allowedLimit = 25000
+			case "growth":
+				allowedLimit = 250000
+			case "enterprise":
+				allowedLimit = 1000000000
+			}
+		}
+
+		if strings.ToLower(planTier) != "enterprise" && generatedCount+b.Quantity > allowedLimit {
+			http.Error(w, fmt.Sprintf(`{"error": "QR Generation limit exceeded. You have generated %d of %d allowed codes. Creating this batch of %d would exceed your limit."}`, generatedCount, allowedLimit, b.Quantity), http.StatusBadRequest)
+			return
+		}
+
 		mDate := b.ManufactureDate
 		if mDate.IsZero() {
 			mDate = time.Now()
@@ -271,6 +304,39 @@ func handleSingleBatchOperations(w http.ResponseWriter, r *http.Request) {
 		db.DB.QueryRow(`SELECT COUNT(*) FROM qr_codes WHERE batch_id = ?`, batchID).Scan(&count)
 		if count > 0 {
 			http.Error(w, `{"error": "QR codes have already been generated for this batch"}`, http.StatusBadRequest)
+			return
+		}
+
+		// Enforce QR code limit check
+		var allowedLimit int
+		var generatedCountTotal int
+		var planTier string
+		err = db.DB.QueryRow(`SELECT allowed_qr_limit, plan_tier FROM producers WHERE id = ?`, ownerProdID).Scan(&allowedLimit, &planTier)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to fetch allowed QR limit: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		err = db.DB.QueryRow(`SELECT COUNT(q.id) FROM qr_codes q JOIN batches b ON q.batch_id = b.id JOIN products p ON b.product_id = p.id WHERE p.producer_id = ?`, ownerProdID).Scan(&generatedCountTotal)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error": "Failed to calculate generated QR count: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		// Fallback to defaults if allowedLimit in DB is 0
+		if allowedLimit == 0 {
+			switch strings.ToLower(planTier) {
+			case "starter":
+				allowedLimit = 25000
+			case "growth":
+				allowedLimit = 250000
+			case "enterprise":
+				allowedLimit = 1000000000
+			}
+		}
+
+		if strings.ToLower(planTier) != "enterprise" && generatedCountTotal+batchQty > allowedLimit {
+			http.Error(w, fmt.Sprintf(`{"error": "QR Generation limit exceeded. You have generated %d of %d allowed codes. Generating %d codes would exceed your limit."}`, generatedCountTotal, allowedLimit, batchQty), http.StatusBadRequest)
 			return
 		}
 
@@ -668,13 +734,24 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		var p models.Producer
 		var logo, idCard, selfie, utilBill, apiKey, apiSecret sql.NullString
-		err := db.DB.QueryRow(`SELECT id, name, slug, plan_tier, contact_email, brand_logo_url, id_card_url, selfie_url, utility_bill_url, api_key, api_secret, status, created_at 
-			FROM producers WHERE id = ?`, prodID).Scan(&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, &idCard, &selfie, &utilBill, &apiKey, &apiSecret, &p.Status, &p.CreatedAt)
+		err := db.DB.QueryRow(`
+			SELECT 
+				id, name, slug, plan_tier, contact_email, brand_logo_url, 
+				id_card_url, selfie_url, utility_bill_url, api_key, api_secret, 
+				status, created_at, allowed_qr_limit,
+				(SELECT COUNT(q.id) FROM qr_codes q 
+				 JOIN batches b ON q.batch_id = b.id 
+				 JOIN products pr ON b.product_id = pr.id 
+				 WHERE pr.producer_id = producers.id) as codes_generated
+			FROM producers WHERE id = ?`, prodID).Scan(
+				&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, 
+				&idCard, &selfie, &utilBill, &apiKey, &apiSecret, 
+				&p.Status, &p.CreatedAt, &p.AllowedQRLimit, &p.CodesGenerated)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				http.Error(w, `{"error": "Producer profile not found"}`, http.StatusNotFound)
 			} else {
-				http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
+				http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
 			}
 			return
 		}
@@ -712,6 +789,25 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Update database
+		// Check for plan tier change to roll over / permanently add allowed QR limits
+		var currentPlanTier string
+		db.DB.QueryRow(`SELECT plan_tier FROM producers WHERE id = ?`, prodID).Scan(&currentPlanTier)
+
+		if req.PlanTier != "" && strings.ToLower(req.PlanTier) != strings.ToLower(currentPlanTier) {
+			limitToAdd := 0
+			switch strings.ToLower(req.PlanTier) {
+			case "starter":
+				limitToAdd = 25000
+			case "growth":
+				limitToAdd = 250000
+			case "enterprise":
+				limitToAdd = 1000000
+			}
+			if limitToAdd > 0 {
+				_, _ = db.DB.Exec(`UPDATE producers SET allowed_qr_limit = allowed_qr_limit + ? WHERE id = ?`, limitToAdd, prodID)
+			}
+		}
+
 		query := `UPDATE producers SET name = ?, contact_email = ?`
 		args := []interface{}{req.Name, req.ContactEmail}
 		if req.BrandLogoURL != "" {
@@ -784,7 +880,16 @@ func handleAdminProducers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := db.DB.Query(`SELECT id, name, slug, plan_tier, contact_email, brand_logo_url, id_card_url, selfie_url, utility_bill_url, status, created_at FROM producers ORDER BY name ASC`)
+	rows, err := db.DB.Query(`
+		SELECT 
+			id, name, slug, plan_tier, contact_email, brand_logo_url, 
+			id_card_url, selfie_url, utility_bill_url, status, created_at, 
+			allowed_qr_limit,
+			(SELECT COUNT(q.id) FROM qr_codes q 
+			 JOIN batches b ON q.batch_id = b.id 
+			 JOIN products pr ON b.product_id = pr.id 
+			 WHERE pr.producer_id = producers.id) as codes_generated
+		FROM producers ORDER BY name ASC`)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error": "Database error: %v"}`, err), http.StatusInternalServerError)
 		return
@@ -795,7 +900,7 @@ func handleAdminProducers(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var p models.Producer
 		var logo, idCard, selfie, utilBill sql.NullString
-		err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, &idCard, &selfie, &utilBill, &p.Status, &p.CreatedAt)
+		err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.PlanTier, &p.ContactEmail, &logo, &idCard, &selfie, &utilBill, &p.Status, &p.CreatedAt, &p.AllowedQRLimit, &p.CodesGenerated)
 		if err == nil {
 			p.BrandLogoURL = logo.String
 			p.IDCardURL = idCard.String
@@ -853,6 +958,24 @@ func handleAdminSingleProducer(w http.ResponseWriter, r *http.Request) {
 			args = append(args, req.Status)
 		}
 		if req.PlanTier != "" {
+			var currentPlanTier string
+			db.DB.QueryRow(`SELECT plan_tier FROM producers WHERE id = ?`, prodID).Scan(&currentPlanTier)
+
+			if strings.ToLower(req.PlanTier) != strings.ToLower(currentPlanTier) {
+				limitToAdd := 0
+				switch strings.ToLower(req.PlanTier) {
+				case "starter":
+					limitToAdd = 25000
+				case "growth":
+					limitToAdd = 250000
+				case "enterprise":
+					limitToAdd = 1000000
+				}
+				if limitToAdd > 0 {
+					_, _ = db.DB.Exec(`UPDATE producers SET allowed_qr_limit = allowed_qr_limit + ? WHERE id = ?`, limitToAdd, prodID)
+				}
+			}
+
 			updates = append(updates, "plan_tier = ?")
 			args = append(args, req.PlanTier)
 		}

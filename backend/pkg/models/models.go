@@ -35,6 +35,8 @@ type Producer struct {
 	APIKey         string    `json:"api_key" db:"api_key"`
 	APISecret      string    `json:"api_secret" db:"api_secret"`
 	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	AllowedQRLimit int       `json:"allowed_qr_limit" db:"allowed_qr_limit"`
+	CodesGenerated int       `json:"codes_generated" db:"codes_generated"`
 }
 
 // User represents a staff member or administrator

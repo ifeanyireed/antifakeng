@@ -152,6 +152,13 @@ func handleSummary(w http.ResponseWriter, r *http.Request) {
 		WHERE p.producer_id = ? AND (q.status = 'recalled' OR b.status = 'recalled')`
 	db.DB.QueryRow(recalledQuery, prodID).Scan(&recalledCount)
 
+	// QR Limit and Count metrics
+	var allowedQrLimit int
+	var codesCount int
+	var planTier string
+	db.DB.QueryRow(`SELECT allowed_qr_limit, plan_tier FROM producers WHERE id = ?`, prodID).Scan(&allowedQrLimit, &planTier)
+	db.DB.QueryRow(`SELECT COUNT(q.id) FROM qr_codes q JOIN batches b ON q.batch_id = b.id JOIN products p ON b.product_id = p.id WHERE p.producer_id = ?`, prodID).Scan(&codesCount)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"products_count":   productCount,
@@ -160,6 +167,9 @@ func handleSummary(w http.ResponseWriter, r *http.Request) {
 		"genuine_count":    genuineCount,
 		"suspicious_count": suspiciousCount,
 		"recalled_count":   recalledCount,
+		"codes_count":      codesCount,
+		"allowed_qr_limit": allowedQrLimit,
+		"plan_tier":        planTier,
 	})
 }
 

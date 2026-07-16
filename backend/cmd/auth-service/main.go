@@ -125,12 +125,22 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	if planTier == "" {
 		planTier = "free"
 	}
+	limit := 0
+	switch strings.ToLower(planTier) {
+	case "starter":
+		limit = 25000
+	case "growth":
+		limit = 250000
+	case "enterprise":
+		limit = 1000000
+	}
+
 	var producerID int64
-	producerQuery := `INSERT INTO producers (name, slug, plan_tier, contact_email, status, created_at) 
-		VALUES (?, ?, ?, ?, ?, ?)`
+	producerQuery := `INSERT INTO producers (name, slug, plan_tier, contact_email, status, created_at, allowed_qr_limit) 
+		VALUES (?, ?, ?, ?, ?, ?, ?)`
 
 	// MySQL returns last insert row ID differently than Postgres, so we check driver style
-	res, err := tx.Exec(producerQuery, req.ProducerName, req.ProducerSlug, planTier, req.ContactEmail, "pending_verification", time.Now())
+	res, err := tx.Exec(producerQuery, req.ProducerName, req.ProducerSlug, planTier, req.ContactEmail, "pending_verification", time.Now(), limit)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error": "Failed to create producer (slug might be taken): %v"}`, err), http.StatusBadRequest)
 		return
@@ -446,8 +456,8 @@ func handleSeedData(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	// Seed Producer
-	res, err := tx.Exec(`INSERT INTO producers (name, slug, plan_tier, contact_email, status, created_at)
-		VALUES ('AURA Skincare', 'aura', 'growth', 'hello@auraskin.com', 'active', ?)`, time.Now())
+	res, err := tx.Exec(`INSERT INTO producers (name, slug, plan_tier, contact_email, status, created_at, allowed_qr_limit)
+		VALUES ('AURA Skincare', 'aura', 'growth', 'hello@auraskin.com', 'active', ?, 250000)`, time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -456,8 +466,8 @@ func handleSeedData(w http.ResponseWriter, r *http.Request) {
 	if producerID == 0 {
 		// Postgres fallback
 		var pid int
-		tx.QueryRow(`INSERT INTO producers (name, slug, plan_tier, contact_email, status, created_at)
-			VALUES ('AURA Skincare', 'aura', 'growth', 'hello@auraskin.com', 'active', ?) RETURNING id`, time.Now()).Scan(&pid)
+		tx.QueryRow(`INSERT INTO producers (name, slug, plan_tier, contact_email, status, created_at, allowed_qr_limit)
+			VALUES ('AURA Skincare', 'aura', 'growth', 'hello@auraskin.com', 'active', ?, 250000) RETURNING id`, time.Now()).Scan(&pid)
 		producerID = int64(pid)
 	}
 
