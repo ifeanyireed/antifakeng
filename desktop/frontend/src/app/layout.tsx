@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/ahnara/ThemeProvider";
 import { NicheProvider } from "@/components/ahnara/NicheContext";
 import { AuthProvider } from "@/components/ahnara/AuthContext";
 import { LocationProvider } from "@/components/ahnara/LocationContext";
+import UpdatePrompt from "@/components/ahnara/UpdatePrompt";
 
 // Local system-font fallbacks for offline sandbox compilation support
 const dmSans = { variable: "font-dm-sans" };
@@ -33,6 +34,7 @@ export default function RootLayout({
             <NicheProvider>
               <LocationProvider>
                 {children}
+                <UpdatePrompt />
               </LocationProvider>
             </NicheProvider>
           </AuthProvider>

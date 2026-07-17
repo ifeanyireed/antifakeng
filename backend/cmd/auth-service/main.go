@@ -87,6 +87,7 @@ func main() {
 	mux.HandleFunc("/api/auth/seed", handleSeedData)
 	mux.HandleFunc("/api/auth/whatsapp/status", handleWhatsAppStatus)
 	mux.HandleFunc("/api/auth/support/submit", handleSupportSubmit)
+	mux.HandleFunc("/api/auth/desktop/version", handleDesktopVersion)
 
 	log.Println("Auth Service starting on port 8081...")
 	log.Fatal(http.ListenAndServe(":8081", middleware.CORS(mux)))
@@ -596,6 +597,26 @@ func handleWhatsAppStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"status": status,
 	})
+}
+
+func handleDesktopVersion(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if r.Method != http.MethodGet {
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	versionInfo := map[string]interface{}{
+		"version":      "2.13.0",
+		"windows_url":  "https://cdn.antifake.ng/desktop/antifake-desktop-setup.exe",
+		"mac_url":      "https://cdn.antifake.ng/desktop/antifake-desktop.dmg",
+		"changelog":    "Local high-RAM print layout processing and 300 DPI support.",
+		"critical":     false,
+	}
+
+	json.NewEncoder(w).Encode(versionInfo)
 }
 
 func handleSupportSubmit(w http.ResponseWriter, r *http.Request) {

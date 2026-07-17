@@ -3,10 +3,13 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/components/ahnara/AuthContext";
 
 export default function DownloadPage() {
   const [detectedOS, setDetectedOS] = useState<"windows" | "mac" | "other">("other");
   const [mounted, setMounted] = useState(false);
+  const { user } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -20,8 +23,8 @@ export default function DownloadPage() {
     }
   }, []);
 
-  const winDownloadUrl = "https://cdn.antifake.ng/desktop/antifake-desktop-setup.exe";
-  const macDownloadUrl = "https://cdn.antifake.ng/desktop/antifake-desktop.dmg";
+  const winDownloadUrl = "https://cdn.antifake.ng/uploads/desktop/antifake-desktop-setup.exe";
+  const macDownloadUrl = "https://cdn.antifake.ng/uploads/desktop/antifake-desktop.dmg";
 
   return (
     <div className="min-h-screen bg-[#E8EFF4] text-slate-800 font-sans flex flex-col overflow-x-hidden">
@@ -32,181 +35,198 @@ export default function DownloadPage() {
           <img src="/logo.png" alt="AntiFakeNG Logo" className="w-10 h-10 object-contain" />
           <span className="font-extrabold text-xl tracking-tight text-slate-900 text-display">AntiFakeNG</span>
         </Link>
-        <div className="flex items-center gap-4">
-          <Link href="/support" className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors">
-            Support Helpdesk
-          </Link>
-          <Link href="/">
-            <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-5 py-2 rounded-full text-xs shadow-sm">
-              Back to Home
+        <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
+          <Link href="/" className="hover:text-slate-950 transition-colors">Home</Link>
+          <Link href="/support" className="hover:text-slate-950 transition-colors">Support Helpdesk</Link>
+        </nav>
+        <div className="hidden md:flex items-center gap-2">
+          <Link href="/consumer">
+            <button className="bg-[#0089C1] hover:bg-sky-600 text-white transition-all font-bold px-5 py-2.5 rounded-full text-sm shadow-sm">
+              Verify Product
             </button>
           </Link>
+          {!user ? (
+            <Link href="/login">
+              <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-5 py-2.5 rounded-full text-sm shadow-sm">
+                Sign In
+              </button>
+            </Link>
+          ) : (
+            <Link href={user.role === "ADMIN" ? "/admin/dashboard" : "/producer/dashboard"}>
+              <button className="bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold px-5 py-2.5 rounded-full text-sm shadow-sm">
+                Dashboard
+              </button>
+            </Link>
+          )}
         </div>
+
+        {/* Burger Button (Mobile Only) */}
+        <button 
+          className="md:hidden text-slate-800 text-2xl font-bold focus:outline-none" 
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          {mobileMenuOpen ? "✕" : "☰"}
+        </button>
       </header>
 
-      {/* HERO SECTION WITH DYNAMIC APP DISPLAY */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-12 md:py-16 flex flex-col items-center">
-        
-        {/* Animated Badge */}
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 bg-[#DDEEF3] border border-sky-200/50 rounded-full px-4 py-1.5 mb-8 shadow-sm"
-        >
-          <span className="w-2 h-2 rounded-full bg-[#0089C1] animate-ping" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#0089C1]">
-            Desktop Client v2.13.0
-          </span>
-        </motion.div>
-
-        {/* 2-Column Split Layout */}
-        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center w-full mt-2">
-          
-          {/* Column 1: Info & Downloads */}
+      {/* Mobile Nav Links Dropdown */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
           <motion.div 
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="lg:col-span-6 flex flex-col"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="md:hidden w-full bg-[#E8EFF4] border-b border-slate-300/30 px-6 py-4 flex flex-col gap-4 text-sm font-semibold text-slate-600 z-40"
           >
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 leading-none text-display mb-6">
-              AntiFakeNG for Desktop
-            </h1>
-            
-            <p className="text-sm md:text-base text-slate-600 font-medium leading-relaxed mb-8">
-              Take complete control of secure label prints. The desktop companion client offloads CPU-and-RAM-heavy layout generation to your local machine, allowing you to export thousands of 300 DPI codes instantly without server limits or timeouts.
-            </p>
-
-            {/* Feature Bullet Checklist */}
-            <div className="space-y-4 mb-10">
-              <div className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#DDEEF3] flex items-center justify-center text-[#0089C1] shrink-0 mt-0.5">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                  </svg>
-                </div>
-                <p className="text-xs text-slate-700 font-bold">
-                  <strong className="text-slate-900">Local Hardware Rendering:</strong> Uses your computer's RAM and CPU for rapid processing of image sheets.
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#DDEEF3] flex items-center justify-center text-[#0089C1] shrink-0 mt-0.5">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                  </svg>
-                </div>
-                <p className="text-xs text-slate-700 font-bold">
-                  <strong className="text-slate-900">300 DPI Export Quality:</strong> Ensure crisp, error-free vector scans on industrial printers.
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#DDEEF3] flex items-center justify-center text-[#0089C1] shrink-0 mt-0.5">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                  </svg>
-                </div>
-                <p className="text-xs text-slate-700 font-bold">
-                  <strong className="text-slate-900">Direct Disk Saving:</strong> Native file dialog integration saves files directly to folders without browser storage boundaries.
-                </p>
-              </div>
+            <Link href="/" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">Home</Link>
+            <Link href="/support" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">Support</Link>
+            <div className="flex flex-col gap-2 pt-3 border-t border-slate-300/20">
+              <Link href="/consumer" onClick={() => setMobileMenuOpen(false)}>
+                <button className="w-full bg-[#0089C1] hover:bg-sky-600 text-white transition-all font-bold py-2.5 rounded-full text-sm shadow-sm text-center">
+                  Verify Product
+                </button>
+              </Link>
+              {!user ? (
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                  <button className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-2.5 rounded-full text-sm shadow-sm text-center">
+                    Sign In
+                  </button>
+                </Link>
+              ) : (
+                <Link href={user.role === "ADMIN" ? "/admin/dashboard" : "/producer/dashboard"} onClick={() => setMobileMenuOpen(false)}>
+                  <button className="w-full bg-[#1E293B] text-white hover:bg-slate-800 transition-all font-bold py-2.5 rounded-full text-sm shadow-sm text-center">
+                    Dashboard
+                  </button>
+                </Link>
+              )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            {/* Dynamic Button CTA Box */}
-            {mounted && (
-              <div className="bg-white/60 backdrop-blur-lg border border-slate-200/50 rounded-3xl p-6 shadow-md max-w-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                    Detected System:
-                  </span>
-                  <span className="text-xs font-black text-[#0089C1] bg-[#DDEEF3] px-2.5 py-1 rounded-full uppercase tracking-wider">
-                    {detectedOS === "windows" && "Windows PC"}
-                    {detectedOS === "mac" && "macOS / Apple Silicon"}
-                    {detectedOS === "other" && "Generic Device"}
-                  </span>
-                </div>
+      {/* HERO CONTAINER */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 mb-12 mt-2">
+        
+        {/* Large Rounded Hero Card */}
+        <div className="w-full bg-[#E9F2F5] rounded-[48px] pt-16 pb-12 px-6 md:px-12 flex flex-col items-center text-center relative overflow-hidden border border-slate-200/20">
+          
 
-                {detectedOS === "windows" && (
-                  <a href={winDownloadUrl} className="block">
-                    <button className="w-full bg-[#0089C1] hover:bg-sky-600 text-white font-extrabold py-3.5 px-6 rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2.5 text-xs">
-                      <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                      </svg>
-                      Download Installer for Windows (.exe)
+
+          {/* Headline */}
+          <h1 className="text-4xl md:text-6xl font-normal text-slate-900 tracking-tight text-display mb-4 leading-[1.1] max-w-4xl text-center relative z-20">
+            AntiFakeNG for Desktop
+          </h1>
+
+          {/* Description */}
+          <p className="text-slate-600 font-semibold text-base md:text-lg mb-8 max-w-3xl text-center leading-relaxed relative z-20">
+            Offload CPU and RAM-heavy print layout generation to your local machine. Export thousands of 300 DPI codes instantly with no timeouts.
+          </p>
+
+          {/* Dynamic Button CTA Box */}
+          {mounted && (
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10 relative z-20">
+              {detectedOS === "windows" && (
+                <a href={winDownloadUrl}>
+                  <button className="bg-[#0089C1] hover:bg-sky-600 text-white transition-all font-bold px-8 py-4 text-sm rounded-full shadow-md hover:shadow-lg flex items-center gap-3">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                    </svg>
+                    Download for Windows (.exe)
+                  </button>
+                </a>
+              )}
+
+              {detectedOS === "mac" && (
+                <a href={macDownloadUrl}>
+                  <button className="bg-slate-900 hover:bg-slate-800 text-white transition-all font-bold px-8 py-4 text-sm rounded-full shadow-md hover:shadow-lg flex items-center gap-3">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                    </svg>
+                    Download for macOS (.dmg)
+                  </button>
+                </a>
+              )}
+
+              {detectedOS === "other" && (
+                <>
+                  <a href={winDownloadUrl}>
+                    <button className="bg-[#0089C1] hover:bg-sky-600 text-white transition-all font-bold px-6 py-3.5 rounded-full text-sm shadow-sm flex items-center gap-2">
+                      Download for Windows (.exe)
                     </button>
                   </a>
-                )}
-
-                {detectedOS === "mac" && (
-                  <a href={macDownloadUrl} className="block">
-                    <button className="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3.5 px-6 rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2.5 text-xs">
-                      <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                      </svg>
-                      Download App for macOS (.dmg)
+                  <a href={macDownloadUrl}>
+                    <button className="bg-slate-900 hover:bg-slate-800 text-white transition-all font-bold px-6 py-3.5 rounded-full text-sm shadow-sm flex items-center gap-2">
+                      Download for macOS (.dmg)
                     </button>
                   </a>
-                )}
+                </>
+              )}
+            </div>
+          )}
 
-                {detectedOS === "other" && (
-                  <div className="flex flex-col gap-2.5">
-                    <a href={winDownloadUrl}>
-                      <button className="w-full bg-[#0089C1] hover:bg-sky-600 text-white font-extrabold py-3 px-5 rounded-xl transition-all text-xs">
-                        Download for Windows (.exe)
-                      </button>
-                    </a>
-                    <a href={macDownloadUrl}>
-                      <button className="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3 px-5 rounded-xl transition-all text-xs">
-                        Download for macOS (.dmg)
-                      </button>
-                    </a>
-                  </div>
-                )}
+          {/* Alternate OS Choice */}
+          {mounted && detectedOS !== "other" && (
+            <p className="text-xs text-slate-500 font-semibold mb-12 -mt-6 relative z-20">
+              Prefer another platform?{" "}
+              {detectedOS === "windows" ? (
+                <a href={macDownloadUrl} className="text-[#0089C1] hover:underline font-bold">
+                  Download macOS client (.dmg)
+                </a>
+              ) : (
+                <a href={winDownloadUrl} className="text-[#0089C1] hover:underline font-bold">
+                  Download Windows client (.exe)
+                </a>
+              )}
+            </p>
+          )}
 
-                {/* Alternate OS Choice */}
-                {detectedOS !== "other" && (
-                  <p className="text-[10px] text-slate-500 font-bold mt-4 text-center">
-                    Prefer another platform?{" "}
-                    {detectedOS === "windows" ? (
-                      <a href={macDownloadUrl} className="text-[#0089C1] hover:underline">
-                        Download macOS client
-                      </a>
-                    ) : (
-                      <a href={winDownloadUrl} className="text-[#0089C1] hover:underline">
-                        Download Windows client
-                      </a>
-                    )}
-                  </p>
-                )}
+          {/* Feature Grid */}
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl w-full mt-2 mb-16 relative z-20">
+            <div className="bg-white/40 backdrop-blur-md border border-slate-200/50 rounded-3xl p-6 text-left shadow-xs">
+              <div className="w-10 h-10 rounded-2xl bg-[#DDEEF3] flex items-center justify-center text-[#0089C1] mb-4">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/>
+                </svg>
               </div>
-            )}
-          </motion.div>
-
-          {/* Column 2: Premium Desktop App Showcase Image */}
-          <motion.div 
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="lg:col-span-6 flex items-center justify-center"
-          >
-            <img 
-              src="/desktop-app.png" 
-              alt="AntiFakeNG Desktop Companion" 
-              className="w-full max-w-lg h-auto object-contain hover:scale-[1.02] transition-transform duration-300" 
-            />
-          </motion.div>
-
+              <h3 className="font-bold text-slate-900 text-sm mb-2">Local Hardware Rendering</h3>
+              <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                Uses your computer's RAM and CPU for rapid processing of image sheets, bypassing server-side memory bottlenecks.
+              </p>
+            </div>
+            <div className="bg-white/40 backdrop-blur-md border border-slate-200/50 rounded-3xl p-6 text-left shadow-xs">
+              <div className="w-10 h-10 rounded-2xl bg-[#DDEEF3] flex items-center justify-center text-[#0089C1] mb-4">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <h3 className="font-bold text-slate-900 text-sm mb-2">300 DPI Quality</h3>
+              <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                Crisp, high-resolution vector and bitmap generation to ensure error-free scans on industrial printers.
+              </p>
+            </div>
+            <div className="bg-white/40 backdrop-blur-md border border-slate-200/50 rounded-3xl p-6 text-left shadow-xs">
+              <div className="w-10 h-10 rounded-2xl bg-[#DDEEF3] flex items-center justify-center text-[#0089C1] mb-4">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 13.5l3 3m0 0l3-3m-3 3v-6m1.06-4.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/>
+                </svg>
+              </div>
+              <h3 className="font-bold text-slate-900 text-sm mb-2">Direct Disk Saving</h3>
+              <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                Saves print layout files directly to selected folders without browser sandbox boundaries.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* DETAILED INSTALLATION GUIDES */}
-        <section className="w-full max-w-4xl mt-24">
+        <section className="w-full max-w-4xl mx-auto mt-24">
           <h2 className="text-2xl font-black text-slate-900 mb-8 text-center">Installation Guides</h2>
           
           <div className="grid md:grid-cols-2 gap-6">
             
             {/* Windows Panel */}
-            <div className="bg-white/80 border border-slate-200/60 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
+            <div className="bg-white/80 border border-slate-200/60 rounded-3xl p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
                 <div className="w-8 h-8 rounded-lg bg-[#DDEEF3] flex items-center justify-center p-1.5 text-[#0089C1]">
                   <svg className="w-full h-full" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M0 3.449L9.75 2.1v9.45H0V3.449zM0 12.45h9.75v9.45L0 20.551v-8.1zM11.25 1.899L24 0v11.55H11.25V1.899zM11.25 12.45H24v11.55l-12.75-1.9v-9.65z"/>
@@ -214,8 +234,8 @@ export default function DownloadPage() {
                 </div>
                 <h3 className="font-black text-slate-900 text-base">Windows PC Guide</h3>
               </div>
-              <ol className="list-decimal list-inside text-xs text-slate-600 font-bold space-y-2.5">
-                <li>Download the `antifake-desktop-setup.exe` installer above.</li>
+              <ol className="list-decimal list-inside text-xs text-slate-600 font-bold space-y-3">
+                <li>Download the <code className="bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">antifake-desktop-setup.exe</code> installer above.</li>
                 <li>Launch the installer executable on your Windows PC.</li>
                 <li>
                   <span className="text-amber-600 font-black">SmartScreen:</span> If prompted by Windows SmartScreen (due to fresh compilation signature), click <strong className="text-slate-800">"More Info"</strong> and select <strong className="text-slate-800">"Run Anyway"</strong>.
@@ -225,8 +245,8 @@ export default function DownloadPage() {
             </div>
 
             {/* Mac Panel */}
-            <div className="bg-white/80 border border-slate-200/60 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
+            <div className="bg-white/80 border border-slate-200/60 rounded-3xl p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
                 <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center p-1.5 text-slate-800">
                   <svg className="w-full h-full" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.2.67-2.92 1.49-.62.71-1.16 1.85-1.01 2.96 1.12.09 2.26-.56 2.94-1.39z"/>
@@ -234,8 +254,8 @@ export default function DownloadPage() {
                 </div>
                 <h3 className="font-black text-slate-900 text-base">macOS Guide</h3>
               </div>
-              <ol className="list-decimal list-inside text-xs text-slate-600 font-bold space-y-2.5">
-                <li>Download the `antifake-desktop.dmg` volume disk image.</li>
+              <ol className="list-decimal list-inside text-xs text-slate-600 font-bold space-y-3">
+                <li>Download the <code className="bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">antifake-desktop.dmg</code> volume disk image.</li>
                 <li>Mount the `.dmg` image by double-clicking it.</li>
                 <li>Drag the <strong className="text-slate-800">AntiFakeNG</strong> app icon into your <strong className="text-slate-800">Applications</strong> directory.</li>
                 <li>Launch the app. If macOS blocks it as unsigned, go to <strong className="text-slate-800">System Settings → Privacy & Security</strong>, scroll down, and click <strong className="text-slate-800">"Open Anyway"</strong>.</li>
