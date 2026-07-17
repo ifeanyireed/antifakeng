@@ -182,28 +182,18 @@ export default function DownloadPage() {
             )}
           </motion.div>
 
-          {/* Column 2: Premium Desktop App Showcase Frame */}
+          {/* Column 2: Premium Desktop App Showcase Image */}
           <motion.div 
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
             className="lg:col-span-6 flex items-center justify-center"
           >
-            <div className="relative w-full max-w-lg bg-slate-950/5 border border-slate-300/30 rounded-3xl p-3 shadow-2xl backdrop-blur-md">
-              {/* Window Chrome Titlebar */}
-              <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-slate-300/20 bg-slate-100/90 rounded-t-2xl">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                <span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                <span className="text-[10px] text-slate-400 font-bold ml-3 tracking-wide">AntiFakeNG Client</span>
-              </div>
-              {/* Image Screenshot */}
-              <img 
-                src="/desktop-app.png" 
-                alt="AntiFakeNG Desktop Interface" 
-                className="w-full h-auto object-cover rounded-b-2xl border-t border-slate-300/10" 
-              />
-            </div>
+            <img 
+              src="/desktop-app.png" 
+              alt="AntiFakeNG Desktop Companion" 
+              className="w-full max-w-lg h-auto object-contain hover:scale-[1.02] transition-transform duration-300" 
+            />
           </motion.div>
 
         </div>
