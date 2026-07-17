@@ -153,6 +153,7 @@ export default function HomePage() {
           <a href="#features" className="hover:text-slate-950 transition-colors">Features</a>
           <a href="#pricing" className="hover:text-slate-950 transition-colors">Pricing</a>
           <a href="#faq" className="hover:text-slate-950 transition-colors">FAQ</a>
+          <Link href="/download" className="hover:text-slate-950 transition-colors">Desktop App</Link>
           <Link href="/support" className="hover:text-slate-950 transition-colors">Support</Link>
         </nav>
 
@@ -199,6 +200,7 @@ export default function HomePage() {
             <a href="#features" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">Features</a>
             <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">Pricing</a>
             <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">FAQ</a>
+            <Link href="/download" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">Desktop App</Link>
             <Link href="/support" onClick={() => setMobileMenuOpen(false)} className="hover:text-slate-950 transition-colors">Support</Link>
 
             {/* Action Buttons inside Mobile Menu Dropdown */}
