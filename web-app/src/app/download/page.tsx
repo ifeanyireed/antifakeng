@@ -108,10 +108,8 @@ export default function DownloadPage() {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 mb-12 mt-2">
         
         {/* Large Rounded Hero Card */}
-        <div className="w-full bg-[#E9F2F5] rounded-[48px] pt-16 pb-12 px-6 md:px-12 flex flex-col items-center text-center relative overflow-hidden border border-slate-200/20">
+        <div className="w-full bg-[#E9F2F5] rounded-[48px] pt-8 pb-12 px-6 md:px-12 flex flex-col items-center text-center relative overflow-hidden border border-slate-200/20">
           
-
-
           {/* Headline */}
           <h1 className="text-4xl md:text-6xl font-normal text-slate-900 tracking-tight text-display mb-4 leading-[1.1] max-w-4xl text-center relative z-20">
             AntiFakeNG for Desktop
@@ -121,6 +119,15 @@ export default function DownloadPage() {
           <p className="text-slate-600 font-semibold text-base md:text-lg mb-8 max-w-3xl text-center leading-relaxed relative z-20">
             Offload CPU and RAM-heavy print layout generation to your local machine. Export thousands of 300 DPI codes instantly with no timeouts.
           </p>
+
+          {/* Desktop Showcase Image */}
+          <div className="w-full max-w-2xl mb-10 relative z-20 flex justify-center">
+            <img 
+              src="/desktop-app.png" 
+              alt="AntiFakeNG Desktop Companion" 
+              className="w-full max-w-xl h-auto object-contain hover:scale-[1.01] transition-transform duration-300 rounded-2xl shadow-md border border-slate-300/30" 
+            />
+          </div>
 
           {/* Dynamic Button CTA Box */}
           {mounted && (
