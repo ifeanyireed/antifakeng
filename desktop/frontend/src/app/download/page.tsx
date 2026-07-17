@@ -58,12 +58,12 @@ export default function DownloadPage() {
             AntiFakeNG for Desktop
           </h1>
           
-          <p className="text-sm md:text-base text-slate-600 font-medium leading-relaxed mb-8 max-w-2xl">
+          <p className="text-xs md:text-sm text-slate-600 font-medium leading-relaxed mb-4 max-w-2xl">
             Take complete control of secure label prints. The desktop companion client offloads CPU-and-RAM-heavy layout generation to your local machine, allowing you to export thousands of 300 DPI codes instantly without server limits or timeouts.
           </p>
 
           {/* Feature Bullet Checklist */}
-          <div className="space-y-4 mb-10 text-left max-w-md mx-auto">
+          <div className="space-y-4 mb-3 text-left max-w-md mx-auto">
             <div className="flex items-start gap-3">
               <div className="w-5 h-5 rounded-full bg-[#DDEEF3] flex items-center justify-center text-[#0089C1] shrink-0 mt-0.5">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
@@ -97,13 +97,11 @@ export default function DownloadPage() {
           </div>
 
           {/* Desktop Showcase Image */}
-          <div className="w-full max-w-2xl mb-10 flex justify-center">
-            <img 
-              src="/desktop-app.png" 
-              alt="AntiFakeNG Desktop Companion" 
-              className="w-full max-w-xl h-auto object-contain hover:scale-[1.01] transition-transform duration-300 rounded-2xl shadow-md border border-slate-300/30" 
-            />
-          </div>
+          <img 
+            src="/desktop-app.png" 
+            alt="AntiFakeNG Desktop Companion" 
+            className="w-full max-w-lg h-auto object-contain hover:scale-[1.02] transition-transform duration-300 mb-10" 
+          />
 
           {/* Dynamic Button CTA Box */}
           {mounted && (
@@ -225,12 +223,45 @@ export default function DownloadPage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="w-full bg-slate-900 text-slate-400 py-8 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-bold">
+      <footer className="w-full bg-[#E8EFF4] text-[#0D090C]/60 py-16 border-t border-slate-300/40 relative z-20">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-10">
+          
+          {/* Logo & Slogan Column */}
+          <div className="md:col-span-5 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="AntiFakeNG Logo" className="w-9 h-9 object-contain" />
+              <span className="font-extrabold text-lg text-slate-900 tracking-tight text-display">AntiFakeNG</span>
+            </div>
+            <p className="text-xs leading-relaxed max-w-sm font-semibold">
+              A multi-tenant authenticity and counterfeit-detection platform for manufacturers. Secure browser-first verification, code isolation, and live geo-analytics.
+            </p>
+          </div>
+
+          {/* Quick Links Column */}
+          <div className="md:col-span-3 flex flex-col gap-3">
+            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Product</h4>
+            <Link href="/#how-it-works" className="text-xs font-semibold hover:text-[#0089C1] transition-colors">How it works</Link>
+            <Link href="/#features" className="text-xs font-semibold hover:text-[#0089C1] transition-colors">Features</Link>
+            <Link href="/#security" className="text-xs font-semibold hover:text-[#0089C1] transition-colors">Security</Link>
+            <Link href="/#pricing" className="text-xs font-semibold hover:text-[#0089C1] transition-colors">Pricing</Link>
+          </div>
+
+          {/* Legal / Contact Column */}
+          <div className="md:col-span-4 flex flex-col gap-3">
+            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Connect</h4>
+            <a href="mailto:hello@antifakeng.com" className="text-xs font-semibold hover:text-[#0089C1] transition-colors">hello@antifakeng.com</a>
+            <a href="tel:+2348067028859" className="text-xs font-semibold hover:text-[#0089C1] transition-colors">+234 806 702 8859</a>
+            <Link href="/#contact" className="text-xs font-semibold hover:text-[#0089C1] transition-colors">Request a Demo</Link>
+            <span className="text-xs font-semibold mt-2 block text-slate-400">Lagos, Nigeria</span>
+          </div>
+
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-slate-300/40 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-bold text-slate-500">
           <p>© 2026 AntiFakeNG. All rights reserved.</p>
           <div className="flex gap-4">
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-slate-900 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-slate-900 transition-colors">Terms of Service</Link>
           </div>
         </div>
       </footer>
