@@ -1,0 +1,13 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "desktop-app",
+  "outputfilename": "desktop-app",
+  "frontend:install": "",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "http://localhost:3000",
+  "author": {
+    "name": "Ifeanyi Reed",
+    "email": "ifeanyireed@ahnara.com"
+  }
+}
