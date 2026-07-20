@@ -205,7 +205,7 @@ export default function LoginPage() {
           {view === "login" && (
             <motion.div
               key="login-form"
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 1, y: 0 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.25 }}
@@ -299,7 +299,7 @@ export default function LoginPage() {
           {view === "register" && (
             <motion.div
               key="register-form"
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 1, y: 0 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.25 }}
@@ -394,7 +394,7 @@ export default function LoginPage() {
           {view === "forgot" && (
             <motion.div
               key="forgot-form"
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 1, y: 0 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.25 }}
