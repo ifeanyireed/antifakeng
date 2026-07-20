@@ -1,5 +1,5 @@
 const getApiBaseUrl = () => {
-  let baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+  let baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://antifake.ng/api";
   if (!baseUrl.endsWith("/api")) {
     baseUrl = baseUrl.replace(/\/$/, "") + "/api";
   }

@@ -14,7 +14,7 @@ import { useAuth } from "@/components/ahnara/AuthContext";
 import { AhnaraCard } from "@/components/ahnara/AhnaraCard";
 import { AhnaraButton } from "@/components/ahnara/AhnaraButton";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "https://antifake.ng").replace(/\/$/, "");
 
 export default function VerifyEmailPage() {
   const router = useRouter();

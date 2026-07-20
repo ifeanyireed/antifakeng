@@ -34,6 +34,7 @@ export default function LoginPage() {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!email || !password) {
       setError("Please fill in all fields.");
       return;
@@ -44,7 +45,7 @@ export default function LoginPage() {
     setSuccessMessage(null);
 
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "https://antifake.ng").replace(/\/$/, "");
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,17 +82,18 @@ export default function LoginPage() {
           }
         }
       } else {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         setError(data.error || "Invalid credentials.");
       }
     } catch (err) {
       setIsLoading(false);
-      setError("Authentication service is currently offline.");
+      setError("Authentication service is currently offline. Please check network connection.");
     }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!name || !email || !password || !confirmPassword) {
       setError("Please fill in all fields.");
       return;
@@ -110,7 +112,7 @@ export default function LoginPage() {
     setSuccessMessage(null);
 
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "https://antifake.ng").replace(/\/$/, "");
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
       const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
