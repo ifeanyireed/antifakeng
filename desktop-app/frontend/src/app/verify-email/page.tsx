@@ -163,7 +163,7 @@ export default function VerifyEmailPage() {
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                   placeholder="0 0 0 0 0 0"
-                  className="w-full h-12 bg-white/50 border border-slate-200 rounded-xl text-center text-lg font-mono font-bold tracking-[0.75em] text-slate-800 placeholder-slate-300 focus:outline-none focus:border-[#0089C1] focus:bg-white transition-all shadow-sm pl-[0.75em]"
+                  className="w-full h-12 bg-white/50 border border-slate-200 rounded-xl text-center text-lg font-mono font-bold tracking-[0.75em] text-slate-800 placeholder-slate-300 focus:outline-none focus:border-ahnara-brand focus:bg-white transition-all shadow-sm pl-[0.75em]"
                   required
                 />
               </div>

@@ -775,12 +775,12 @@ func GenerateImageSheet(w io.Writer, config PrintConfig, tokens []string) error 
 	ptScale := dpi / 72.0
 	var serialFace, msgFace, logoFace, footerFace font.Face
 	if foundBoldFont != "" {
-		serialFace, _ = gg.LoadFontFace(foundBoldFont, 6.0*contentScale*ptScale)
-		logoFace, _ = gg.LoadFontFace(foundBoldFont, 9.0*contentScale*ptScale)
-		footerFace, _ = gg.LoadFontFace(foundBoldFont, 4.5*contentScale*ptScale)
+		serialFace, _ = gg.LoadFontFace(foundBoldFont, 7.2*contentScale*ptScale)
+		logoFace, _ = gg.LoadFontFace(foundBoldFont, 10.5*contentScale*ptScale)
+		footerFace, _ = gg.LoadFontFace(foundBoldFont, 5.2*contentScale*ptScale)
 	}
 	if foundRegularFont != "" {
-		msgFace, _ = gg.LoadFontFace(foundRegularFont, 4.5*contentScale*ptScale)
+		msgFace, _ = gg.LoadFontFace(foundRegularFont, 5.2*contentScale*ptScale)
 	}
 
 	// Load Logo file once

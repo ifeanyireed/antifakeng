@@ -60,7 +60,7 @@ export default function ProducerReports() {
             <input
               type="text"
               placeholder="Search store name or token..."
-              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-2 pl-10 pr-4 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-2 pl-10 pr-4 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
             />
           </div>
         </div>

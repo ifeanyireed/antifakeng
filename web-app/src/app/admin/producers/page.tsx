@@ -127,7 +127,7 @@ export default function AdminProducers() {
               placeholder="Search producer brands..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-2 pl-10 pr-4 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-2 pl-10 pr-4 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
             />
           </div>
         </div>
@@ -277,7 +277,7 @@ export default function AdminProducers() {
                   <select
                     value={editPlan}
                     onChange={(e) => setEditPlan(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                   >
                     <option value="free">Free (0 codes limit/Inactive)</option>
                     <option value="starter">Starter (25k codes limit)</option>
@@ -291,7 +291,7 @@ export default function AdminProducers() {
                   <select
                     value={editStatus}
                     onChange={(e) => setEditStatus(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                   >
                     <option value="active">Active</option>
                     <option value="suspended">Suspended (Locks login &amp; alerts)</option>

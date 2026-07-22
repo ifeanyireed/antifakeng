@@ -1,92 +1,70 @@
 package email
 
 import (
-	"crypto/tls"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
-	"net/smtp"
+	"net/http"
 	"os"
 )
 
-// sendSMTP is a unified private helper to handle the SSL/TLS/SMTP transmission
+// sendSMTP is a unified private helper to handle email transmission via Email Proxy
 func sendSMTP(recipient, subject, bodyHTML string) error {
-	smtpHost := os.Getenv("SMTP_HOST")
-	if smtpHost == "" {
-		smtpHost = "smtp.hostinger.com"
-	}
-	smtpPortStr := os.Getenv("SMTP_PORT")
-	if smtpPortStr == "" {
-		smtpPortStr = "465"
-	}
-	smtpUser := os.Getenv("SMTP_USER")
-	if smtpUser == "" {
-		smtpUser = "noreply@resultspro.ng"
-	}
-	smtpPass := os.Getenv("SMTP_PASS")
-	if smtpPass == "" {
-		smtpPass = "*Reedb4b4"
-	}
 	fromEmail := os.Getenv("FROM_EMAIL")
 	if fromEmail == "" {
 		fromEmail = "noreply@antifake.ng"
 	}
-
-	fromHeader := fmt.Sprintf("From: AntiFakeNG <%s>\n", fromEmail)
-	subjectHeader := fmt.Sprintf("Subject: %s\n", subject)
-	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-
-	msg := []byte(fromHeader + subjectHeader + mime + bodyHTML)
-	addr := fmt.Sprintf("%s:%s", smtpHost, smtpPortStr)
-	auth := smtp.PlainAuth("", smtpUser, smtpPass, smtpHost)
-
-	// Secure SSL/TLS configuration for Port 465 (Default Hostinger Configuration)
-	if smtpPortStr == "465" {
-		tlsConfig := &tls.Config{
-			InsecureSkipVerify: true,
-			ServerName:         smtpHost,
-		}
-		conn, err := tls.Dial("tcp", addr, tlsConfig)
-		if err != nil {
-			return fmt.Errorf("failed to dial SMTP SSL/TLS connection: %w", err)
-		}
-		defer conn.Close()
-
-		client, err := smtp.NewClient(conn, smtpHost)
-		if err != nil {
-			return fmt.Errorf("failed to create SMTP SSL client: %w", err)
-		}
-		defer client.Quit()
-
-		if err = client.Auth(auth); err != nil {
-			return fmt.Errorf("SMTP SSL credentials authorization failed: %w", err)
-		}
-		if err = client.Mail(smtpUser); err != nil {
-			return fmt.Errorf("SMTP SSL MAIL FROM declaration failed: %w", err)
-		}
-		if err = client.Rcpt(recipient); err != nil {
-			return fmt.Errorf("SMTP SSL RCPT TO destination address rejected: %w", err)
-		}
-		w, err := client.Data()
-		if err != nil {
-			return fmt.Errorf("SMTP SSL DATA pipeline creation failed: %w", err)
-		}
-		_, err = w.Write(msg)
-		if err != nil {
-			return fmt.Errorf("SMTP SSL write payload to buffer failed: %w", err)
-		}
-		err = w.Close()
-		if err != nil {
-			return fmt.Errorf("SMTP SSL writer stream termination failed: %w", err)
-		}
-	} else {
-		// Port 587 (TLS/StartTLS)
-		err := smtp.SendMail(addr, auth, smtpUser, []string{recipient}, msg)
-		if err != nil {
-			return fmt.Errorf("SMTP SendMail standard pipeline failed: %w", err)
-		}
+	fromName := os.Getenv("FROM_NAME")
+	if fromName == "" {
+		fromName = "AntiFakeNG"
 	}
 
-	log.Printf("[SMTP Email] Sent email successfully to %s: %s", recipient, subject)
+	proxyURL := os.Getenv("EMAIL_PROXY_URL")
+	if proxyURL == "" {
+		proxyURL = "https://mail.resultspro.ng/email_proxy/api/send-email.php"
+	}
+
+	apiKey := os.Getenv("EMAIL_PROXY_API_KEY")
+	if apiKey == "" {
+		apiKey = "my_api_key_6f3b92d8a4c1e7f50b4a1d9c2e8f7a3b"
+	}
+
+	payload := map[string]string{
+		"to":        recipient,
+		"subject":   subject,
+		"html":      bodyHTML,
+		"from":      fromEmail,
+		"from_name": fromName,
+	}
+
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal email payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", proxyURL, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request to email proxy: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("email proxy returned error status %d: %s", resp.StatusCode, string(body))
+	}
+
+	log.Printf("[Email Proxy] Sent email successfully to %s: %s", recipient, subject)
 	return nil
 }
 

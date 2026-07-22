@@ -179,7 +179,7 @@ export default function ProducerProducts() {
             <input
               type="text"
               placeholder="Search catalog..."
-              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-2 pl-10 pr-4 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-2 pl-10 pr-4 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
             />
           </div>
         </div>
@@ -283,7 +283,7 @@ export default function ProducerProducts() {
                     value={newProductName}
                     onChange={(e) => setNewProductName(e.target.value)}
                     placeholder="e.g. AURA Skincare Gel Cream"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                     required
                   />
                 </div>
@@ -295,7 +295,7 @@ export default function ProducerProducts() {
                     value={newProductSku}
                     onChange={(e) => setNewProductSku(e.target.value)}
                     placeholder="e.g. AURA-GEL-CREAM-30"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                     required
                   />
                 </div>
@@ -305,7 +305,7 @@ export default function ProducerProducts() {
                   <select
                     value={newProductCat}
                     onChange={(e) => setNewProductCat(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                   >
                     <option value="Cosmetics">Cosmetics</option>
                     <option value="Pharma">Pharmaceuticals</option>
@@ -340,7 +340,7 @@ export default function ProducerProducts() {
                           value={productImage}
                           onChange={(e) => setProductImage(e.target.value)}
                           placeholder="Image URL (e.g. /product.png)"
-                          className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1]"
+                          className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand"
                         />
                         <div className="flex items-center gap-2">
                           <span className="text-[9px] font-black text-slate-400 uppercase">Or</span>
@@ -417,7 +417,7 @@ export default function ProducerProducts() {
                     value={editProductName}
                     onChange={(e) => setEditProductName(e.target.value)}
                     placeholder="e.g. AURA Skincare Gel Cream"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                     required
                   />
                 </div>
@@ -429,7 +429,7 @@ export default function ProducerProducts() {
                     value={editProductSku}
                     onChange={(e) => setEditProductSku(e.target.value)}
                     placeholder="e.g. AURA-GEL-CREAM-30"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                     required
                   />
                 </div>
@@ -439,7 +439,7 @@ export default function ProducerProducts() {
                   <select
                     value={editProductCat}
                     onChange={(e) => setEditProductCat(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                   >
                     <option value="Cosmetics">Cosmetics</option>
                     <option value="Pharma">Pharmaceuticals</option>
@@ -474,7 +474,7 @@ export default function ProducerProducts() {
                           value={editProductImage}
                           onChange={(e) => setEditProductImage(e.target.value)}
                           placeholder="Image URL (e.g. /product.png)"
-                          className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1]"
+                          className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand"
                         />
                         <div className="flex items-center gap-2">
                           <span className="text-[9px] font-black text-slate-400 uppercase">Or</span>

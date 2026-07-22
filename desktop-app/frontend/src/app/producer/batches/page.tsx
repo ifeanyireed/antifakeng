@@ -714,7 +714,7 @@ export default function ProducerBatches() {
             <input
               type="text"
               placeholder="Search batches..."
-              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-2 pl-10 pr-4 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-2 pl-10 pr-4 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
             />
           </div>
         </div>
@@ -837,7 +837,7 @@ export default function ProducerBatches() {
                   <select
                     value={selectedProduct}
                     onChange={(e) => setSelectedProduct(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                   >
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
@@ -854,7 +854,7 @@ export default function ProducerBatches() {
                     placeholder="e.g. 500 (max 1000)"
                     min="1"
                     max="1000"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                     required
                   />
                   <p className="text-[10px] text-slate-500 mt-1.5 font-bold">
@@ -874,7 +874,7 @@ export default function ProducerBatches() {
                     value={batchId}
                     onChange={(e) => setBatchId(e.target.value.toUpperCase())}
                     placeholder="e.g. B-AURA-LOT3"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                   />
                 </div>
 
@@ -886,7 +886,7 @@ export default function ProducerBatches() {
                       value={manufactureDate}
                       onChange={(e) => setManufactureDate(e.target.value)}
                       required
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                     />
                   </div>
 
@@ -897,7 +897,7 @@ export default function ProducerBatches() {
                       value={expiryDate}
                       onChange={(e) => setExpiryDate(e.target.value)}
                       required
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                     />
                   </div>
                 </div>
@@ -943,7 +943,7 @@ export default function ProducerBatches() {
                           <select
                             value={dimensionUnit}
                             onChange={(e) => setDimensionUnit(e.target.value as any)}
-                            className="bg-slate-50 border border-slate-200 rounded-lg py-1 px-2 text-[10px] font-bold text-slate-700 outline-none focus:border-[#0089C1]"
+                            className="bg-slate-50 border border-slate-200 rounded-lg py-1 px-2 text-[10px] font-bold text-slate-700 outline-none focus:border-ahnara-brand"
                           >
                             <option value="px">Pixels (px)</option>
                             <option value="mm">Millimeters (mm)</option>
@@ -974,7 +974,7 @@ export default function ProducerBatches() {
                           <select
                             value={labelRotation}
                             onChange={(e) => setLabelRotation(parseInt(e.target.value))}
-                            className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-2 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-[#0089C1]"
+                            className="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-2 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand"
                           >
                             <option value="0">0° (Normal)</option>
                             <option value="90">90° Right</option>
@@ -1203,7 +1203,7 @@ export default function ProducerBatches() {
                         onChange={(e) => setPrintMessage(e.target.value)}
                         rows={2}
                         disabled={isGenerating}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white resize-none leading-normal disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white resize-none leading-normal disabled:opacity-60 disabled:cursor-not-allowed"
                         placeholder="Message printed next to each code..."
                       />
                     </div>
@@ -1221,7 +1221,7 @@ export default function ProducerBatches() {
                           value={layoutWidth}
                           onChange={(e) => setLayoutWidth(e.target.value)}
                           disabled={isGenerating}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white disabled:opacity-60"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white disabled:opacity-60"
                         >
                           <option value="4ft">4ft Roll (approx. 120cm)</option>
                           <option value="6ft">6ft Roll (approx. 180cm)</option>
@@ -1236,7 +1236,7 @@ export default function ProducerBatches() {
                           value={fileFormat}
                           onChange={(e) => setFileFormat(e.target.value)}
                           disabled={isGenerating}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white disabled:opacity-60"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white disabled:opacity-60"
                         >
                           <option value="pdf">Vector PDF (CMYK Print Ready)</option>
                           <option value="png">High-Res PNG Roll</option>
@@ -1255,7 +1255,7 @@ export default function ProducerBatches() {
                             value={customWidth}
                             onChange={(e) => setCustomWidth(e.target.value)}
                             disabled={isGenerating}
-                            className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-xs font-bold text-slate-800 outline-none focus:border-[#0089C1] disabled:opacity-60"
+                            className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-xs font-bold text-slate-800 outline-none focus:border-ahnara-brand disabled:opacity-60"
                           />
                         </div>
                         <div className="flex flex-col gap-1.5">
@@ -1282,7 +1282,7 @@ export default function ProducerBatches() {
                           value={columnsMode}
                           onChange={(e) => setColumnsMode(e.target.value as any)}
                           disabled={isGenerating}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white disabled:opacity-60"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white disabled:opacity-60"
                         >
                           <option value="auto">Auto-Fit Columns (Preserve Label Size)</option>
                           <option value="manual">Manual Columns (Stretch/Shrink Label)</option>
@@ -1296,7 +1296,7 @@ export default function ProducerBatches() {
                             value={manualColumns}
                             onChange={(e) => setManualColumns(parseInt(e.target.value))}
                             disabled={isGenerating}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white disabled:opacity-60"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white disabled:opacity-60"
                           >
                             <option value="4">4 Columns</option>
                             <option value="6">6 Columns</option>
@@ -2034,7 +2034,7 @@ export default function ProducerBatches() {
                           <select
                             value={dimensionUnit}
                             onChange={(e) => setDimensionUnit(e.target.value as any)}
-                            className="bg-white border border-slate-200 rounded-lg py-1 px-2 text-[10px] font-bold text-slate-700 outline-none focus:border-[#0089C1]"
+                            className="bg-white border border-slate-200 rounded-lg py-1 px-2 text-[10px] font-bold text-slate-700 outline-none focus:border-ahnara-brand"
                           >
                             <option value="px">Pixels (px)</option>
                             <option value="mm">Millimeters (mm)</option>
@@ -2062,7 +2062,7 @@ export default function ProducerBatches() {
                           <select
                             value={editLabelRotation}
                             onChange={(e) => setEditLabelRotation(parseInt(e.target.value))}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs font-bold text-slate-800 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                           >
                             <option value="0">0° (Normal)</option>
                             <option value="90">90° Right</option>

@@ -410,7 +410,7 @@ export default function SupportPage() {
                         value={name} 
                         onChange={(e) => setName(e.target.value)}
                         placeholder="John Doe" 
-                        className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-[#0089C1] transition-colors"
+                        className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-ahnara-brand transition-colors"
                       />
                     </div>
                     <div>
@@ -422,7 +422,7 @@ export default function SupportPage() {
                         value={email} 
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="john@example.com" 
-                        className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-[#0089C1] transition-colors"
+                        className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-ahnara-brand transition-colors"
                       />
                     </div>
                     <div>
@@ -434,7 +434,7 @@ export default function SupportPage() {
                         value={subject} 
                         onChange={(e) => setSubject(e.target.value)}
                         placeholder="Verification issue / Account query" 
-                        className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-[#0089C1] transition-colors"
+                        className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-ahnara-brand transition-colors"
                       />
                     </div>
                   </>
@@ -487,7 +487,7 @@ export default function SupportPage() {
                     value={message} 
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder={formType === "contact" ? "Type details here..." : "Describe where, when and what you observed about the product..."}
-                    className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none resize-none focus:border-[#0089C1] transition-colors"
+                    className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none resize-none focus:border-ahnara-brand transition-colors"
                   />
                 </div>
 
@@ -586,7 +586,7 @@ export default function SupportPage() {
                   placeholder="Ask a question..."
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  className="flex-1 bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-[#0089C1] transition-colors"
+                  className="flex-1 bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-ahnara-brand transition-colors"
                 />
                 <button
                   type="submit"

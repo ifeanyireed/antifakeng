@@ -1,0 +1,7 @@
+{
+    "name": "project/email-proxy",
+    "description": "PHP Email Proxy for Go Backend",
+    "require": {
+        "phpmailer/phpmailer": "^6.9"
+    }
+}

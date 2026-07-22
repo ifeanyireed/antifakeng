@@ -32,3 +32,4 @@ tmp/
 # SSH / Local keys
 a.md
 b.md
+email_proxy/config/config.php

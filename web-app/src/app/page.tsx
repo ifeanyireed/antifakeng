@@ -776,7 +776,7 @@ export default function HomePage() {
                   placeholder="Full name" 
                   value={demoName}
                   onChange={(e) => setDemoName(e.target.value)}
-                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1]" 
+                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-ahnara-brand" 
                   required 
                 />
                 <input 
@@ -784,7 +784,7 @@ export default function HomePage() {
                   placeholder="Company" 
                   value={demoCompany}
                   onChange={(e) => setDemoCompany(e.target.value)}
-                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1]" 
+                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-ahnara-brand" 
                   required 
                 />
                 <input 
@@ -792,7 +792,7 @@ export default function HomePage() {
                   placeholder="Work email" 
                   value={demoEmail}
                   onChange={(e) => setDemoEmail(e.target.value)}
-                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1]" 
+                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-ahnara-brand" 
                   required 
                 />
                 <textarea 
@@ -800,7 +800,7 @@ export default function HomePage() {
                   rows={3} 
                   value={demoMessage}
                   onChange={(e) => setDemoMessage(e.target.value)}
-                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#0089C1] resize-none" 
+                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-ahnara-brand resize-none" 
                   required 
                 />
                 <button 
@@ -939,7 +939,7 @@ export default function HomePage() {
                   placeholder="Ask a question..."
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  className="flex-1 bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-[#0089C1] transition-colors"
+                  className="flex-1 bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-ahnara-brand transition-colors"
                 />
                 <button
                   type="submit"

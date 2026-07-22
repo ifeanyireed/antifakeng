@@ -113,7 +113,7 @@ export default function DeleteUserData() {
                     placeholder="2348067028859"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9]/g, ""))}
-                    className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-3 pl-8 pr-4 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-3 pl-8 pr-4 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                     required
                     disabled={isSubmitting}
                   />

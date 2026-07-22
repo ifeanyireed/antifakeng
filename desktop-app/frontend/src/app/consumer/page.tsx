@@ -331,7 +331,7 @@ export default function ConsumerPortal() {
                         setToken(formatted);
                       }}
                       placeholder="e.g. 9F3C-71AE"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-center tracking-widest text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-center tracking-widest text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                       required
                     />
                   </div>
@@ -428,7 +428,7 @@ export default function ConsumerPortal() {
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
                         placeholder="800 000 0000"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-14 pr-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-14 pr-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                         required
                       />
                     </div>
@@ -528,7 +528,7 @@ export default function ConsumerPortal() {
                         setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6));
                       }}
                       placeholder="000 000"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-center tracking-widest text-slate-800 placeholder-slate-300 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-mono font-bold text-center tracking-widest text-slate-800 placeholder-slate-300 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                       required
                     />
                     {otpError && (
@@ -805,7 +805,7 @@ export default function ConsumerPortal() {
                       value={retailerName}
                       onChange={(e) => setRetailerName(e.target.value)}
                       placeholder="e.g. Pharmacy A, Ikeja Mall"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                       required
                     />
                   </div>
@@ -816,7 +816,7 @@ export default function ConsumerPortal() {
                       value={retailerLocation}
                       onChange={(e) => setRetailerLocation(e.target.value)}
                       placeholder="e.g. Ikeja, Lagos"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white"
                       required
                     />
                   </div>
@@ -827,7 +827,7 @@ export default function ConsumerPortal() {
                       onChange={(e) => setReportComment(e.target.value)}
                       placeholder="How much did it cost? Did packaging look tampered?"
                       rows={3}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0089C1] focus:bg-white resize-none"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-ahnara-brand focus:bg-white resize-none"
                     />
                   </div>
 
